@@ -16,6 +16,7 @@ import { judgeAnswerSchema, parseJsonAnswer } from "./json-answer";
 // answer decides; the rest is "unsure" (or "not_judged" when no model could be asked at all).
 
 const MAX_ANSWER_TOKENS = 1024;
+const CALL_TIMEOUT_MS = 60_000;
 
 const SYSTEM = [
   "You are a meticulous QA engineer judging one moment of an end-to-end test of a web app.",
@@ -49,6 +50,7 @@ function requestFor(input: IJudgeInput, evidence: IEvidence): IModelRequest {
   return {
     system: SYSTEM,
     maxTokens: MAX_ANSWER_TOKENS,
+    timeoutMs: CALL_TIMEOUT_MS,
     parts: [
       { type: "image", png: evidence.png },
       {
@@ -139,7 +141,9 @@ export async function judge(
   input: IJudgeInput,
   evidence: IJudgeEvidence,
   clients: IJudgeClients,
-  settings: IJudgeSettings
+  settings: IJudgeSettings,
+  // No new look starts after this moment (epoch ms): the test has a timeout of its own.
+  deadlineAt: number | null = null
 ): Promise<IJudgement> {
   const plan = [
     ...Array.from({ length: 1 + settings.retries }, () => clients.primary),
@@ -157,6 +161,13 @@ export async function judge(
     if (keyless.has(client)) {
       continue;
     }
+    if (
+      attempts.length > 0 &&
+      deadlineAt !== null &&
+      Date.now() >= deadlineAt
+    ) {
+      break;
+    }
     if (attempts.length > 0) {
       await evidence.settle();
     }
@@ -166,7 +177,8 @@ export async function judge(
       focus
     );
     attempts.push(result.attempt);
-    everyAttemptUnavailable &&= result.unavailable !== null;
+    // Not judged unless some model answered: a wrong key or an outage is no judgement either.
+    everyAttemptUnavailable &&= result.attempt.answer === null;
     lastAnswer = result.attempt.answer ?? lastAnswer;
     focus = result.attempt.answer?.look_at ?? focus;
     if (result.unavailable === "budget") {

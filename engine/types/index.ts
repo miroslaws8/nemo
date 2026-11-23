@@ -350,6 +350,8 @@ export interface IModelRequest {
   system: string;
   parts: IModelPart[];
   maxTokens: number;
+  // A call that takes longer is given up (and counts as an error of its attempt).
+  timeoutMs: number;
 }
 
 export interface IModelUsage {

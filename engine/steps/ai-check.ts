@@ -19,6 +19,8 @@ const argsSchema = z.union([
   }),
 ]);
 
+const JUDGE_TIME_CAP_MS = 180_000;
+
 // Said once per worker: the run goes on without AI.
 let warnedNotJudged = false;
 
@@ -64,7 +66,8 @@ function record(
 export const aiCheckStep = defineStep({
   keyword: "ai_check",
   schema: argsSchema,
-  observesOnly: true,
+  // Not replayed after a rate limit: it would be judged, and paid for, again.
+  observesOnly: false,
   describe: (args) =>
     `ai_check: ${typeof args === "string" ? args : args.question}`,
   run: async (args, context) => {
@@ -106,7 +109,9 @@ export const aiCheckStep = defineStep({
         settle: () => settlePage(context.page),
       },
       { primary: ai.primary, escalation: ai.escalation },
-      ai.settings.judge
+      ai.settings.judge,
+      // At most half of the test's timeout, three minutes at most: the test must still finish.
+      Date.now() + Math.min(JUDGE_TIME_CAP_MS, context.testInfo.timeout / 2)
     );
     const shown = seen.evidence;
     if (shown !== null) {

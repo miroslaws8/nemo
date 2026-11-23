@@ -6,7 +6,7 @@
   "scripts": {
     "test": "playwright test",
     "test:list": "playwright test --list",
-    "unit": "tsx --test \"engine/**/*.unit.ts\"",
+    "unit": "tsx --test --test-timeout=30000 \"engine/**/*.unit.ts\"",
     "demo": "E2E_ENV=demo playwright test",
     "report": "playwright show-report reports/html",
     "ui": "tsx engine/scripts/ui.ts",

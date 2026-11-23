@@ -13,6 +13,7 @@ const REQUEST: IModelRequest = {
     { type: "text", text: "Is the menu open?" },
   ],
   maxTokens: 1024,
+  timeoutMs: 60_000,
 };
 
 interface ISeenRequest {
@@ -116,6 +117,59 @@ describe("openai protocol", () => {
     await assert.rejects(
       MODEL_PROTOCOLS.openai.complete(settings({}), "key", REQUEST, fetchImpl)
     );
+  });
+});
+
+describe("both protocols", () => {
+  test("ignore the SDKs' own environment variables (no other host gets the key)", async () => {
+    process.env.OPENAI_BASE_URL = "http://elsewhere.invalid/v1";
+    process.env.ANTHROPIC_BASE_URL = "http://elsewhere.invalid";
+    try {
+      const openai = fakeFetch(200, OPENAI_REPLY);
+      await MODEL_PROTOCOLS.openai.complete(
+        settings({}),
+        "key",
+        REQUEST,
+        openai.fetchImpl
+      );
+      assert.equal(
+        openai.seen[0].url,
+        "https://api.openai.com/v1/chat/completions"
+      );
+      const anthropic = fakeFetch(200, ANTHROPIC_REPLY);
+      await MODEL_PROTOCOLS.anthropic.complete(
+        settings({ protocol: "anthropic" }),
+        "key",
+        REQUEST,
+        anthropic.fetchImpl
+      );
+      assert.equal(
+        anthropic.seen[0].url,
+        "https://api.anthropic.com/v1/messages"
+      );
+    } finally {
+      delete process.env.OPENAI_BASE_URL;
+      delete process.env.ANTHROPIC_BASE_URL;
+    }
+  });
+
+  test("a call that hangs is given up at the request's timeout", async () => {
+    const hanging: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () =>
+          reject(new Error("aborted"))
+        );
+      });
+    const started = Date.now();
+    await assert.rejects(
+      MODEL_PROTOCOLS.openai.complete(
+        settings({}),
+        "key",
+        { ...REQUEST, timeoutMs: 100 },
+        hanging
+      )
+    );
+    assert.ok(Date.now() - started < 5_000);
   });
 });
 

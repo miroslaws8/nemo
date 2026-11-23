@@ -15,7 +15,13 @@ const modelSchema = z.strictObject({
   protocol: z.enum(AI_PROTOCOLS),
   model: z.string().min(1),
   // Another server of the protocol: OpenRouter, Ollama (http://localhost:11434/v1), vLLM, ….
-  base_url: z.url().optional(),
+  base_url: z
+    .url()
+    .refine((url) => {
+      const parsed = new URL(url);
+      return parsed.username === "" && parsed.password === "";
+    }, "no credentials in base_url: the key goes in `key`")
+    .optional(),
   // The variable holding its API key, a QA_* name (the engine's .env loading reaches those);
   // null for a server that takes none.
   key: z

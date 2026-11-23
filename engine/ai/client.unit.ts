@@ -60,7 +60,7 @@ const REPLY: IModelReply = {
   refused: false,
 };
 
-const REQUEST = { system: "s", parts: [], maxTokens: 100 };
+const REQUEST = { system: "s", parts: [], maxTokens: 100, timeoutMs: 1000 };
 
 function tempSpend(): ReturnType<typeof runSpend> {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "ai-client-"));
@@ -121,6 +121,23 @@ describe("model client", () => {
     );
     await client.complete(REQUEST);
     assert.deepEqual(keys, [null]);
+  });
+
+  test("an error never carries the key", async () => {
+    process.env[KEY] = "sk-very-secret";
+    const failing: IModelProtocol = {
+      async complete() {
+        throw new Error("401: key sk-very-secret is not valid");
+      },
+    };
+    const client = createModelClient(settings(), "fast", tempSpend(), {
+      openai: failing,
+      anthropic: failing,
+    });
+    await assert.rejects(client.complete(REQUEST), (error: unknown) => {
+      const message = error instanceof Error ? error.message : "";
+      return !message.includes("sk-very-secret") && message.includes("401");
+    });
   });
 
   test("missingKeys names the judge's unset key variables", () => {

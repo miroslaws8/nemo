@@ -56,7 +56,18 @@ export function createModelClient(
           })`
         );
       }
-      const reply = await protocol.complete(model, apiKey, request);
+      let reply;
+      try {
+        reply = await protocol.complete(model, apiKey, request);
+      } catch (error) {
+        // Provider errors end up in reports: never with the key in them.
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(
+          apiKey === null || apiKey === ""
+            ? message
+            : message.split(apiKey).join("***")
+        );
+      }
       const usd =
         (reply.usage.inputTokens * model.usdPerMillion.input +
           reply.usage.outputTokens * model.usdPerMillion.output) /
@@ -67,16 +78,15 @@ export function createModelClient(
   };
 }
 
-/** The judge's models whose key variable is unset, as config errors (CI stops on them). */
+/**
+ * The judge's own model, when its key variable is unset, as a config error (CI stops on it). A
+ * missing escalation key does not count: the judge skips a model it cannot ask.
+ */
 export function missingKeys(settings: IAiSettings): string[] {
-  const roles = [settings.judge.model, settings.judge.escalateTo].filter(
-    (role): role is string => role !== null
-  );
-  return roles.flatMap((role) => {
-    const variable = settings.models[role]?.keyVariable ?? null;
-    if (variable === null || keyOf(variable) !== "") {
-      return [];
-    }
-    return [`ai.models.${role}.key: ${variable} is not set`];
-  });
+  const role = settings.judge.model;
+  const variable = settings.models[role]?.keyVariable ?? null;
+  if (variable === null || keyOf(variable) !== "") {
+    return [];
+  }
+  return [`ai.models.${role}.key: ${variable} is not set`];
 }

@@ -5,7 +5,9 @@ import type { IEvidence, IRegion } from "../types";
 // providers take — Anthropic refuses images over 8000 px a side), from its top or around a text the
 // model asked to look at (look_at), and the ARIA snapshot of the whole page (trimmed).
 
-const MAX_CAPTURE_HEIGHT_CSS = 3000;
+// In CSS pixels, and the screenshot is taken in CSS pixels (not the device's): 1600 tall stays
+// readable after a provider scales the image down; look_at reaches the rest.
+const MAX_CAPTURE_HEIGHT_CSS = 1600;
 // A focused capture starts this far above the text, so what leads to it is in view too.
 const FOCUS_LEAD_CSS = 600;
 const MAX_ARIA_CHARACTERS = 20_000;
@@ -53,6 +55,13 @@ async function focusTop(page: Page, text: string): Promise<number | null> {
   return box.y + (await page.evaluate(() => window.scrollY));
 }
 
+function originAndPath(address: string): string {
+  const url = new URL(address);
+  return url.protocol.startsWith("http")
+    ? `${url.origin}${url.pathname}`
+    : url.protocol;
+}
+
 export async function captureEvidence(
   page: Page,
   focus: string | null = null
@@ -81,6 +90,7 @@ export async function captureEvidence(
   try {
     png = await page.screenshot({
       fullPage: true,
+      scale: "css",
       clip: { x: 0, y: top, width: size.width, height },
     });
   } finally {
@@ -94,7 +104,8 @@ export async function captureEvidence(
   return {
     png,
     aria,
-    url: page.url(),
+    // Origin and path only: a query or fragment may carry tokens.
+    url: originAndPath(page.url()),
     top,
     focus: focus === null ? null : { text: focus, found: focusedAt !== null },
   };
@@ -120,7 +131,7 @@ export async function settlePage(page: Page): Promise<void> {
 /**
  * The page with the model's regions drawn on it (a red box and its note each, like
  * hermes/qa-mark.js), as a PNG of the same capture as `evidence`; the marks are removed
- * afterwards. Regions are in screenshot pixels: divided by the device's pixel ratio and moved
+ * afterwards. Regions are in screenshot pixels, which are CSS pixels (scale "css"): moved
  * down by where the capture starts.
  */
 export async function markRegions(
@@ -130,16 +141,15 @@ export async function markRegions(
 ): Promise<Buffer> {
   await page.evaluate(
     ({ boxes, top }) => {
-      const ratio = window.devicePixelRatio || 1;
       for (const box of boxes) {
         const mark = document.createElement("div");
         mark.setAttribute("data-nemo-mark", "");
         Object.assign(mark.style, {
           position: "absolute",
-          left: `${box.x / ratio}px`,
-          top: `${top + box.y / ratio}px`,
-          width: `${box.width / ratio}px`,
-          height: `${box.height / ratio}px`,
+          left: `${box.x}px`,
+          top: `${top + box.y}px`,
+          width: `${box.width}px`,
+          height: `${box.height}px`,
           outline: "3px solid #e11d48",
           background: "rgba(225, 29, 72, 0.12)",
           zIndex: "2147483647",

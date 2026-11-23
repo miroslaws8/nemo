@@ -114,6 +114,16 @@ describe("ai settings", () => {
     assert.match(issueAt(text, "ai.judge.model") ?? "", /vision: true/);
   });
 
+  test("a base_url with credentials in it", () => {
+    const text = configText(
+      MINIMAL_AI.replace(
+        "protocol: openai,",
+        "protocol: openai, base_url: https://user:pass@llm.example.com/v1,"
+      )
+    );
+    assert.ok(issueAt(text, "ai.models.fast.base_url") !== null);
+  });
+
   test("a console setting as key", () => {
     const text = configText(MINIMAL_AI.replace("QA_AI_KEY", "QA_CONSOLE_KEY"));
     assert.ok(issueAt(text, "ai.models.fast.key") !== null);

@@ -23,7 +23,12 @@ export const openAiProtocol: IModelProtocol = {
     const client = new OpenAI({
       // A local server takes no key, but the client wants one.
       apiKey: apiKey ?? "none",
-      baseURL: settings.baseUrl ?? undefined,
+      // Explicit, so the SDK's own variables (OPENAI_BASE_URL, OPENAI_ORG_ID, …) never send the
+      // key or the screenshots anywhere the config does not name.
+      baseURL: settings.baseUrl ?? "https://api.openai.com/v1",
+      organization: null,
+      project: null,
+      timeout: request.timeoutMs,
       fetch: fetchImpl,
       // One retry for a transient error; the judge's own re-checks do the rest.
       maxRetries: 1,

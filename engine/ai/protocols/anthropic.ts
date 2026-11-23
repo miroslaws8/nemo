@@ -21,7 +21,11 @@ export const anthropicProtocol: IModelProtocol = {
   async complete(settings, apiKey, request, fetchImpl) {
     const client = new Anthropic({
       apiKey,
-      baseURL: settings.baseUrl ?? undefined,
+      // Explicit, so the SDK's own variables (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN) never send
+      // the key or the screenshots anywhere the config does not name.
+      authToken: null,
+      baseURL: settings.baseUrl ?? "https://api.anthropic.com",
+      timeout: request.timeoutMs,
       fetch: fetchImpl,
       // One retry for a transient error; the judge's own re-checks do the rest.
       maxRetries: 1,

@@ -11,7 +11,8 @@
 #   pushes and pull requests         Validate (no browser run); a PR can also run staging by hand
 #
 # Secured repository variables: QA_STAGE_EMAIL, QA_STAGE_PASSWORD, QA_PROD_EMAIL,
-# QA_PROD_PASSWORD (the QA accounts), SLACK_WEBHOOK_URL (optional); for the console to follow the
+# QA_PROD_PASSWORD (the QA accounts), QA_AI_OPENAI_KEY / QA_AI_ANTHROPIC_KEY (the AI judge's models,
+# once a test uses ai_check), SLACK_WEBHOOK_URL (optional); for the console to follow the
 # e2e runs live (ci/ingest.mts) QA_CONSOLE_INGEST_URL (e.g. https://qa.example.com) and
 # QA_CONSOLE_INGEST_TOKEN (one of the console's QA_CONSOLE_INGEST_TOKENS): a step then waits while
 # a run of the console's own uses its environment (at most 20 minutes). Without them the runs go

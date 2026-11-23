@@ -223,6 +223,46 @@ describe("judge", () => {
     assert.equal(result.attempts[1].lookedAt, "Starter $50");
   });
 
+  test("no attempt answered (wrong key, outage): not judged, with the error", async () => {
+    const primary = stubClient("fast-1", [
+      new Error("401 invalid api key"),
+      new Error("401 invalid api key"),
+      new Error("401 invalid api key"),
+    ]);
+    const result = await judge(
+      INPUT,
+      stubEvidence(),
+      { primary, escalation: null },
+      SETTINGS
+    );
+    assert.equal(result.outcome, "not_judged");
+    assert.equal(result.attempts[0].error, "401 invalid api key");
+  });
+
+  test("past its deadline the judge starts no other look", async () => {
+    const slow: IModelClient = {
+      role: "fast",
+      model: "fast-1",
+      async complete() {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        return {
+          text: answer("unsure", 0.4),
+          usage: { inputTokens: 1, outputTokens: 1 },
+          refused: false,
+        };
+      },
+    };
+    const result = await judge(
+      INPUT,
+      stubEvidence(),
+      { primary: slow, escalation: null },
+      SETTINGS,
+      Date.now() + 20
+    );
+    assert.equal(result.outcome, "unsure");
+    assert.equal(result.attempts.length, 1);
+  });
+
   test("a model that cannot be asked is not asked again", async () => {
     const noKey = (): Error =>
       new AiUnavailableError("no_key", "QA_AI_KEY is not set");

@@ -96,6 +96,21 @@ function findSkipReason(step: IStepNode, variables: IVariables): string | null {
   return null;
 }
 
+/**
+ * A step for the AI judge's "steps so far": as written, with its ${…} left as they are, so values
+ * (a typed password, a tokenised link) never leave the machine.
+ */
+export function stepLogLine(step: IActionStep): string {
+  const definition = STEPS_BY_KEYWORD.get(step.keyword);
+  try {
+    return definition === undefined
+      ? step.keyword
+      : definition.describe(step.args);
+  } catch {
+    return step.keyword;
+  }
+}
+
 function describeAction(step: IActionStep, variables: IVariables): string {
   const definition = STEPS_BY_KEYWORD.get(step.keyword);
   if (definition === undefined) {
@@ -194,7 +209,7 @@ async function runAction(
     return resolved;
   });
   await definition.run(args, context);
-  context.stepLog.push(definition.describe(args));
+  context.stepLog.push(stepLogLine(step));
   await attachScreenshot(context, `step-${number}`);
 }
 

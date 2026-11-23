@@ -24,7 +24,9 @@ Playwright image (`pnpm validate` checks its version in every workflow too).
 | `Sweep test data` (`sweep.yml`) | daily once `E2E_SCHEDULES` is `true`, or Run workflow | `ci/sweep.sh`: leftover test data on staging and prod |
 
 - **Secrets** (Settings → Secrets and variables → Actions): `QA_STAGE_EMAIL`,
-  `QA_STAGE_PASSWORD`, `QA_PROD_EMAIL`, `QA_PROD_PASSWORD`, and `SLACK_WEBHOOK_URL` (optional).
+  `QA_STAGE_PASSWORD`, `QA_PROD_EMAIL`, `QA_PROD_PASSWORD`, `QA_AI_OPENAI_KEY` /
+  `QA_AI_ANTHROPIC_KEY` (the [AI judge](#ai)'s models, once a test uses `ai_check`), and
+  `SLACK_WEBHOOK_URL` (optional).
   **Variable** `E2E_SCHEDULES=true` turns the schedules on; without it they are skipped, so a fork
   without an app to test stays quiet.
 - An `E2E` job runs in the GitHub environment named like the test environment (`staging`,
@@ -63,7 +65,9 @@ Playwright image (`pnpm validate` checks its version in every workflow too).
 - Results: the pipeline's Tests tab (JUnit), the HTML report in the artifacts, and a Slack
   message for every failure (`ci/notify-slack.mts`).
 - Secured repository variables: `QA_STAGE_EMAIL`, `QA_STAGE_PASSWORD`,
-  `QA_PROD_EMAIL`, `QA_PROD_PASSWORD` (the QA accounts) and `SLACK_WEBHOOK_URL`.
+  `QA_PROD_EMAIL`, `QA_PROD_PASSWORD` (the QA accounts), `QA_AI_OPENAI_KEY` /
+  `QA_AI_ANTHROPIC_KEY` (the [AI judge](#ai)'s models, once a test uses `ai_check`) and
+  `SLACK_WEBHOOK_URL`.
 - The app's deploy pipelines start a run with `atlassian/trigger-pipeline` (`REPOSITORY: nemo`,
   `CUSTOM_PIPELINE_NAME: e2e-staging` or `e2e-prod`, the expected build in `PIPELINE_VARIABLES`),
   using a repository access token of nemo with Pipelines write access.
@@ -539,11 +543,15 @@ ai:
   budget_usd_per_run: 1
 ```
 
-**The judge** (`ai_check`) shows its model the page — a screenshot from the top (up to 3000 CSS
-pixels) and the ARIA snapshot — with the test's title, its steps so far and the question, and gets
-a verdict (`pass`, `fail`, `unsure`), a confidence and a reason. An answer below `min_confidence`,
-or `unsure`, is not trusted: the page is left to settle (network quiet, animations done), looked at
-again (`retries`), then shown to `escalate_to`. Only a confident answer decides:
+**The judge** (`ai_check`) shows its model the page — a screenshot in CSS pixels from the top (up
+to 1600 tall) and the ARIA snapshot of the whole page — with the test's title, its steps so far
+(as written, without their values) and the question, and gets a verdict (`pass`, `fail`,
+`unsure`), a confidence and a reason. When what decides is below the screenshot, the model answers
+`unsure` with `look_at`, a text of the page; the next look is taken around it. An answer below
+`min_confidence`, or `unsure`, is not trusted: the page is left to settle (network quiet,
+animations done), looked at again (`retries`), then shown to `escalate_to`. A call gives up after
+60 s, and the whole check after half the test's timeout (3 minutes at most). Only a confident
+answer decides:
 
 | Outcome | The step | The report |
 |---|---|---|
@@ -551,14 +559,19 @@ again (`retries`), then shown to `escalate_to`. Only a confident answer decides:
 | fail, blocking | fails: `AI check failed (<confidence>): <reason>` | and `ai-check-<n>-marked`: the screenshot with the regions the model pointed at |
 | fail, `blocking: false` | passes | annotation `ai finding` |
 | still unsure | passes | annotation `ai review`: "AI was not sure: …" |
-| not judged (no key, budget spent) | passes | annotation `ai review`: "AI did not judge: …", and one warning in the output |
+| not judged (no key, wrong key, outage, budget spent) | passes | annotation `ai review`: "AI did not judge: …", and one warning in the output |
 
-AI never turns a failed step green. Its calls cost what `usd_per_million` says; all workers of a
+AI never turns a failed step green, and an `ai_check` is not replayed after a rate limit (it would
+be paid for again). What leaves the machine: the screenshot, the ARIA snapshot, the page's origin
+and path (no query), the test's title and steps as written, the question; the key only to the
+`base_url` the config names (the SDKs' own `*_BASE_URL` variables are ignored). Its calls cost what `usd_per_million` says; all workers of a
 run share `budget_usd_per_run` (`<run folder or reports>/ai-spend/<run id>.ndjson`), and past it
-nothing more is asked. In CI (`CI` set) a run whose judge has no key stops at start, so a forgotten
-secret is not mistaken for passing checks. `ai: false` on an environment or a profile turns AI off
-there (prod here); with AI off, `ai_check` only attaches the screenshot and the question. The QA
-console's runs get no AI keys yet: their `ai_check` steps are not judged.
+nothing more is asked. In CI (`CI` set) a run whose tests use `ai_check` while the judge's model has no
+key stops at start (listing tests does not), so a forgotten secret is not mistaken for passing
+checks; a missing escalation key only skips the escalation. `ai: false` on an environment or a profile turns AI off
+there (prod here); with AI off, `ai_check` only attaches the screenshot and the question. A local
+QA console (`pnpm console`) runs with this machine's `.env`, so its runs are judged like the CLI's;
+a server console's runs get no AI keys yet, and their `ai_check` steps are not judged.
 
 ## A test file
 

@@ -20,6 +20,9 @@ for environment in staging prod; do
   done
 done
 
+# Listing never trips the AI start check (it runs as global setup, not when tests are listed).
+CI=1 E2E_ENV=demo pnpm exec playwright test --list > /dev/null
+
 # A console run builds too: its own folder (E2E_RUN_DIR) and the live event reporter.
 run_dir="$(mktemp -d)"
 E2E_RUN_DIR="$run_dir" E2E_ENV=staging E2E_PROFILE=post-deploy pnpm exec playwright test --list > /dev/null

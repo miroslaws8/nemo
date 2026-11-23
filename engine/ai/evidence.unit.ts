@@ -115,6 +115,34 @@ describe("evidence", () => {
     await tall.close();
   });
 
+  test("the capture is in CSS pixels and at most 1600 tall, whatever the device", async () => {
+    const context = await browser.newContext({
+      viewport: { width: 400, height: 800 },
+      deviceScaleFactor: 3,
+    });
+    const dense = await context.newPage();
+    await dense.setContent(
+      '<body style="margin:0"><div style="height:9000px"></div></body>'
+    );
+    const png = (await captureEvidence(dense)).png;
+    assert.equal(png.readUInt32BE(16), 400);
+    assert.equal(png.readUInt32BE(20), 1600);
+    await context.close();
+  });
+
+  test("the URL goes without its query or fragment", async () => {
+    const routed = await browser.newPage();
+    await routed.route("https://example.test/**", (route) =>
+      route.fulfill({ contentType: "text/html", body: "<h1>Hi</h1>" })
+    );
+    await routed.goto("https://example.test/pricing?token=abc#top");
+    assert.equal(
+      (await captureEvidence(routed)).url,
+      "https://example.test/pricing"
+    );
+    await routed.close();
+  });
+
   test("a focus that is not on the page keeps the top", async () => {
     const evidence = await captureEvidence(page, "Nowhere to be found");
     assert.deepEqual(evidence.focus, {
