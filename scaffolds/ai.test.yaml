@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=__SCHEMA_PATH__
+# AI tests spend credits; they run only after the smoke tier passes.
+suite: __SUITE__
+tier: ai
+tags: []
+
+setup: [blank_course, resolve_asset]
+
+# One test per row (like test.each).
+each:
+  as: asset
+  from: data/assets-ai.yaml
+
+tests:
+  - name: generates ${asset.label}
+    timeout: 25m
+    steps:
+      - goto: ${course.edit_url}
+      - expect_visible: { text: This page is empty }
+      - add_asset_via_modal:
+          label: ${asset.label}
+          ai: ${asset.ai}
+      - wait_asset: { type: "${asset.type}", timeout: 20m }
+      - expect_asset: { min_height: 100, images_loaded: true }
+      - expect_no_errors: true

@@ -1,0 +1,61 @@
+# The server console on this machine, built and run the way the team's server runs it
+# (README → QA Console → Docker): pnpm console:docker → http://127.0.0.1:7359
+# myqa's .env (and ~/.hermes/.env) give the settings (QA_CONSOLE_IDP_*, _OAUTH_CLIENT_ID,
+# _GIT_URL/_GIT_TOKEN, QA_* for the QA accounts); console/users.yaml (a copy of
+# users.example.yaml) the people.
+# Runs, the clone, packages and sessions stay in the volume qa-console-data.
+name: qa-console
+
+services:
+  console:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: qa-console:local
+    # Where the engine reads them too: ~/.hermes/.env, then myqa's .env (it wins).
+    env_file:
+      - path: ${HOME}/.hermes/.env
+        required: false
+      - path: ../.env
+        required: false
+    # The shape of this container; these win over .env.
+    environment:
+      QA_CONSOLE_MODE: server
+      QA_CONSOLE_HOST: 0.0.0.0
+      QA_CONSOLE_PORT: "7357"
+      QA_CONSOLE_PUBLIC_URL: http://127.0.0.1:7359
+      # Run files (reports, traces, screenshots) on another origin, as on the server.
+      QA_CONSOLE_FILES_URL: http://localhost:7359
+      QA_CONSOLE_DATA_DIR: /data
+      QA_CONSOLE_USERS_FILE: /config/users.yaml
+      # The image's Hermes, not a Mac's install that .env may name for pnpm console.
+      QA_CONSOLE_HERMES: /usr/local/bin/qa-hermes
+    ports:
+      # This machine only, on another port than pnpm console.
+      - "127.0.0.1:7359:7357"
+    volumes:
+      - qa-console-data:/data
+      # Missing, it stops compose instead of becoming an empty folder.
+      - type: bind
+        source: ./users.yaml
+        target: /config/users.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp
+    # Chromium needs more shared memory than Docker's 64 MB.
+    shm_size: 1gb
+    # The console stops its runs first, so their tests delete their data (up to 3 minutes).
+    stop_grace_period: 4m
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:7357/api/ready').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+
+volumes:
+  qa-console-data:

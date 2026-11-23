@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=../../../schema/skill-file.schema.json
+# What this skill does; pnpm skills writes its SKILL.md (Hermes reads that) from this file.
+description: >-
+  Functional test of the AI course-creation INTAKE flow (/create-course/ai) — drives it with a
+  Playwright script (one persistent browser session) up to the Course Review brief gate and STOPS
+  before Confirm. MUTATING + uses AI credits — runs on every env (staging/local AND prod); leaves
+  a `[SMOKE]` draft. Use to verify the AI course intake / data-gathering works.
+title: Example app — AI course intake (Playwright-driven)
+summary: >-
+  This long, multi-turn AI conversation is too fragile for step-by-step agent browser driving
+  (the local daemon drops during the long gather waits). So the heavy work lives in a Playwright
+  script (`scripts/intake.mjs`) that runs the whole intake in ONE persistent browser session with
+  deterministic waits, stops at the **Course Review brief** gate, and NEVER clicks
+  Confirm/Generate. Your job: run it and interpret output.
+safety: creates_data
+ai_credits: true
+side_effects: >-
+  a `[SMOKE]` draft course and its chat, left for manual cleanup (find them by the `[SMOKE]`
+  marker in the courses list); it STOPS at the review brief and never clicks Confirm/Generate,
+  so no full course is generated
+
+sections:
+  - title: Credentials for the script
+    text: >-
+      The script logs in by itself (it cannot use the Hermes vault). It needs, in
+      `~/.hermes/.env` (it loads that file) or the environment, the pair for the target env:
+      `QA_<ENV>_EMAIL` and `QA_<ENV>_PASSWORD` — `QA_STAGE_*` for staging,
+      `QA_LOCAL_*` for local, `QA_PROD_*` for prod. If the pair for the target env is not
+      set, the script STOPs with a setup error (exit 2) naming the missing var — add it to
+      `~/.hermes/.env` (prod needs `QA_PROD_EMAIL` / `QA_PROD_PASSWORD`).
+  - title: One-time setup (only if deps are missing)
+    text: |-
+      If `scripts/node_modules` does not exist in this skill directory, run once:
+      ```
+      cd <skill-dir>/scripts && pnpm install --frozen-lockfile && pnpm exec playwright install chromium
+      ```
+
+steps:
+  - Ensure deps are installed (one-time setup above).
+  - |-
+    Run the script from the app's project root (so screenshots land there), passing the
+    environment:
+    ```
+    cd ~/myqa-output && node ~/.hermes/skills/qa-ai-course-intake/scripts/intake.mjs staging
+    ```
+    (Use `local` or `prod` instead of `staging` for those envs.)
+  - >-
+    Run the script ONCE. Read the result from the JSON file
+    `~/myqa-output/smoke-screens/<env>/intake/result.json` (the script always writes it) — it holds
+    the same object as the `INTAKE_RESULT=<json>` stdout line: `stage`, `turns` (each with the
+    `answer` picked), `brief`, `screenshots`, `error`. Combine with the exit code (0 = brief
+    reached, 1 = not reached, 2 = setup error). **Do NOT re-run the script if the stdout line
+    looks truncated — read `result.json` instead.** Each run costs AI credits and leaves a
+    `[SMOKE]` draft.
+  - >-
+    Do not drive the browser yourself and do not click Confirm — the script already stops at the
+    brief.
+
+report:
+  - >-
+    environment and the script's `stage` (start → logged-in → intake-loaded → gathering →
+    review-brief)
+  - >-
+    whether the Course Review brief was reached; if so, summarize `brief` (title + rough
+    outline/section count)
+  - the answers the script picked (from `turns[].answer` — one real option per question)
+  - the screenshot folder (`screenshots`)
+  - any `error` from the script
+  - >-
+    side effects: a `[SMOKE]` draft course + chat were created on this env (left for manual
+    cleanup — find by the `[SMOKE]` marker in the courses list); AI credits were used;
+    generation was NOT triggered
+pass_if:
+  - exit code 0 and `stage` is `review-brief` with a non-empty `brief`
+fail_if:
+  - >-
+    exit 1: the brief was not reached (report the `stage` and `error` so the script/selectors can
+    be tuned)
+  - "exit 2: setup error (missing creds/deps)"

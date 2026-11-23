@@ -1,0 +1,48 @@
+# yaml-language-server: $schema=../../schema/skill-template.schema.json
+# A skill template: the QA console offers it under Skills → Add skill. [[…]] marks where the author's
+# words go; the console does not add a skill while one is left.
+label: Walk a flow that leaves the account's progress or an attempt
+about: >-
+  Goes through a learner's flow end to end (a course, a quiz, a path) the way a person would. It
+  changes nothing but the test account's own activity, which it records on every environment.
+skill:
+  description: >-
+    Functional test of [[the flow]] — open [[what]] and go through it to [[the end state]]. Records
+    [[what it leaves, e.g. one quiz attempt]] for the test account on every env. Use to check that
+    [[what must work]].
+  title: "[[Your app]] — [[the flow]] (player check)"
+  summary: Open [[what]] and confirm it plays end to end, up to [[the end state]].
+  safety: records_activity
+  side_effects: "[[what it records, e.g. one learner attempt for the test account]]"
+  start_at: /dashboard/[[the list page's path]]
+  rules:
+    - >-
+      Change nothing but the test account's own activity: do not edit, delete or publish anything,
+      and submit no form other than login and [[the flow's own answers]].
+  steps:
+    - Log in and open `<base>/dashboard/[[the list page's path]]`.
+    - >-
+      Pick [[which one, e.g. the published one with the fewest questions]]. If there is none, STOP
+      (not a failure): `RESULT: PASS — nothing to [[take]] (nothing to test)`.
+    - "[[Open it, e.g. its player URL]]"
+    - "[[Go through it, step by step]]"
+    - Verify [[the end state, e.g. the results screen shows a score]].
+  screenshots:
+    folder: flow
+    files:
+      - "`01-list.png`"
+      - "`02-start.png`"
+      - "`03-end.png`: [[the end state]]"
+  report:
+    - environment
+    - "[[what was taken]] and its id"
+    - how far it got, and whether [[the end state]] rendered
+    - screenshot paths
+    - "side effects: [[what was recorded]] for the test account (expected)"
+  pass_if:
+    - it reached [[the end state]]
+    - there was nothing to [[take]]
+  fail_if:
+    - the environment is unreachable or login fails
+    - "[[a screen of the flow]] errors, never renders, or a loader never resolves"
+    - "[[what else fails it]]"

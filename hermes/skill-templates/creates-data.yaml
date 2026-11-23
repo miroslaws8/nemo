@@ -1,0 +1,50 @@
+# yaml-language-server: $schema=../../schema/skill-template.schema.json
+# A skill template: the QA console offers it under Skills → Add skill. [[…]] marks where the author's
+# words go; the console does not add a skill while one is left.
+label: Create something and check it
+about: >-
+  Creates a record through the app (a course, a quiz, a path) and checks it was saved. Everything it
+  creates is titled with QA_DATA_PREFIX, so the console's Clean up and the nightly sweep remove it.
+skill:
+  description: >-
+    Functional test — create [[what]] in the app and check it was saved. MUTATING (creates data) — runs
+    on every env; what it creates carries the `[SMOKE]` marker for cleanup. Use to test
+    [[the create flow]].
+  title: "[[Your app]] — create [[what]]"
+  summary: Create [[what]] through the app, then confirm it was saved [[and what it holds]].
+  safety: creates_data
+  side_effects: one [[what]]
+  start_at: /dashboard/[[the list page's path]]
+  rules:
+    - >-
+      Do NOT delete or edit what it created — leave everything in place. From the QA console its
+      **Clean up** removes it; by hand it is left for review and removed manually.
+  steps:
+    - Open `<base>/dashboard/[[the list page's path]]` and log in. Confirm the list loaded.
+    - Note how many [[what]] the list shows.
+    - >-
+      Click **[[the create button]]**. Title it `<QA_DATA_PREFIX>[[What]] <YYYY-MM-DD HH:MM>`
+      when `QA_DATA_PREFIX` is set, else `[SMOKE] [[What]] <YYYY-MM-DD HH:MM>` (the current date
+      and time). [[Fill in the rest of the form]], then save.
+    - Verify it was created ([[where it shows, e.g. in the list, or its page opens]]); note its id.
+    - "[[Check what it holds, e.g. reload its page and see the saved fields]]"
+  screenshots:
+    folder: created
+    files:
+      - "`01-list.png`"
+      - "`02-form.png`: the filled form, before saving"
+      - "`03-created.png`"
+  report:
+    - environment
+    - the created [[what]]'s title and id/URL
+    - the list's count before vs after
+    - screenshot paths
+    - >-
+      a reminder: `Left in place: the QA console's Clean up removes it` (with `QA_DATA_PREFIX`)
+      or `Left in place for review — delete manually when done.` (without)
+  pass_if:
+    - "[[what]] was created and still shows after a reload"
+  fail_if:
+    - the environment is unreachable or login fails
+    - the create form errors, or what it saves does not persist
+    - "[[what else fails it]]"

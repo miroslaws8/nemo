@@ -1,0 +1,4 @@
+{
+  "version": 1,
+  "about": "The live events this commit's engine writes (engine/reporters/live-events.ts), as the QA console reads them. The hosted console runs a commit only if it knows this version: bump it when an event changes in a way older consoles can't read."
+}

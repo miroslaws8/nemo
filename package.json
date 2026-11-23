@@ -1,0 +1,35 @@
+{
+  "name": "myqa",
+  "private": true,
+  "description": "Automated QA for web apps: end-to-end tests written in YAML, executed by Playwright Test, with a QA console and AI agent checks.",
+  "scripts": {
+    "test": "playwright test",
+    "test:list": "playwright test --list",
+    "report": "playwright show-report reports/html",
+    "ui": "tsx engine/scripts/ui.ts",
+    "console": "pnpm --dir console/server start",
+    "console:setup": "pnpm --dir console/server install --frozen-lockfile && pnpm --dir console/web install --frozen-lockfile && pnpm --dir console/web build",
+    "console:dev": "pnpm --dir console/web dev",
+    "console:check": "pnpm --dir console/server typecheck && pnpm --dir console/web typecheck && pnpm --dir console/web build",
+    "console:docker": "docker compose -f console/compose.yaml up --build",
+    "schema": "tsx engine/scripts/generate-schema.ts",
+    "skills": "tsx engine/scripts/build-skills.ts",
+    "skills:migrate": "pnpm --silent --dir console/server skills:migrate",
+    "skills:pull": "pnpm --silent --dir console/server skills:pull",
+    "validate": "tsx engine/scripts/validate.ts",
+    "new": "tsx engine/scripts/new-test.ts",
+    "sweep": "tsx engine/scripts/sweep.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "format": "prettier --write \"engine/**/*.ts\" \"console/{server,shared}/**/*.ts\" \"console/web/src/**/*.{ts,vue}\" console/web/vite.config.ts \"ci/**/*.{ts,mts}\" playwright.config.ts",
+    "format:check": "prettier --check \"engine/**/*.ts\" \"console/{server,shared}/**/*.ts\" \"console/web/src/**/*.{ts,vue}\" console/web/vite.config.ts \"ci/**/*.{ts,mts}\" playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0",
+    "@types/node": "^24.19.2",
+    "prettier": "2.8.8",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  }
+}

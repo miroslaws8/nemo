@@ -1,0 +1,26 @@
+{
+  "name": "qa-console-server",
+  "private": true,
+  "description": "The QA console's server (NestJS). Run from the repo root: pnpm console.",
+  "scripts": {
+    "start": "node -r @swc-node/register main.ts",
+    "start:dev": "node --watch -r @swc-node/register main.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "skills:migrate": "node -r @swc-node/register scripts/skills-migrate.ts",
+    "skills:pull": "node -r @swc-node/register scripts/skills-pull.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.1170.0",
+    "@nestjs/common": "12.5.1",
+    "@nestjs/core": "12.5.1",
+    "@nestjs/platform-express": "12.5.1",
+    "@swc-node/register": "1.12.1",
+    "@swc/core": "1.16.22",
+    "reflect-metadata": "0.2.2",
+    "rxjs": "7.8.2"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "typescript": "5.9.3"
+  }
+}

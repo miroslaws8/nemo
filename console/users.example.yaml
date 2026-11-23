@@ -1,0 +1,8 @@
+# Who may use a server QA console, and as what (README → Sign-in and roles): QA_CONSOLE_USERS_FILE.
+#   viewer   — watches runs and CI, reads logs, reports and traces (not prod's)
+#   runner   — also runs, stops, retries and cleans up on staging
+#   operator — also on prod
+# Emails as the app has them (case does not matter). Edits apply at once, without a restart.
+users:
+  someone@example.com: operator
+  other@example.com: viewer

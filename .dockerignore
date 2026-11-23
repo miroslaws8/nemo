@@ -1,0 +1,13 @@
+# The image takes the code, never this machine's state or secrets.
+.git
+.env
+.auth
+reports
+test-results
+smoke-screens
+# Every project's packages (pnpm links them into this machine's store): the image installs its own.
+**/node_modules
+console/web/dist
+console/users.yaml
+**/*.log
+**/.DS_Store

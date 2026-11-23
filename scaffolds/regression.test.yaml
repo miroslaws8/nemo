@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=__SCHEMA_PATH__
+# Regression tests may create data (titles start with safety.data_prefix); no AI credits.
+suite: __SUITE__
+tier: regression
+tags: []
+
+# A fresh course with one empty page per test, created through the API.
+setup: [blank_course]
+
+tests:
+  - name: works on a fresh course
+    steps:
+      - goto: ${course.edit_url}
+      - expect_visible: { text: This page is empty }
+      - expect_no_errors: true

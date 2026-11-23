@@ -1,0 +1,13 @@
+# The asset types the "[SMOKE] Asset Zoo" fixture course holds (built by the Hermes skill
+# /qa-asset-zoo). `label` is the card name in the app's Add Asset modal. A row whose type the zoo
+# lacks fails its test: rebuild the zoo with that type.
+- { type: text_block, label: Text Block }
+- { type: content_block, label: Content Block }
+- { type: hero, label: Hero Section }
+- { type: cards, label: Cards Grid }
+- { type: feature_grid, label: Feature Grid }
+- { type: accordion, label: Accordion }
+- { type: case_study, label: Case Study }
+- { type: goals, label: Goals }
+- { type: numbered_grid, label: Numbered Grid }
+- { type: comparison_columns, label: Comparison Columns }

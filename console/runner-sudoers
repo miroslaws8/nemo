@@ -1,0 +1,9 @@
+# /etc/sudoers.d/qa-console in the console's image (Dockerfile): the console (pwuser) runs branch
+# code as the runner users (QA_CONSOLE_RUNNERS=sudo, console/server/runners.ts).
+#   !use_pty      the runner stays in the process group the console signals: sudo hands it SIGINT
+#   SETENV (-E)   the runner gets the environment the console hands it, nothing of sudo's own
+#   umask 0007    what a runner writes, its group (the console is in it) may read and remove
+Defaults:pwuser !use_pty, !lecture
+Defaults>qa-runner umask=0007, umask_override
+Defaults>qa-runner-guarded umask=0007, umask_override
+pwuser ALL=(qa-runner, qa-runner-guarded) NOPASSWD:SETENV: ALL

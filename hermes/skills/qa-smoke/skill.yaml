@@ -1,0 +1,39 @@
+# yaml-language-server: $schema=../../../schema/skill-file.schema.json
+# What this skill does; pnpm skills writes its SKILL.md (Hermes reads that) from this file.
+description: >-
+  Read-only browser smoke test of the web app (local | staging | prod) — log in and
+  verify the dashboard and courses list render. Use to smoke-test the app, check an environment's
+  login/dashboard is up, or verify the app after a deploy.
+title: App smoke test (local | staging | prod)
+summary: Log in and verify the dashboard and the courses list render.
+safety: read_only
+start_at: /dashboard
+
+steps:
+  - Open `<base>/dashboard` and log in (shared contract → Credentials).
+  - >-
+    Verify the dashboard rendered: the final URL is on the workspace host; no error screen, no
+    401/403/404, no `role=alert`, no stuck loader.
+  - >-
+    Open `<base>/dashboard/courses`; report how many courses are listed (by section if grouped,
+    e.g. Micro-learning / My courses; fall back to section heading counts if a card selector
+    matches nothing).
+
+screenshots:
+  folder: smoke
+  files:
+    - "`01-login.png`: the bare login form, before typing"
+    - "`02-dashboard.png`"
+    - "`03-courses.png`"
+
+report:
+  - environment and final URL
+  - dashboard rendered? (key sections seen)
+  - courses count (or why unknown)
+  - screenshot paths
+  - any side effects
+fail_if:
+  - the environment is unreachable or login fails
+  - the dashboard shows an error, 401, 403 or 404
+  - a loader never resolves
+  - the final URL is not on the workspace host

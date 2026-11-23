@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+suite: Asset — add through the UI (AI-generated)
+tier: ai
+tags: [assets, ui]
+
+# Before each test: a fresh "[SMOKE] E2E …" course with one empty page (via the API, no credits),
+# then resolve_asset checks the row's `ai` against the backend.
+setup: [blank_course, resolve_asset]
+
+# One test per row of the data file (like test.each).
+each:
+  as: asset
+  from: data/assets-ai.yaml
+
+tests:
+  - name: adds ${asset.label} via the Add Asset modal
+    timeout: 25m
+    steps:
+      - goto: ${course.edit_url}
+      - expect_visible: { text: This page is empty }
+      - add_asset_via_modal:
+          label: ${asset.label}
+          ai: ${asset.ai}
+      - wait_asset: { type: "${asset.type}", timeout: 20m }
+      - expect_asset:
+          min_height: 100
+          not_text: [Unknown component type, Generating]
+          images_loaded: true
+          timeout: 5m
+      - expect_no_errors: true
+      - ai_check: Does the ${asset.label} block show real fire-safety content rather than a blank box or a loader?

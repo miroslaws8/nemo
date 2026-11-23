@@ -1,0 +1,24 @@
+# Dashboard sections of a workspace Owner/Admin, by route: the sidebar is regrouped often, the
+# routes stay. A section works when its URL holds (no redirect), its heading shows and no error
+# comes up (the error monitor checks the rest).
+# `heading` is the page heading the app shows, matched as a substring,
+# so "What do you want to teach" also covers "What do you want to teach, {name}?".
+# Certificates needs the plan's certificates feature and the Workforce rows its custom
+# integrations feature — the test account needs both.
+- { name: Home, path: /dashboard, heading: What do you want to teach }
+- { name: Courses, path: /dashboard/courses, heading: Courses }
+- { name: Shared with me, path: /dashboard/share, heading: Shared with me }
+- { name: Collections, path: /dashboard/collections, heading: Collections }
+- { name: Learning Paths, path: /dashboard/learning-paths, heading: Learning Paths }
+- { name: Quizzes, path: /dashboard/quizzes, heading: Quizzes }
+- { name: Certificates, path: /dashboard/certificates, heading: Certificates }
+- { name: Learning Settings, path: /learning-settings, heading: Learning Settings }
+- { name: Recently deleted, path: /dashboard/recently-deleted, heading: Recently deleted }
+- { name: Requests for you, path: /dashboard/contributions, heading: Requests for you }
+- { name: Readiness, path: /dashboard/workforce, heading: Overview }
+- { name: Skill gaps, path: /dashboard/workforce/skill-gaps, heading: Skill gaps }
+- { name: Recommendations, path: /dashboard/workforce/recommendations, heading: Teaching recommendations }
+- { name: Organization, path: /dashboard/workforce/structure, heading: Organization }
+- { name: Work areas, path: /dashboard/workforce/work-areas, heading: Work areas }
+- { name: Automation, path: /dashboard/workforce/automation, heading: Automation }
+- { name: Manage requests, path: /dashboard/workforce/requests, heading: Manage requests }

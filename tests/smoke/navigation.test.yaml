@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+suite: Navigation — dashboard sections open
+tier: smoke
+tags: [navigation]
+
+each:
+  as: section
+  from: data/nav-sections.yaml
+
+tests:
+  - name: opens ${section.name}
+    steps:
+      - goto: ${section.path}
+      # Still on the section: no redirect by a route guard, a plan check or the login.
+      - expect_url: { matches: "${section.path}/?([?#]|$)" }
+      - expect_visible: { role: heading, name: "${section.heading}", exact: false, nth: 0 }

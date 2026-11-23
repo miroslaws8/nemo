@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+suite: Learning path — create and add courses
+tier: regression
+tags: [learning-path]
+
+# Two draft courses of the test's own (through the API), so the picker never touches real
+# courses. The path is made through the UI and tracked; cleanup deletes it before the courses.
+setup:
+  - blank_course: { as: course_a }
+  - blank_course: { as: course_b }
+
+tests:
+  - name: creates a path and adds two courses
+    steps:
+      - goto: /dashboard/learning-paths
+      # The empty list repeats the button, hence nth.
+      - click: { button: New Learning Path, nth: 0 }
+      - fill: { label: Title, in: dialog, value: "${test.data_title}" }
+      - fill: { label: Description, in: dialog, value: Automated test path - safe to delete }
+      - click: { button: Save, in: dialog }
+      - track: { kind: learning_path, title: "${test.data_title}" }
+
+      # Saving keeps the list open; the card's title opens the path.
+      - click: { role: heading, name: "${test.data_title}" }
+      - expect_url: { matches: "/dashboard/learning-paths/\\d+" }
+      - expect_visible: { role: heading, name: "${test.data_title}" }
+
+      # The empty path repeats this button too.
+      - click: { button: Add courses, nth: 0 }
+      - click: { role: button, name: "${course_a.title}", exact: false, in: dialog }
+      - click: { role: button, name: "${course_b.title}", exact: false, in: dialog }
+      - click: { button: Add selected (2), in: dialog }
+
+      - expect_visible: { text: 2 courses }
+      - expect_visible: { role: heading, name: "${course_a.title}" }
+      - expect_visible: { role: heading, name: "${course_b.title}" }

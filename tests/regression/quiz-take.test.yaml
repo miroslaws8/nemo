@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+suite: Quiz — take it as a learner
+tier: regression
+tags: [quiz, learner]
+
+# A two-question quiz of the test's own, created through the API and deleted after the test,
+# so the attempt never counts against a real quiz.
+setup: [quiz]
+
+tests:
+  - name: answers every question and sees the score
+    steps:
+      - goto: ${quiz.player_url}
+      - click: { button: Start Quiz }
+
+      # One round per question: pick the first option, check it, go on.
+      - repeat:
+          until: { text: Quiz Completed }
+          max: 10
+          steps:
+            - click: { css: "button[role=radio], button[role=checkbox]", nth: 0 }
+            - click: { button: Check answer }
+            - click: { button: Continue }
+
+      # The dashboard player keeps the option order and the setup lists the right option first,
+      # so always picking the first option must score every question.
+      - expect_visible: { text: Quiz Completed }
+      - expect_visible: { text: "${quiz.questions} of ${quiz.questions} right" }

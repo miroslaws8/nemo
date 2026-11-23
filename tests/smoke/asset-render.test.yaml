@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+suite: Asset — renders in the Asset Zoo
+tier: smoke
+tags: [assets]
+
+# Read-only: asset_zoo finds the row's asset in the "[SMOKE] Asset Zoo" fixture course (built by
+# the Hermes skill /qa-asset-zoo) and skips the test on an environment without one.
+setup: [asset_zoo]
+
+each:
+  as: asset
+  from: data/asset-zoo.yaml
+
+tests:
+  - name: renders ${asset.label}
+    steps:
+      # The author preview shows every asset of the page at once; the learner view only one.
+      - goto: ${zoo.preview_url}
+      - expect_asset:
+          min_height: 40
+          not_text: [Unknown component type]
+          images_loaded: true
+          timeout: 1m
+      - ai_check: Does the ${asset.label} block show real content rather than a blank box, a stuck loader or an error?

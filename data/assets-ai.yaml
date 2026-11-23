@@ -1,0 +1,6 @@
+# AI-generated asset types. `label` is the card name in the app's Add Asset modal. resolve_asset
+# fails the test if the backend's manual_only list disagrees with `ai`.
+- { type: hero, label: Hero Section, ai: true }
+- { type: cards, label: Cards Grid, ai: true }
+- { type: accordion, label: Accordion, ai: true }
+- { type: feature_grid, label: Feature Grid, ai: true }

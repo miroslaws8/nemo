@@ -1,0 +1,9 @@
+{
+  "name": "qa-ai-course-intake-script",
+  "private": true,
+  "type": "module",
+  "description": "Playwright driver for the app's AI course-creation intake test",
+  "dependencies": {
+    "playwright": "^1.48.0"
+  }
+}

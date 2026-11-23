@@ -1,0 +1,12 @@
+# yaml-language-server: $schema=__SCHEMA_PATH__
+# Smoke tests are read-only: they also run as the scheduled prod monitor.
+suite: __SUITE__
+tier: smoke
+tags: []
+
+tests:
+  - name: opens the page without errors
+    steps:
+      - goto: /dashboard
+      - expect_visible: { role: link, name: Home, nth: 0 }
+      - expect_no_errors: true

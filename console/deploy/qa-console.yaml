@@ -1,0 +1,252 @@
+# The QA console on Kubernetes at qa.example.com: a reference to adapt to your cluster
+# (console/deploy/README.md says what to fill in). One replica on one
+# volume: the console holds one lock per environment and its runs, sessions and clone live on it.
+# Not here: the Secret qa-console-secrets (its keys are in the README) and the image tag. Agent
+# checks also reach api.anthropic.com over HTTPS.
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: qa-console-data
+  labels:
+    app: qa-console
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # Run folders (reports, traces, screenshots; the newest 30 stay), the git clone, the
+      # packages of the latest three lockfiles (pnpm's store) and Chromium of two other Playwright versions.
+      storage: 20Gi
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qa-console-settings
+  labels:
+    app: qa-console
+data:
+  QA_CONSOLE_PORT: "7357"
+  QA_CONSOLE_PUBLIC_URL: https://qa.example.com
+  # Run files (reports, traces, screenshots: written by branch code) on an origin of their own.
+  QA_CONSOLE_FILES_URL: https://qa-files.example.com
+  # People sign in through the app's IdP (here staging's).
+  QA_CONSOLE_IDP_URL: https://auth.staging.example.com
+  QA_CONSOLE_IDP_API_URL: https://api.staging.example.com
+  # The IdP's public OAuth client with the redirect https://qa.example.com/auth/callback.
+  QA_CONSOLE_OAUTH_CLIENT_ID: "<client id>"
+  QA_CONSOLE_USERS_FILE: /config/users.yaml
+  QA_CONSOLE_GIT_URL: https://github.com/<owner>/myqa.git
+  # One run at a time to start with; two once the pod's resources prove enough (an agent check
+  # beside a test run: 3 Gi more memory, below).
+  QA_CONSOLE_MAX_ACTIVE_RUNS: "1"
+  # What agent checks may spend in a day (UTC), in dollars at list prices (default 5).
+  # QA_CONSOLE_AGENT_DAILY_USD: "5"
+  # The skill store (README → Skill store; README here → Skill store): the S3 bucket every
+  # console reads skills from (and QA_CONSOLE_SKILLS_ENDPOINT for a store other than AWS S3). Set it together with its key in the Secret
+  # (QA_CONSOLE_SKILLS_ACCESS_KEY_ID, QA_CONSOLE_SKILLS_SECRET_ACCESS_KEY): one without the other
+  # and the console does not start.
+  # QA_CONSOLE_SKILLS_BUCKET: myqa-skills
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qa-console-users
+  labels:
+    app: qa-console
+data:
+  # Who may use the console, and as what (viewer, runner, operator). The console reads it again
+  # when the ConfigMap changes: no restart.
+  users.yaml: |
+    users:
+      someone@example.com: operator
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qa-console
+  labels:
+    app: qa-console
+spec:
+  replicas: 1
+  # Never two consoles at once: one volume (ReadWriteOnce), one lock per environment.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: qa-console
+  template:
+    metadata:
+      labels:
+        app: qa-console
+    spec:
+      # On SIGTERM the console stops its runs so their tests delete their data (up to 3 minutes),
+      # then exits.
+      terminationGracePeriodSeconds: 240
+      # Kubernetes would hand the pod QA_CONSOLE_PORT=tcp://… for the Service named qa-console,
+      # which the console reads as its own setting.
+      enableServiceLinks: false
+      securityContext:
+        # pwuser of the Playwright image.
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+      containers:
+        - name: console
+          image: <registry>/qa-console:TAG
+          securityContext:
+            # Branch code runs as the image's runner users through sudo (QA_CONSOLE_RUNNERS=sudo):
+            # sudo needs it. A cluster that forbids it: QA_CONSOLE_RUNNERS=self in the settings.
+            allowPrivilegeEscalation: true
+          ports:
+            - name: http
+              containerPort: 7357
+          envFrom:
+            - configMapRef:
+                name: qa-console-settings
+            - secretRef:
+                name: qa-console-secrets
+          # Not ready while it shuts down (503): no new requests reach a console that drains.
+          readinessProbe:
+            httpGet:
+              path: /api/ready
+              port: http
+            periodSeconds: 10
+            failureThreshold: 3
+          # Lenient: a busy console (runs, listings) must not be restarted under its runs.
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            failureThreshold: 6
+          # One run at a time: a test run, or an agent check (Hermes and its Chromium: 2.5 GB at
+          # the peak, the console's own included).
+          resources:
+            requests:
+              cpu: "2"
+              memory: 4Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            # The whole folder, not a subPath: a subPath would not see the ConfigMap change.
+            - name: users
+              mountPath: /config
+              readOnly: true
+            # Chromium needs more shared memory than the default 64 MB.
+            - name: shm
+              mountPath: /dev/shm
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: qa-console-data
+        - name: users
+          configMap:
+            name: qa-console-users
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 1Gi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 4Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qa-console
+  labels:
+    app: qa-console
+spec:
+  selector:
+    app: qa-console
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qa-console
+  labels:
+    app: qa-console
+  annotations:
+    # The event stream (/api/stream) stays open for as long as a page is: no read timeout to cut
+    # it (the console pings every 15 s), and no buffering to hold its events back (it also sends
+    # X-Accel-Buffering: no).
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - qa.example.com
+        - qa-files.example.com
+      secretName: qa-console-tls
+  rules:
+    - host: qa.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qa-console
+                port:
+                  name: http
+    # Run files (QA_CONSOLE_FILES_URL): the same console, which answers that host with them only.
+    - host: qa-files.example.com
+      http:
+        paths:
+          - path: /t/
+            pathType: Prefix
+            backend:
+              service:
+                name: qa-console
+                port:
+                  name: http
+
+---
+# CI runs live (ci/ingest.mts): a step's report comes in one PUT of up to 200 MB.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qa-console-ingest
+  labels:
+    app: qa-console
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 256m
+    nginx.ingress.kubernetes.io/proxy-request-buffering: "off"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - qa.example.com
+      secretName: qa-console-tls
+  rules:
+    - host: qa.example.com
+      http:
+        paths:
+          - path: /api/ingest/
+            pathType: Prefix
+            backend:
+              service:
+                name: qa-console
+                port:
+                  name: http

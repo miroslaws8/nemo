@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "environments": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "base_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "api_url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "credentials": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "alias": {
+            "type": "string",
+            "minLength": 1
+          },
+          "allowed_tiers": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "guarded": {
+            "default": false,
+            "type": "boolean"
+          },
+          "branch": {
+            "default": "develop",
+            "type": "string",
+            "minLength": 1
+          },
+          "local_only": {
+            "default": false,
+            "type": "boolean"
+          },
+          "login_origin": {
+            "type": "string",
+            "format": "uri"
+          },
+          "skill_channel": {
+            "default": "latest",
+            "type": "string",
+            "enum": [
+              "latest",
+              "prod"
+            ]
+          },
+          "agent_checks": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*$"
+            }
+          }
+        },
+        "required": [
+          "base_url",
+          "credentials"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "tiers": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "workers": {
+            "default": 1,
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "retries": {
+            "default": 0,
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 3
+          },
+          "needs": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "read_only": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "profiles": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "tiers": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            }
+          },
+          "global_timeout": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "string",
+                "pattern": "^(\\d+)(ms|s|m|h|d)$"
+              }
+            ]
+          }
+        },
+        "required": [
+          "tiers"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "default_profile": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "safety": {
+      "type": "object",
+      "properties": {
+        "data_prefix": {
+          "type": "string",
+          "minLength": 1
+        },
+        "protected_titles": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "data_prefix"
+      ],
+      "additionalProperties": false
+    },
+    "cleanup": {
+      "type": "object",
+      "properties": {
+        "on_pass": {
+          "type": "string",
+          "enum": [
+            "delete",
+            "keep"
+          ]
+        },
+        "on_fail": {
+          "type": "string",
+          "enum": [
+            "delete",
+            "keep"
+          ]
+        },
+        "on_interrupt": {
+          "default": "delete",
+          "type": "string",
+          "enum": [
+            "delete",
+            "keep"
+          ]
+        }
+      },
+      "required": [
+        "on_pass",
+        "on_fail"
+      ],
+      "additionalProperties": false
+    },
+    "sweeper": {
+      "type": "object",
+      "properties": {
+        "older_than": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "exclusiveMinimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "string",
+              "pattern": "^(\\d+)(ms|s|m|h|d)$"
+            }
+          ]
+        },
+        "max_deletes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "older_than",
+        "max_deletes"
+      ],
+      "additionalProperties": false
+    },
+    "error_monitor": {
+      "type": "object",
+      "properties": {
+        "auto_check": {
+          "type": "boolean"
+        },
+        "ignore": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "auto_check"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "environments",
+    "tiers",
+    "profiles",
+    "default_profile",
+    "safety",
+    "cleanup",
+    "sweeper",
+    "error_monitor"
+  ],
+  "additionalProperties": false
+}

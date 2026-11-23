@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What the template is for, as the console offers it: 'Check a page, changing nothing'."
+    },
+    "about": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A sentence or two on when to start from it."
+    },
+    "skill": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "description": "What the skill checks and when to use it: Hermes's list of skills and the QA console's New run show it."
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The heading of its SKILL.md."
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "description": "What it does, in a few sentences (Markdown)."
+        },
+        "safety": {
+          "type": "string",
+          "enum": [
+            "read_only",
+            "records_activity",
+            "creates_data"
+          ],
+          "description": "What it changes in the app: read_only (nothing but logging in), records_activity (the test account's own progress or attempts), creates_data (records titled as the shared contract says)."
+        },
+        "ai_credits": {
+          "default": false,
+          "description": "It spends AI credits on the environment.",
+          "type": "boolean"
+        },
+        "side_effects": {
+          "description": "What exactly it records or creates (records_activity, creates_data), e.g. 'one learner attempt for the test account'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "arguments": {
+          "description": "What it takes besides the environment, e.g. 'the asset type, a registry slug'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "start_at": {
+          "description": "The page it starts on, from the app's root: /dashboard/quizzes.",
+          "type": "string",
+          "pattern": "^\\/"
+        },
+        "rules": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "What to keep to all along: one rule each (Markdown)."
+        },
+        "sections": {
+          "default": [],
+          "description": "More sections before the steps (Markdown), e.g. a one-time setup or the credentials a script needs.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "title",
+              "text"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "steps": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "What to do, in order (Markdown; a step may hold a list, a table or a code block)."
+        },
+        "screenshots": {
+          "description": "The screenshots the agent saves (none: a script of the skill saves them).",
+          "type": "object",
+          "properties": {
+            "folder": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]*$",
+              "description": "Its folder under ~/myqa-output/smoke-screens/<env>/."
+            },
+            "files": {
+              "minItems": 1,
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "description": "The screenshots to save, each with when to take it."
+            }
+          },
+          "required": [
+            "folder",
+            "files"
+          ],
+          "additionalProperties": false
+        },
+        "report": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "What the report gives after its RESULT line."
+        },
+        "pass_if": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "When it passes (any of these). None: whenever no FAIL case holds."
+        },
+        "fail_if": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "When it fails (any of these)."
+        },
+        "not_a_failure": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "What may look wrong but does not fail it."
+        }
+      },
+      "required": [
+        "description",
+        "title",
+        "summary",
+        "safety",
+        "steps",
+        "report",
+        "fail_if"
+      ],
+      "additionalProperties": false,
+      "description": "The skill it starts as: a skill.yaml's fields, with [[…]] where the author's words go."
+    }
+  },
+  "required": [
+    "label",
+    "about",
+    "skill"
+  ],
+  "additionalProperties": false
+}

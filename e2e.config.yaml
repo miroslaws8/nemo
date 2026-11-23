@@ -1,0 +1,84 @@
+# yaml-language-server: $schema=./schema/config.schema.json
+#
+# What runs where. Each test file declares a tier; a profile picks the tiers for one run:
+#   E2E_ENV=staging E2E_PROFILE=post-deploy pnpm exec playwright test
+# A bare `pnpm exec playwright test` runs default_profile on staging.
+
+environments:
+  # The tests run in a workspace of their own (QA Automation, account qa@example.com) in every
+  # environment, apart from real workspaces.
+  local:
+    base_url: http://qa-automation.localhost:5173
+    credentials: LOCAL # QA_LOCAL_EMAIL / QA_LOCAL_PASSWORD
+    local_only: true # the app on this machine: the server QA console does not offer it
+    login_origin: http://localhost:8090 # the sign-in page (the console's agent checks log in here)
+  staging:
+    base_url: https://qa-automation.staging.example.com
+    api_url: https://api.staging.example.com
+    credentials: STAGE
+    login_origin: https://auth.staging.example.com
+    # After each deploy and on CI's schedule, the QA console runs these Hermes skills here.
+    agent_checks: [qa-smoke, qa-nav-smoke]
+  prod:
+    # Full parity with staging: no allowed_tiers.
+    base_url: https://qa-automation.example.com
+    api_url: https://api.example.com # the login fails loudly if the app calls another host
+    credentials: PROD
+    login_origin: https://auth.example.com
+    # Stored skills run here as promoted to prod (the skill's page → Promote to prod).
+    skill_channel: prod
+    agent_checks: [qa-smoke] # read-only on prod
+    guarded: true # pnpm ui / the console ask for an explicit confirmation before running here
+    branch: main # the QA console's server runs prod's tests from main (the others: develop)
+
+tiers:
+  smoke:
+    description: Read-only checks; also the scheduled prod monitor.
+    read_only: true
+    workers: 2
+    retries: 1
+  regression:
+    description: Creates test data through the API and the UI; no AI credits.
+    workers: 2
+    retries: 1
+  ai:
+    description: AI generation spends credits, so it waits for a green smoke tier and never retries.
+    workers: 2
+    retries: 0
+    needs: [smoke]
+
+profiles:
+  smoke:
+    description: Fast and read-only.
+    tiers: [smoke]
+    global_timeout: 15m
+  post-deploy:
+    description: Everything; runs after each deploy to staging or prod.
+    tiers: [smoke, regression, ai]
+    global_timeout: 60m
+
+default_profile: smoke
+
+safety:
+  # Titles of everything the tests create start with this; nothing else is ever deleted.
+  data_prefix: "[SMOKE] E2E "
+  # Never deleted, whatever the prefix rule says (shared fixtures).
+  protected_titles: ["[SMOKE] Asset Zoo"]
+
+# What happens to the data a test created (courses, quizzes, learning paths) once it finishes.
+# Deletion re-reads each record first: the title prefix and the test user as owner must match.
+cleanup:
+  on_pass: delete
+  on_fail: keep # left for debugging; the sweeper removes it later
+  on_interrupt: delete # a run stopped by hand (Ctrl+C, the console's Stop) cleans up after itself
+
+# What counts as an error during a test: API 5xx/401/403, leaving the app (a login redirect),
+# error toasts and destructive alerts. auto_check fails a test that ends with any of them.
+error_monitor:
+  auto_check: true
+  ignore: [] # regular expressions for known, harmless records, e.g. "^401 GET /api/notifications"
+
+# pnpm sweep: deletes leftovers of the test user that are older than this.
+sweeper:
+  older_than: 1d
+  max_deletes: 50 # more candidates than this means something is off: stop and say so

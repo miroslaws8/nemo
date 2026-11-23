@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=../../schema/skill-template.schema.json
+# A skill template: the QA console offers it under Skills → Add skill. [[…]] marks where the author's
+# words go; the console does not add a skill while one is left.
+label: Check a page, changing nothing
+about: >-
+  Opens a page of the app, checks it renders without errors and that what should be on it is there,
+  and saves screenshots. Read-only on every environment, prod included.
+skill:
+  description: >-
+    Read-only check of [[the page or section]] — log in, open it and verify [[what must be on it]].
+    Use to [[when to run it, e.g. check the page after a deploy]].
+  title: "[[Your app]] — [[the page]] (read-only check)"
+  summary: Open [[the page]] and confirm it renders [[what must be on it]] without errors.
+  safety: read_only
+  start_at: /dashboard/[[the page's path]]
+  steps:
+    - Open `<base>/dashboard/[[the page's path]]` and log in (shared contract → Credentials).
+    - >-
+      Verify the page rendered: the final URL is still the page's; no error screen, no
+      401/403/404/5xx, no `role=alert`, no spinner left after ~8 s.
+    - "[[What to check on it, e.g. the list shows at least one item, each with a title]]"
+  screenshots:
+    folder: page-check
+    files:
+      - "`01-page.png`: the page once it rendered"
+  report:
+    - environment and final URL
+    - what was on the page ([[what to count or name]])
+    - screenshot paths
+  fail_if:
+    - the environment is unreachable or login fails
+    - the page shows an error, 401, 403, 404 or 5xx, or a loader never resolves
+    - "[[what else fails it]]"
+  not_a_failure:
+    - 'an empty-state page ("No … yet"): the account may have no data there'

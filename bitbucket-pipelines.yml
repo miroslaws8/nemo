@@ -1,0 +1,154 @@
+# CI for myqa: runs the YAML e2e tests against the deployed environments.
+#
+#   custom: e2e-staging / e2e-prod   started by the app's deploy pipelines (atlassian/trigger-pipeline:
+#                                    staging deploys → branch develop, prod deploys → branch main) or
+#                                    by hand (Run pipeline)
+#   custom: e2e-prod-monitor         for a Schedule: smoke tests on prod (schedules take no variables)
+#   custom: e2e-sweep                for a Schedule: deletes leftover test data on staging and prod
+#   custom: agent-checks-staging /   for a Schedule: the QA console runs the environment's agent
+#           agent-checks-prod        checks (Hermes skills, agent_checks in e2e.config.yaml); the
+#                                    e2e-staging / e2e-prod steps queue them after a deploy too
+#   pushes and pull requests         Validate (no browser run); a PR can also run staging by hand
+#
+# Secured repository variables: QA_STAGE_EMAIL, QA_STAGE_PASSWORD, QA_PROD_EMAIL,
+# QA_PROD_PASSWORD (the QA accounts), SLACK_WEBHOOK_URL (optional); for the console to follow the
+# e2e runs live (ci/ingest.mts) QA_CONSOLE_INGEST_URL (e.g. https://qa.example.com) and
+# QA_CONSOLE_INGEST_TOKEN (one of the console's QA_CONSOLE_INGEST_TOKENS): a step then waits while
+# a run of the console's own uses its environment (at most 20 minutes). Without them the runs go
+# as before.
+
+# The browsers come from this image, so its version must equal @playwright/test in package.json
+# (pnpm validate checks it).
+image: mcr.microsoft.com/playwright:v1.65.0-noble
+
+definitions:
+  caches:
+    # pnpm's store (the packages node_modules links to), in the clone so the links are hard links.
+    pnpm:
+      key:
+        files:
+          - pnpm-lock.yaml
+          - console/server/pnpm-lock.yaml
+      path: $BITBUCKET_CLONE_DIR/.pnpm-store
+
+  steps:
+    - step: &validate
+        name: Validate
+        caches:
+          - pnpm
+        script:
+          # pnpm 10, with its store where the cache keeps it.
+          - &pnpm npm install -g pnpm@latest-10 && pnpm config set store-dir $BITBUCKET_CLONE_DIR/.pnpm-store
+          - bash ci/validate.sh
+
+    - step: &e2e-staging
+        name: E2E staging
+        size: 2x
+        # Above the 15m deploy wait + the post-deploy profile's 60m global_timeout: a step killed
+        # by max-time skips its after-script, and with it the Slack message.
+        max-time: 90
+        concurrency-group: e2e-staging
+        caches:
+          - pnpm
+        script:
+          - *pnpm
+          - export E2E_ENV=staging E2E_PROFILE="${E2E_PROFILE:-post-deploy}"
+          - bash ci/run.sh
+        after-script:
+          - node ci/notify-slack.mts || true
+          - node ci/ingest.mts report || true
+          # The console's agent checks of this environment, once the deploy was tested (the prod
+          # monitor's pipeline queues none: the console says so).
+          - node ci/ingest.mts agents --after-deploy || true
+        artifacts:
+          - reports/**
+          - test-results/**
+
+    - step: &e2e-prod
+        <<: *e2e-staging
+        name: E2E prod
+        concurrency-group: e2e-prod
+        script:
+          # A green run after a prod deploy is worth a Slack message too.
+          - *pnpm
+          - export E2E_ENV=prod E2E_PROFILE="${E2E_PROFILE:-post-deploy}" E2E_NOTIFY_SUCCESS=true
+          - bash ci/run.sh
+
+pipelines:
+  branches:
+    main:
+      - step: *validate
+    develop:
+      - step: *validate
+
+  pull-requests:
+    '**':
+      - step: *validate
+      - step:
+          <<: *e2e-staging
+          name: E2E staging (run by hand)
+          trigger: manual
+
+  custom:
+    e2e-staging:
+      - variables:
+          - name: E2E_PROFILE
+            default: post-deploy
+            allowed-values:
+              - post-deploy
+              - smoke
+          - name: E2E_EXPECT_FRONTEND_BUILD
+            description: Image tag of the frontend deploy to wait for (empty = don't wait)
+          - name: E2E_EXPECT_API_BUILD
+            description: Image tag of the API deploy to wait for (empty = don't wait)
+      - step: *e2e-staging
+
+    e2e-prod:
+      - variables:
+          - name: E2E_PROFILE
+            default: post-deploy
+            allowed-values:
+              - post-deploy
+              - smoke
+          - name: E2E_EXPECT_FRONTEND_BUILD
+            description: Image tag of the frontend deploy to wait for (empty = don't wait)
+          - name: E2E_EXPECT_API_BUILD
+            description: Image tag of the API deploy to wait for (empty = don't wait)
+      - step: *e2e-prod
+
+    e2e-prod-monitor:
+      - step:
+          <<: *e2e-prod
+          name: E2E prod monitor
+          size: 1x
+          script:
+            - *pnpm
+            - export E2E_ENV=prod E2E_PROFILE=smoke
+            - bash ci/run.sh
+
+    e2e-sweep:
+      - step:
+          name: Sweep test data
+          caches:
+            - pnpm
+          script:
+            - *pnpm
+            - bash ci/sweep.sh
+
+    # A Schedule's agent checks: the console queues and runs them (they wait their turn on the
+    # environment); this step only asks. Plain node runs ci/ingest.mts: no install.
+    agent-checks-staging:
+      - step: &agent-checks
+          name: Agent checks staging
+          image: node:24-slim
+          max-time: 5
+          script:
+            - export E2E_ENV=staging
+            - node ci/ingest.mts agents
+    agent-checks-prod:
+      - step:
+          <<: *agent-checks
+          name: Agent checks prod
+          script:
+            - export E2E_ENV=prod
+            - node ci/ingest.mts agents
