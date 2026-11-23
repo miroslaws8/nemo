@@ -1,5 +1,6 @@
 import {
   defineConfig,
+  devices,
   type PlaywrightTestProject,
   type ReporterDescription,
 } from "@playwright/test";
@@ -33,6 +34,11 @@ if (isMainProcess && run.skippedTiers.length > 0) {
 // A tier waits for the tiers it needs and does not start if one of them fails. Retrying one test of
 // a gated tier can skip the gate on request (E2E_SKIP_NEEDS=1); the login always runs.
 const skipNeeds = process.env.E2E_SKIP_NEEDS === "1";
+
+// An environment with an account signs in first and every test starts with that session; one
+// without (a public site) has no login project. `device` makes every test run as that device.
+const { signsIn, device } = run.environment;
+const deviceSettings = device === null ? {} : devices[device];
 const tierProjects: PlaywrightTestProject[] = run.tiers.map((tier) => ({
   name: tierProjectName(tier.name),
   testMatch: /yaml\.spec\.ts$/,
@@ -40,10 +46,13 @@ const tierProjects: PlaywrightTestProject[] = run.tiers.map((tier) => ({
   workers: tier.workers,
   retries: tier.retries,
   dependencies: [
-    loginProject,
+    ...(signsIn ? [loginProject] : []),
     ...(skipNeeds ? [] : tier.needs.map(tierProjectName)),
   ],
-  use: { storageState: run.environment.storageStatePath },
+  use: {
+    ...deviceSettings,
+    ...(signsIn ? { storageState: run.environment.storageStatePath } : {}),
+  },
 }));
 
 // A run with E2E_RUN_DIR (the console) writes into its own folder and streams live events; the
@@ -87,7 +96,16 @@ export default defineConfig({
   projects: [
     // One retry: a login has stalled on the app's /oauth/callback redirect, and every test
     // depends on it.
-    { name: loginProject, testMatch: /auth\.setup\.ts$/, retries: 1 },
+    ...(signsIn
+      ? [
+          {
+            name: loginProject,
+            testMatch: /auth\.setup\.ts$/,
+            retries: 1,
+            use: deviceSettings,
+          },
+        ]
+      : []),
     ...tierProjects,
   ],
 });

@@ -55,7 +55,13 @@ function summarizeRuns(): string[] {
 // `pnpm new` copies these, so each must still turn into a valid test of its own tier.
 function findBrokenScaffolds(): string[] {
   const config = loadE2eConfig();
-  const environment = buildEnvironment(Object.keys(config.environments)[0]);
+  // Scaffolds are for the app's tests, which may use setups: an environment with an account.
+  const environment = Object.keys(config.environments)
+    .map(buildEnvironment)
+    .find((candidate) => candidate.signsIn);
+  if (environment === undefined) {
+    return [];
+  }
   const problems: string[] = [];
 
   for (const tierName of Object.keys(config.tiers)) {

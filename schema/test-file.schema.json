@@ -1480,6 +1480,31 @@
         {
           "type": "object",
           "properties": {
+            "expect_fits_width": {
+              "type": "boolean",
+              "const": true
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "when": {
+              "type": "string",
+              "minLength": 1
+            },
+            "unless": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "expect_fits_width"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
             "wait_asset": {
               "type": "object",
               "properties": {

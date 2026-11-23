@@ -54,6 +54,12 @@ export interface IEnvironment {
   alias: string;
   apiUrl: string | null;
   allowedTiers: string[] | null;
+  // It has a QA account (`credentials`): its runs sign in first. Otherwise they run signed out.
+  signsIn: boolean;
+  // The Playwright device its tests run as (`device`, e.g. "Pixel 7"); null: a desktop browser.
+  device: string | null;
+  // Its folder under tests/ (`tests`); null: every test no other environment claims.
+  testsFolder: string | null;
   guarded: boolean;
   // The branch a server QA console runs its tests from.
   branch: string;
@@ -318,6 +324,12 @@ export interface IDeletionOutcome {
   reason: string | null;
 }
 
+/** How far a page reaches past the window's right edge (expect_fits_width). */
+export interface IOverflow {
+  excess: number;
+  culprit: string | null;
+}
+
 export interface IQaUser {
   id: number;
 }
@@ -481,7 +493,8 @@ export interface IE2eTestFixtures {
 }
 
 export interface IE2eWorkerFixtures {
-  qaUser: IQaUser;
+  // Asked of the API once per worker, and only when a test has data to delete.
+  qaUser: () => Promise<IQaUser>;
 }
 
 export interface IStepDefinition<TArgs> {

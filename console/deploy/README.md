@@ -181,10 +181,10 @@ the skill store's endpoint. Allow them where egress is restricted.
    curl https://qa.example.com/api/ready    # 200 (503 while it shuts down)
    ```
 3. **Sign in** at `https://qa.example.com` with an account of `users.yaml`.
-4. **A test run:** **New run** → **Scripted tests** → staging → `smoke`: it passes, and its report
+4. **A test run:** **New run** → **Scripted tests** → demo → `smoke`: it passes, and its report
    opens on `qa-files.example.com`.
-5. **An agent check:** **New run** → **Agent check** → `qa-smoke` → staging: it passes, for about
-   a cent.
+5. **An agent check:** **New run** → **Agent check** → `qa-landing-mobile` → demo: it passes, for
+   about a cent.
 
 ## 4. Turn the skill store on (after step 3)
 

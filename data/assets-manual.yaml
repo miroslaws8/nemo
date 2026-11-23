@@ -1,3 +1,0 @@
-# Manual-only asset types (added with their default content, no AI credits). resolve_asset fails
-# the test if the backend's manual_only list disagrees with `ai`.
-- { type: content_block, label: Content Block, ai: false }

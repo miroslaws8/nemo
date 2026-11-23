@@ -1,7 +1,9 @@
 import fs from "node:fs";
+import path from "node:path";
+import { devices } from "@playwright/test";
 import { parse } from "yaml";
 import { z } from "zod";
-import { CONFIG_PATH } from "./paths";
+import { CONFIG_PATH, TESTS_DIRECTORY } from "./paths";
 import { durationSchema } from "./schema";
 import type { IE2eConfig } from "./types";
 
@@ -15,13 +17,33 @@ const nameSchema = z
 const environmentSettingsSchema = z.strictObject({
   base_url: z.url(),
   api_url: z.url().optional(),
+  // The QA account (QA_<NAME>_EMAIL / _PASSWORD). Left out: the tests run signed out (a public
+  // site), with no login, no setups and no data of their own.
   credentials: z
     .string()
     .regex(/^[A-Z][A-Z0-9_]*$/, "the <NAME> in QA_<NAME>_EMAIL, e.g. STAGE")
     .refine(
       (name) => !`${name}_`.startsWith("CONSOLE_"),
       "CONSOLE is taken: QA_CONSOLE_* are the QA console's settings"
-    ),
+    )
+    .optional(),
+  // A Playwright device the tests run as (its screen, user agent and touch), e.g. "Pixel 7".
+  device: z
+    .string()
+    .refine(
+      (name) => Object.hasOwn(devices, name),
+      'not a Playwright device name, e.g. "Pixel 7" or "iPhone 15" (playwright.dev/docs/emulation)'
+    )
+    .optional(),
+  // A folder under tests/ that holds this environment's tests, e.g. "demo". Left out: every test
+  // except those in a folder another environment names here.
+  tests: z
+    .string()
+    .regex(
+      /^[a-z0-9][a-z0-9_-]*(\/[a-z0-9][a-z0-9_-]*)*$/,
+      "a folder under tests/, e.g. demo"
+    )
+    .optional(),
   alias: z.string().min(1).optional(),
   allowed_tiers: z.array(nameSchema).min(1).optional(),
   // Runs write real data with the shared QA account: tools ask for an explicit confirmation.
@@ -174,6 +196,15 @@ function checkReferences(config: IConfigShape, context: z.RefinementCtx): void {
       ["environments", environmentName, "allowed_tiers"],
       environment.allowed_tiers ?? []
     );
+    if (
+      environment.tests !== undefined &&
+      !fs.existsSync(path.join(TESTS_DIRECTORY, environment.tests))
+    ) {
+      report(
+        ["environments", environmentName, "tests"],
+        `tests/${environment.tests} does not exist`
+      );
+    }
   }
 }
 

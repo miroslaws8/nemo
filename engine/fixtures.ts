@@ -35,7 +35,7 @@ function cleanupPolicy(testInfo: TestInfo): ICleanupPolicy {
 async function finishResources(
   registry: IResourceRegistry,
   api: ApiClient,
-  qaUser: IQaUser,
+  qaUser: () => Promise<IQaUser>,
   testInfo: TestInfo
 ): Promise<void> {
   const tracked = registry.list();
@@ -53,7 +53,8 @@ async function finishResources(
     return;
   }
 
-  for (const outcome of await deleteTracked(tracked, api, qaUser.id)) {
+  const { id: ownerId } = await qaUser();
+  for (const outcome of await deleteTracked(tracked, api, ownerId)) {
     testInfo.annotations.push(
       outcome.deleted
         ? {
@@ -70,17 +71,24 @@ async function finishResources(
   }
 }
 
-/** The YAML tests' `test`: an API client and a cleanup registry per test, the test user per worker. */
+/** The YAML tests' `test`: an API client and a cleanup registry per test, the test user per worker (asked for when needed). */
 export const test = base.extend<IE2eTestFixtures, IE2eWorkerFixtures>({
   qaUser: [
     async ({}, use) => {
-      const api = await ApiClient.create(environment);
-      try {
-        const user = await api.get("/api/auth", authUserSchema);
-        await use({ id: user.id });
-      } finally {
-        await api.dispose();
-      }
+      let user: Promise<IQaUser> | null = null;
+      const fetchUser = async (): Promise<IQaUser> => {
+        const api = await ApiClient.create(environment);
+        try {
+          const found = await api.get("/api/auth", authUserSchema);
+          return { id: found.id };
+        } finally {
+          await api.dispose();
+        }
+      };
+      await use(() => {
+        user ??= fetchUser();
+        return user;
+      });
     },
     { scope: "worker" },
   ],

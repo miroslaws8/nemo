@@ -148,5 +148,5 @@ export function skillNameProblem(name: string): string | null {
   }
   return SKILL_NAME_PATTERN.test(name)
     ? null
-    : "The name starts with qa- and goes on in lowercase letters, digits and single hyphens, e.g. qa-quiz-take";
+    : "The name starts with qa- and goes on in lowercase letters, digits and single hyphens, e.g. qa-landing-mobile";
 }

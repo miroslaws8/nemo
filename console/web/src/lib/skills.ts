@@ -35,7 +35,7 @@ export const SAFETY_WORDS: Record<
 export function skillNameHint(name: string): string | null {
   const trimmed = name.trim();
   if (trimmed === "") {
-    return "Give it a name: the folder it goes in, e.g. qa-quiz-take.";
+    return "Give it a name: the folder it goes in, e.g. qa-landing-mobile.";
   }
   return SKILL_NAME_PATTERN.test(trimmed)
     ? null

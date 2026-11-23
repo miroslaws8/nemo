@@ -40,7 +40,7 @@ body:
       label: How to reproduce it
       description: The command you ran, and the smallest test file, config or skill that shows it.
       placeholder: |
-        E2E_ENV=staging pnpm exec playwright test tests/smoke/dashboard.test.yaml
+        E2E_ENV=demo pnpm exec playwright test tests/demo/landing.test.yaml
 
         ```yaml
         suite: …

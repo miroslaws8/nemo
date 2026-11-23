@@ -26,7 +26,7 @@ export function runsScripts(skillMd: string, files: string[]): boolean {
 
 // Why the console cannot run a skill yet (the first that applies), by what the skill needs:
 // Playwright scripts of its own or another skill's (their packages and the QA account's
-// password), or the Asset Zoo fixture that such a script builds.
+// password).
 const NOT_YET: {
   applies: (skillMd: string, files: string[]) => boolean;
   reason: string;
@@ -34,11 +34,6 @@ const NOT_YET: {
   {
     applies: runsScripts,
     reason: "needs Playwright scripts that the console does not run yet",
-  },
-  {
-    applies: (skillMd) => /asset-zoo-[<{]/.test(skillMd),
-    reason:
-      "needs the Asset Zoo fixture, which qa-asset-zoo builds (not offered yet)",
   },
 ];
 

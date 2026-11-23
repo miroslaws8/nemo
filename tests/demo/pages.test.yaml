@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+# Each page of the landing opens on a phone, keeps its URL and fits the screen (data/demo-pages.yaml).
+suite: Landing pages on a phone
+tier: smoke
+tags: [demo, mobile]
+
+each:
+  as: section
+  from: data/demo-pages.yaml
+
+tests:
+  - name: opens ${section.name}
+    steps:
+      - goto: ${section.path}
+      - expect_url: { matches: "${section.path}/?([?#]|$)" }
+      - expect_visible: { css: h1, has_text: "${section.heading}" }
+      - expect_fits_width: true

@@ -5,9 +5,11 @@ Guidance for AI coding agents working in this repository.
 ## What this repo is
 
 QA automation for a web app and its API, kept apart from the app and run against deployed
-environments (staging, prod). The tests, data, templates and skills here are a worked example
-against an e-learning app at `*.example.com`; the app-specific engine code is the API client,
-setups, resources, cleanup gateways and `auth.setup.ts`.
+environments (staging, prod). The tests, data and skill shipped here are a demo: the public
+landing of edplay.ai on a phone (environment `demo`: no `credentials`, so no login and no data;
+`device: Pixel 7`; its tests in `tests/demo`, which no other environment runs; `pnpm demo`).
+The app-specific engine code (the API client, setups, resources, cleanup gateways and
+`auth.setup.ts`) is that of an e-learning app at `*.example.com`, for an environment that signs in.
 
 End-to-end tests are written in YAML (`tests/**/*.test.yaml`) and run by Playwright Test through
 a TypeScript engine (`engine/`). `e2e.config.yaml` holds environments, tiers, run profiles, safety
@@ -62,8 +64,8 @@ pnpm console:docker                                # server console in Docker â†
 ```
 
 Packages: pnpm 10 (`npm install -g pnpm@latest-10`, no `packageManager`
-field). Five projects, each with its own `pnpm-lock.yaml`: the root (the tests), `console/server`,
-`console/web` and the `scripts` of `qa-asset-zoo` and `qa-ai-course-intake`. Never add a
+field). Three projects, each with its own `pnpm-lock.yaml`: the root (the tests), `console/server`
+and `console/web` (and a skill's `scripts` folder, when one has it). Never add a
 `pnpm-workspace.yaml`: with one at the root, `pnpm install` in a sub-folder installs into the root.
 Script arguments go without `--` (pnpm passes it on). The server console installs a commit's
 packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, store

@@ -4,7 +4,7 @@ import { z } from "zod";
 import { loadE2eConfig } from "./config";
 import { environmentVariables } from "./environment";
 import { normalizeSteps } from "./normalize";
-import { E2E_ROOT } from "./paths";
+import { E2E_ROOT, TESTS_DIRECTORY } from "./paths";
 import {
   eachSchema,
   parseDuration,
@@ -29,14 +29,28 @@ import type {
 import { interpolate } from "./variables";
 import { readYamlDocument } from "./yaml-document";
 
-const TESTS_DIRECTORY = path.join(E2E_ROOT, "tests");
 const TEST_FILE_PATTERN = /\.test\.ya?ml$/;
 const DEFAULT_TEST_TIMEOUT_MS = 5 * 60_000;
 
-function findTestFiles(): string[] {
+function isInFolder(entry: string, folder: string): boolean {
+  return entry.split(path.sep).join("/").startsWith(`${folder}/`);
+}
+
+// An environment's own folder (`tests` in e2e.config.yaml), else every test outside the folders
+// other environments name: a public demo's tests never run against staging.
+function findTestFiles(environment: IEnvironment): string[] {
+  const ownFolder = environment.testsFolder;
+  const claimedFolders = Object.values(loadE2eConfig().environments).flatMap(
+    (settings) => (settings.tests === undefined ? [] : [settings.tests])
+  );
   return fs
     .readdirSync(TESTS_DIRECTORY, { recursive: true, encoding: "utf8" })
     .filter((entry) => TEST_FILE_PATTERN.test(entry))
+    .filter((entry) =>
+      ownFolder === null
+        ? !claimedFolders.some((folder) => isInFolder(entry, folder))
+        : isInFolder(entry, ownFolder)
+    )
     .sort()
     .map((entry) => path.join(TESTS_DIRECTORY, entry));
 }
@@ -208,6 +222,34 @@ function checkReadOnlyTier(
   }
 }
 
+// An environment without an account (no `credentials`) has no session for the API: no setups,
+// and no step that registers data for cleanup.
+function checkSignedOut(
+  environment: IEnvironment,
+  setupCalls: ISetupCall[],
+  cases: ITestCase[],
+  file: string,
+  templates: ReadonlyMap<string, ITemplateDefinition>
+): void {
+  if (environment.signsIn) {
+    return;
+  }
+  if (setupCalls.length > 0) {
+    throw new Error(
+      `${file}: ${
+        environment.name
+      } has no account (no credentials in e2e.config.yaml), so setup ${setupCalls
+        .map((call) => call.name)
+        .join(", ")} cannot run there`
+    );
+  }
+  if (cases.some((testCase) => stepsCreateData(testCase.steps, templates))) {
+    throw new Error(
+      `${file}: ${environment.name} has no account (no credentials in e2e.config.yaml), so no step may register data (track)`
+    );
+  }
+}
+
 // A test list (how the console retries tests) splits a full test title on this character.
 const TITLE_SEPARATOR = "›";
 
@@ -259,6 +301,7 @@ export function parseTestSuite(
     )
   );
   checkReadOnlyTier(definition.tier, setupCalls, cases, file, templates);
+  checkSignedOut(environment, setupCalls, cases, file, templates);
   checkTitles(definition.suite, cases, file);
 
   return {
@@ -272,7 +315,7 @@ export function parseTestSuite(
 
 /** Reads every tests/**\/*.test.yaml; a malformed file fails the whole run with its location. */
 export function loadTestSuites(environment: IEnvironment): ITestSuite[] {
-  return findTestFiles().map((filePath) => {
+  return findTestFiles(environment).map((filePath) => {
     const file = path.relative(E2E_ROOT, filePath);
     return parseTestSuite(file, readYamlDocument(filePath, file), environment);
   });

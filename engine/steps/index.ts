@@ -8,6 +8,7 @@ import {
 } from "./assertions";
 import { expectAssetStep, waitAssetStep } from "./assets";
 import { clickStep, fillStep, pressStep } from "./interaction";
+import { expectFitsWidthStep } from "./layout";
 import { expectUrlStep, gotoStep } from "./navigation";
 import { trackStep } from "./track";
 
@@ -22,6 +23,7 @@ export const STEPS: readonly IRegisteredStep[] = [
   expectVisibleStep,
   expectHiddenStep,
   expectNoErrorsStep,
+  expectFitsWidthStep,
   waitAssetStep,
   expectAssetStep,
   aiCheckStep,

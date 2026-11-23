@@ -12,21 +12,17 @@ Built at [Edplay](https://edplay.ai), where it tests Edplay's own apps, and shar
 source for everyone who tests web apps.
 
 ```yaml
-suite: Quiz — take it as a learner
-tier: regression
-setup: [quiz]                     # created through the API, deleted after the test
+suite: Landing on a phone
+tier: smoke                       # read-only: also the scheduled prod monitor
 tests:
-  - name: answers every question and sees the score
+  - name: the menu opens and leads to the pricing
     steps:
-      - goto: ${quiz.player_url}
-      - click: { button: Start Quiz }
-      - repeat:                   # one round per question
-          until: { text: Quiz Completed }
-          steps:
-            - click: { role: radio, nth: 0 }
-            - click: { button: Check answer }
-            - click: { button: Continue }
-      - expect_visible: { text: "${quiz.questions} of ${quiz.questions} right" }
+      - goto: /
+      - click: { button: Open menu }
+      - click: { role: link, name: Pricing, in: dialog }
+      - expect_url: { matches: "/pricing/?([?#]|$)" }
+      - expect_visible: { css: h1 }
+      - expect_fits_width: true   # nothing scrolls sideways on the phone
 ```
 
 ## Why
@@ -72,13 +68,21 @@ git clone https://github.com/miroslaws8/nemo.git && cd nemo
 pnpm install
 pnpm exec playwright install chromium
 pnpm validate                       # offline: config, tests, templates, schemas, skills
+pnpm demo                           # the demo: edplay.ai's landing on a phone, no .env needed
+pnpm report                         # its HTML report: each step and its screenshot
 ```
+
+The demo (`tests/demo/`, environment `demo` in `e2e.config.yaml`) is a public site tested signed
+out on an emulated Pixel 7: the home page, the mobile menu, the FAQ and six pages, each checked
+for errors and for scrolling sideways.
 
 Point it at your app:
 
-1. **`e2e.config.yaml`** — your environments (`base_url`, `api_url`, the sign-in origin), tiers,
-   profiles and safety settings. See [Configuration](docs/guide.md#configuration--e2econfigyaml).
-2. **`.env`** (git-ignored) — the QA account of each environment, by its `credentials` name:
+1. **`e2e.config.yaml`** — your environments (`base_url`, `api_url`, the sign-in origin, a
+   `device` to test as a phone), tiers, profiles and safety settings. See
+   [Configuration](docs/guide.md#configuration--e2econfigyaml).
+2. **`.env`** (git-ignored; start from `cp .env.example .env`) — the QA account of each
+   environment, by its `credentials` name (a public site needs none):
    ```bash
    QA_STAGE_EMAIL=qa@example.com
    QA_STAGE_PASSWORD=…
@@ -99,16 +103,17 @@ A new test from a scaffold: `pnpm new regression quizzes/take-quiz "Quiz — tak
 
 ## Adapting it to your app
 
-The engine, the console and the skill framework are generic. The tests, data, templates and
-skills in this repository are a **worked example** against an e-learning app (courses, quizzes,
-learning paths, AI-generated course assets) at `*.example.com`. Keep what fits, replace the rest:
+The engine, the console and the skill framework are generic. What ships besides them is a demo
+(`tests/demo/`, `data/demo-pages.yaml`, the skill `qa-landing-mobile`: a public landing on a
+phone) and the engine code of the app nemo was built for, an e-learning app with courses and
+quizzes behind a sign-in — the parts to write for your own app:
 
 | Part | Generic | Example-specific: replace for your app |
 |---|---|---|
 | Tests | the format, steps, tiers, templates, scaffolds | `tests/`, `data/`, `templates/` |
-| Sign-in | the session handling, `QA_<ENV>_*` credentials | the login form in `engine/auth.setup.ts` |
+| Sign-in | the session handling, `QA_<ENV>_*` credentials, signed-out environments | the login form in `engine/auth.setup.ts` |
 | Test data | registry, cleanup guard, sweeper, data prefix | the API client and records (`engine/api-client.ts`, `api-schemas.ts`), setups (`engine/setups/`), cleanup gateways (`engine/cleanup/gateways.ts`), asset steps (`engine/steps/assets.ts`) |
-| Agent checks | the console's runner, the skill format and linter, `hermes/skill-template.md` | `hermes/skills/`, the environments in `hermes/qa-shared.md` |
+| Agent checks | the console's runner, the skill format and linter, `hermes/skill-template.md`, `hermes/skill-templates/` | `hermes/skills/`, the environments in `hermes/qa-shared.md` |
 | Console sign-in | OAuth 2 authorization code with PKCE, roles, audit | the IdP's "who am I" call (`/api/auth`, `console/server/auth/`) |
 
 Steps, setups and cleanup gateways are registries: a new one is a file plus one line in its

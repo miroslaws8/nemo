@@ -9,26 +9,24 @@ them into `~/.hermes`, so edit them in the repo (a skill: its `skill.yaml`, then
 
 ## Environment
 
-Each skill takes the environment as its invocation argument. **Default: `staging`.**
-Base URL per environment (env-var override takes priority if set):
-- `local`   → `http://qa-automation.localhost:5173` (override `QA_LOCAL_URL`)
+Each skill takes the environment as its invocation argument (a name in `e2e.config.yaml`).
+**Default: `staging`.** Its base URL is that environment's `base_url`, unless `QA_<NAME>_URL` is
+set (the console sets it for every check it runs). The repo ships:
+- `demo`    → `https://edplay.ai` (a public site on a phone: no account, no login)
 - `staging` → `https://qa-automation.staging.example.com` (override `QA_STAGE_URL`)
 - `prod`    → `https://qa-automation.example.com`      (override `QA_PROD_URL`)
 
-These are the QA Automation workspaces of the test account (`QA_<ENV>_EMAIL`), kept apart
-from real workspaces.
-
-Build every page URL as `<base>/<path>` (e.g. `<base>/dashboard/courses`). **Prod now
-runs the SAME full tests as staging** — see "Prod & test-data safety" below.
+Replace `staging` and `prod` with your app's. Build every page URL as `<base>/<path>`.
+An environment with an account runs with its test account (`QA_<NAME>_EMAIL`), never a personal
+one; one without (`demo`) is never logged in to.
 
 ## Credentials (vault login)
 
 Passwords come ONLY from the credential **vault** auto-fill: the browser tool cannot
 type a password, and `save_login` cannot prompt in a `-z` session. The vault is
-seeded once per login origin with `hermes vault add`:
-- local → `http://localhost:8090`
-- staging → `https://auth.staging.example.com`
-- prod → `https://auth.example.com`
+seeded once per login origin (`login_origin` in `e2e.config.yaml`) with `hermes vault add`,
+e.g. staging → `https://auth.staging.example.com`. An environment without an account has no
+login: skip this section there.
 
 Login procedure (verified):
 1. Open the skill's landing URL; an unauthenticated load redirects to the login
@@ -37,10 +35,10 @@ Login procedure (verified):
    `tool_describe` on `browser_vault` first if its schema is not loaded). Pick the
    item whose `origin` equals the login origin; when several match, the one whose
    `identifier` equals `QA_<ENV>_EMAIL`. Note its `handle` and `identifier`.
-3. Type the identifier into the Email field: `fill_input("#v-0", identifier)`
+3. Type the identifier into the email field of the login form (`fill_input(<its selector>, identifier)`)
    (identifier from the vault, or `QA_<ENV>_EMAIL`). Do not touch the password.
 4. Fill the password via `tool_call` `browser_vault` `{"action":"fill","handle":<handle>}`
-   (it fills `#v-1`). Never type the password.
+   (it fills the password field). Never type the password.
 5. Submit by clicking the form's OWN `button[type=submit]` whose text is "Sign in".
    Never click Google / Microsoft / SSO; if an external OAuth page opens, go back and
    use the email/password form.
@@ -52,15 +50,12 @@ Never print, echo, or log the password.
 
 ## Prod & test-data safety
 
-Prod (`qa-automation.example.com`) runs the FULL test suite, same as staging (decision 2026-11-10:
-full parity). Mutating skills WRITE real data to prod — quiz attempts, course progress,
-`[SMOKE]` draft courses/Learning Paths, AI-gathered drafts — and AI skills spend real credits
-there. No more preview-only / refuse-prod modes.
+Prod runs the FULL test suite, same as staging (full parity). Mutating skills WRITE real data
+to prod — attempts, progress, `[SMOKE]` drafts — and AI skills spend real credits there.
 - Every artefact a skill CREATES keeps the `[SMOKE]` marker in its title so prod test data
   is identifiable and removable. Never delete anything yourself: leave what you created in
   place. (The YAML e2e tests in this repo delete their own `[SMOKE] E2E` data after a passing
-  test, keep it after a failure, and `pnpm sweep` removes leftovers older than a day —
-  never `[SMOKE] Asset Zoo`.)
+  test, keep it after a failure, and `pnpm sweep` removes leftovers older than a day.)
 - **Titles of what you create (`QA_DATA_PREFIX`).** Read it first:
   `os.environ.get("QA_DATA_PREFIX")` in `browser_exec`, `echo "$QA_DATA_PREFIX"` in the
   terminal. The QA console sets it for every check it runs (`[SMOKE] E2E <run id> `, ending in
@@ -69,44 +64,12 @@ there. No more preview-only / refuse-prod modes.
   check, and the nightly sweep after a day, delete what carries it. Not set (a run by hand):
   use the skill's own `[SMOKE] …` title; that data stays for review until someone removes it.
 - Test account: the vault login per origin — use the dedicated QA account of that
-  environment, never a personal one. The Playwright scripts (asset-zoo, ai-course-intake)
-  can't read the vault: they need `QA_<STAGE|PROD|LOCAL>_EMAIL` / `_PASSWORD` in
-  `~/.hermes/.env`.
+  environment, never a personal one. A skill's own Playwright scripts can't read the vault:
+  they need `QA_<NAME>_EMAIL` / `_PASSWORD` in `~/.hermes/.env`.
 - Still NEVER do anything TRULY destructive or costly beyond the skill's purpose, on any
   env: don't delete or edit data you did not create, never complete a payment / enter card
   details, and don't publish to real learners.
-- A purely read-only skill (smoke, nav-smoke, asset-render) stays read-only everywhere — it
-  submits nothing beyond login.
-
-## Per-asset testing fixture (Asset Zoo)
-
-Assets (hero, matching, dialog, accordion, ...) have NO standalone route — they only render
-inside a course page. So per-asset tests use a fixture course `[SMOKE] Asset Zoo`, built by
-`qa-asset-zoo`, which AI-GENERATES a batch of asset types into a blank course (with_ai:true,
-5 assets per page) to test generation. That build writes a manifest
-`~/.hermes/asset-zoo-<env>.json` with `pages` and `assets:[{type, asset_id, page_id,
-generation_status, ai, view_url, learner_url}]`. `qa-asset-render <type> <env>` reads the
-manifest and opens `view_url` — the AUTHOR PREVIEW
-(`<base>/hub/<hub_id>/<chat_id>/ai-builder/<page_id>?mode=preview`), which renders assets by
-NUMERIC page_id with no publish needed. Do NOT use the published learner view
-(`<base>/hub/<hub_id>/course/<page_id>`): the published view addresses pages by a HASH, so a
-numeric page_id redirects to the course home page and the asset is absent. The asset DOM wrapper
-carries `data-asset-id` (numeric) but NO `data-asset-type`, so locate an asset by its `asset_id`
-from the manifest, never by a type attribute. Generation status values: `queued`/`generating`
-(busy) → `completed`/`failed`.
-
-**Frontend add test (separate from render).** `qa-asset-render` only *views* assets. To
-test the real *add* UX — the **Add asset** button, the Add-Asset modal (search + asset cards
-+ AI toggle + prompt), and on-page generation — use `qa-asset-add <type> <env>`. It
-builds a FRESH `[SMOKE] Asset Zoo UI` course (via `ZOO_BLANK_ONLY=1` on the asset-zoo script:
-a blank course + one empty page, no AI, no credits), opens that empty page in the builder's
-EDIT mode (`<base>/hub/<hub_id>/<chat_id>/ai-builder/<page_hash>` — NO `?mode=preview`, so the
-add buttons show), and clicks through the UI to add one asset. Button text: page opens the
-modal via **Add asset** (`builder.buttons.add_asset`); the modal is titled **Add New Asset**;
-the confirm button inside it is **Add Asset** (`asset_selector.add_asset`). The AI toggle
-("Generate this asset with AI") defaults ON for AI-capable types and is absent for manual-only
-types. This UI-add course is SEPARATE from the API-built `[SMOKE] Asset Zoo` render fixture —
-never add via UI into the render fixture.
+- A purely read-only skill stays read-only everywhere — it submits nothing beyond login.
 
 ## Browser resilience & mechanics
 

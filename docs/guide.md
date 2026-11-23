@@ -197,29 +197,27 @@ an operator and its name, and **Stop** ends it (Hermes stops and closes its brow
   words of that line (or what went wrong); then what it spent (tokens as Hermes counts them, by
   kind, and dollars at the model's list prices: `AGENT_MODELS` in `console/server/settings.ts`)
   and the agent's report. **Open transcript** is the whole chat; Hermes's raw stream is attached.
-  The run list shows what each check cost. `/qa-smoke` costs about half a cent on Haiku,
-  nine cents on Sonnet and under a cent on GPT-6 Luna (which takes about three times as long);
-  `/qa-nav-smoke` about two cents on Haiku.
+  The run list shows what each check cost: a short read-only skill costs about half a cent on
+  Haiku, nine cents on Sonnet and under a cent on GPT-6 Luna (which takes about three times as
+  long).
 - **From CI:** after each deploy an e2e step tested, and on the `agent-checks-*` Schedules, CI
   asks the console (`node ci/ingest.mts agents`, with the ingest token; the console checks with
   Bitbucket that the pipeline is running) to queue the checks its environment lists in
-  `agent_checks` (`e2e.config.yaml` of the environment's branch: staging `qa-smoke` and
-  `qa-nav-smoke`, prod `qa-smoke`, read-only) on the default model (GPT-6 Luna; Claude
+  `agent_checks` (`e2e.config.yaml` of the environment's branch, e.g. `agent_checks:
+  [qa-landing-mobile]`) on the default model (GPT-6 Luna; Claude
   Haiku 5.5 where the console has no OpenAI key). They wait their turn like any run, count
   towards the day's limit, and their page says **Queued by** the pipeline; a step that asks again
   gets the checks it queued. CI does not wait for them and its result does not depend on them.
-- **Arguments** (optional): one line the skill gets after the environment, e.g. an asset type
-  (`/qa-asset-render staging hero`).
+- **Arguments** (optional): one line the skill gets after the environment, e.g. a page to look
+  at (`/qa-landing-mobile demo /pricing`).
 - **Run again** repeats it: the same commit, skill, model and arguments.
 - **Clean up** removes the data the check made. The console hands Hermes `QA_DATA_PREFIX`
   (`[SMOKE] E2E <run id> `); a skill starts the title of everything it creates with it
   (`hermes/qa-shared.md`), and Clean up deletes what carries it, as for a run of the tests
-  (`pnpm sweep --run <run id>`). The nightly sweep removes what is left after a day. A quiz
-  attempt or a course's progress stays: there is nothing to delete.
-- **Not offered yet:** the skills that drive the browser from Playwright scripts of their own
-  (`qa-asset-zoo`, `qa-ai-course-intake`, and `qa-asset-add`, which runs the zoo's
-  script), and `qa-asset-render`, which reads the fixture the zoo builds. New run lists them
-  with why.
+  (`pnpm sweep --run <run id>`). The nightly sweep removes what is left after a day. An
+  attempt or a learner's progress stays: there is nothing to delete.
+- **Not offered yet:** skills that drive the browser from Playwright scripts of their own (a
+  `scripts` folder). New run lists them with why.
 
 It takes a model key — `QA_CONSOLE_ANTHROPIC_API_KEY` for the Claude models, an Anthropic API key
 (best one of a workspace of its own with a spend limit), and `QA_CONSOLE_OPENAI_API_KEY` for
@@ -313,8 +311,8 @@ for every new Hermes home, so for each agent home. To use the install you have, 
 
 The team keeps its skills in one place every console reads — the team's and each Mac's — instead
 of git: an S3 bucket of its own (S3-compatible; `QA_CONSOLE_SKILLS_*`, below). Only the
-skills that run Playwright scripts stay in `hermes/skills` (`qa-asset-zoo`,
-`qa-ai-course-intake`, `qa-asset-add`): they are code, with packages of their own.
+skills that run Playwright scripts stay in `hermes/skills`: they are code, with packages of
+their own.
 
 - **In the bucket:** `<prefix>skills/<name>/meta.json` (the skill's versions, who added each and
   when, and the one promoted to prod) and `v<n>/skill.yaml` (a version, never changed once
@@ -508,7 +506,7 @@ deploy, turning the skill store on, CI, and what must stay as it is.
 
 | Section | What it sets |
 |---|---|
-| `environments` | `base_url`, `api_url`, `credentials` prefix; optional `allowed_tiers` to keep tiers off an environment, `guarded: true` to ask for a confirmation before interactive runs (`pnpm ui`, the console), `branch` the server console tests it from (default `develop`), `local_only: true` for one only a developer's machine reaches (the app on localhost: the server console neither shows nor runs it), `login_origin` the origin of its sign-in page (the console's agent checks put the QA account into Hermes's vault for it), `agent_checks` the Hermes skills CI has the console run there after a deploy and on a schedule |
+| `environments` | `base_url`, `api_url`, `credentials` prefix (left out: a public site, tested signed out — no login, no setups, no `track`); `device` a Playwright device its tests run as (`Pixel 7`, `iPhone 15`: screen, user agent, touch); `tests` its own folder under `tests/` (the others leave that folder out); optional `allowed_tiers` to keep tiers off an environment, `guarded: true` to ask for a confirmation before interactive runs (`pnpm ui`, the console), `branch` the server console tests it from (default `develop`), `local_only: true` for one only a developer's machine reaches (the app on localhost: the server console neither shows nor runs it), `login_origin` the origin of its sign-in page (the console's agent checks put the QA account into Hermes's vault for it), `agent_checks` the Hermes skills CI has the console run there after a deploy and on a schedule |
 | `tiers` | per tier: `workers`, `retries`, `needs` (tiers that must pass first), `read_only` |
 | `profiles` | which tiers one run includes, `global_timeout` |
 | `default_profile` | the profile of a bare run |
@@ -524,23 +522,25 @@ deploy whose smoke tests fail. A read-only tier may not create data: no creating
 ## A test file
 
 ```yaml
-suite: Asset — add through the UI         # like describe()
-tier: regression                          # smoke | regression | ai (e2e.config.yaml tiers)
-tags: [assets, ui]                        # --grep @assets
-setup: [blank_course, resolve_asset]      # like beforeEach()
-each: { as: asset, from: data/assets-manual.yaml } # like test.each(): one test per row
+suite: Landing pages on a phone           # like describe()
+tier: smoke                               # smoke | regression | ai (e2e.config.yaml tiers)
+tags: [demo, mobile]                      # --grep @mobile
+setup: []                                 # like beforeEach(): data through the API (see Setups)
+each: { as: section, from: data/demo-pages.yaml } # like test.each(): one test per row
 tests:
-  - name: adds ${asset.label} via the Add Asset modal
-    timeout: 10m                          # optional; skip: true / only: true also work
+  - name: opens ${section.name}
+    timeout: 2m                           # optional; skip: true / only: true also work
     steps:
-      - goto: ${course.edit_url}
-      - expect_visible: { text: This page is empty }
-      - add_asset_via_modal:              # a template call (see Templates)
-          label: ${asset.label}
-          ai: ${asset.ai}
-      - ai_check: Is the new block rendered?
-        unless: asset.ai                  # run the step only if the variable is falsy
+      - goto: ${section.path}
+      - expect_url: { matches: "${section.path}/?([?#]|$)" }
+      - expect_visible: { css: h1, has_text: "${section.heading}" }
+      - expect_fits_width: true
+      - ai_check: Does the page look right on a phone?
+        unless: section.plain             # skip the step when the row's variable is truthy
 ```
+
+`tests/demo/` is the working example: the public landing of edplay.ai on a phone
+(environment `demo`, `pnpm demo`), no account and no `.env` needed.
 
 Add `# yaml-language-server: $schema=../../schema/test-file.schema.json` at the top for
 autocompletion and inline errors in the editor. Folders under `tests/` follow the tiers by
@@ -558,6 +558,7 @@ convention; the `tier` field is what counts.
 | `expect_visible` / `expect_hidden` | target |
 | `expect_url` | exactly one of `contains`, `starts_with`, `matches` (a regex); retries, so it also catches a late redirect |
 | `expect_no_errors` | `true` — the error check below, at this point of the test |
+| `expect_fits_width` | `true` — the page is no wider than the window: nothing scrolls sideways (the phone check; names the element that sticks out) |
 | `repeat` | `until` (a target), `max` rounds (default 25), `steps` — runs the steps until the target shows |
 | `wait_asset` | `type`, `timeout` — polls the API until the new asset finishes generating, then waits for it on the page |
 | `expect_asset` | `id` (default: the last asset), `min_height`, `not_text`, `images_loaded`, `timeout` |
@@ -609,7 +610,7 @@ the path picks a list item: `${course.pages.1.title}`.
 | `published_course` | creates | a published course of `pages` pages (default 2), one manual `asset` each (default `content_block`, no credits) → `${course.pages.N.learner_url}`, `.hash`, `.title`, `.preview_url` |
 | `quiz` | creates | a knowledge quiz of `questions` single-choice questions (default 2), the right option first → `${quiz.player_url}`, `.id`, `.questions` |
 | `resolve_asset` | read-only | checks the `asset` row's `ai` against the backend's manual-only list |
-| `asset_zoo` | read-only | finds the `asset` row's asset in the `[SMOKE] Asset Zoo` fixture (built by Hermes `/qa-asset-zoo`) → `${zoo.preview_url}`, `.asset_id`; skips the test where no zoo exists |
+| `asset_zoo` | read-only | finds the `asset` row's asset in the `[SMOKE] Asset Zoo` fixture (built by a Hermes skill of the app) → `${zoo.preview_url}`, `.asset_id`; skips the test where no zoo exists |
 
 The creating setups take `as` to put a second one in another variable:
 `setup: [{ blank_course: { as: course_a } }, { blank_course: { as: course_b } }]`.
@@ -679,29 +680,18 @@ also checks that every scaffold still makes a valid test.
 ## Hermes agent skills
 
 `hermes/` holds the `qa-*` skills for [Hermes Agent](https://github.com/NousResearch/hermes-agent):
-an AI agent that drives the browser from the command line for exploratory checks (smoke,
-navigation, course view, quiz, learning paths, AI course intake, asset add/render, the Asset Zoo
-fixture). `hermes/qa-shared.md` is the contract every skill follows: environments, vault
-login, safety rules, screenshots, marking what is wrong.
+an AI agent that drives the browser from the command line for exploratory checks.
+`hermes/qa-shared.md` is the contract every skill follows: environments, vault login, safety
+rules, screenshots, marking what is wrong.
 
-Their repeatable checks also run as YAML tests in CI:
-
-| Skill | YAML test |
-|---|---|
-| `qa-smoke` | `tests/smoke/dashboard.test.yaml` |
-| `qa-nav-smoke` | `tests/smoke/navigation.test.yaml` (sections by route: `data/nav-sections.yaml`) |
-| `qa-asset-render` | `tests/smoke/asset-render.test.yaml` (types: `data/asset-zoo.yaml`) |
-| `qa-course-view` | `tests/regression/course-view.test.yaml` |
-| `qa-quiz-take` | `tests/regression/quiz-take.test.yaml` |
-| `qa-lp-create` | `tests/regression/learning-path.test.yaml` |
-| `qa-asset-add` | `tests/regression/add-asset-manual.test.yaml`, `tests/ai/add-asset.test.yaml` |
-
-`qa-asset-zoo` builds the fixture the asset render tests read (once per environment), and
-`qa-ai-course-intake` stays agent-only.
+The repo ships one: `qa-landing-mobile`, the edplay.ai landing on a phone (environment `demo`,
+no login) — the same page the YAML tests in `tests/demo/` check, looked at the way a tester
+would. Start your own from a skill template (`hermes/skill-templates/`, or the console's Skills →
+Add skill).
 
 ```bash
 bash hermes/install.sh                       # links the skills into ~/.hermes (backs up what was there)
-hermes -z "/qa-smoke staging" --accept-hooks
+hermes -z "/qa-landing-mobile demo" --accept-hooks
 ```
 
 - Edit the skills here: `~/.hermes/skills/qa-*` are symlinks to this folder. Most skills are in

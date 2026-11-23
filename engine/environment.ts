@@ -87,7 +87,9 @@ export function buildEnvironment(name: string): IEnvironment {
     );
   }
 
-  const prefix = settings.credentials;
+  // Without an account, the environment's name still prefixes its overrides (QA_DEMO_URL).
+  const prefix =
+    settings.credentials ?? name.toUpperCase().replace(/[^A-Z0-9]/g, "_");
   const baseUrl = withoutTrailingSlash(
     process.env[`QA_${prefix}_URL`] ?? settings.base_url
   );
@@ -106,6 +108,9 @@ export function buildEnvironment(name: string): IEnvironment {
       new URL(baseUrl).hostname.split(".")[0],
     apiUrl: apiUrl === undefined ? null : withoutTrailingSlash(apiUrl),
     allowedTiers: settings.allowed_tiers ?? null,
+    signsIn: settings.credentials !== undefined,
+    device: settings.device ?? null,
+    testsFolder: settings.tests ?? null,
     guarded: settings.guarded,
     branch: settings.branch,
     localOnly: settings.local_only,

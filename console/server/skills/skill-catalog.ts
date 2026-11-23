@@ -39,7 +39,7 @@ import { hashOf, type ISkillStore, type IStoredSkill } from "./skill-stores";
 // version prod runs and how its last check went.
 
 // The skill a new one is best started from (GET /api/skills/example): the smallest.
-const EXAMPLE_SKILL = "qa-smoke";
+const EXAMPLE_SKILL = "qa-landing-mobile";
 
 interface ISkillEntry {
   summary: ISkillSummary;

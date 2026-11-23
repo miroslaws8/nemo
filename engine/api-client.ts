@@ -61,7 +61,8 @@ export class ApiClient {
   private constructor(
     private readonly context: APIRequestContext,
     private readonly environment: IEnvironment,
-    private readonly savedToken: string,
+    // null: an environment without an account (engine/auth.setup.ts never ran), so no token.
+    private readonly savedToken: string | null,
     private readonly browserContext: BrowserContext | null,
     readonly origin: string,
     private readonly notify: INotify | null
@@ -77,6 +78,9 @@ export class ApiClient {
     browserContext: BrowserContext | null = null,
     notify: INotify | null = null
   ): Promise<ApiClient> {
+    if (!environment.signsIn) {
+      return ApiClient.signedOut(environment, notify);
+    }
     const storageState = storageStateSchema.parse(
       readJsonFile(environment.storageStatePath)
     );
@@ -104,6 +108,19 @@ export class ApiClient {
       origin,
       notify
     );
+  }
+
+  /** No account, no session: the origin is api_url, else the site itself, and calls carry no token. */
+  private static async signedOut(
+    environment: IEnvironment,
+    notify: INotify | null
+  ): Promise<ApiClient> {
+    const origin = environment.apiUrl ?? new URL(environment.baseUrl).origin;
+    const context = await request.newContext({
+      baseURL: origin,
+      extraHTTPHeaders: { Accept: "application/json" },
+    });
+    return new ApiClient(context, environment, null, null, origin, notify);
   }
 
   async get<TSchema extends z.ZodType>(
@@ -206,6 +223,9 @@ export class ApiClient {
   }
 
   private async authorization(): Promise<Record<string, string>> {
+    if (this.savedToken === null) {
+      return {};
+    }
     const token =
       this.browserContext === null
         ? this.savedToken

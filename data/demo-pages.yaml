@@ -1,0 +1,8 @@
+# Pages of edplay.ai the demo opens on a phone (tests/demo/pages.test.yaml). `heading` is a part
+# of the page's h1, so a reworded headline fails here first: keep it short.
+- { name: Pricing, path: /pricing, heading: Pay for what you build }
+- { name: About Us, path: /about, heading: Closing the gap }
+- { name: Blog, path: /blog, heading: Blog }
+- { name: Workforce Intelligence, path: /workforce-intelligence, heading: See the big picture }
+- { name: Manufacturing, path: /manufacturing, heading: Make real work teachable }
+- { name: Assets, path: /assets, heading: ways to make learning stick }

@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+# The demo: the public landing of edplay.ai on a phone (environment `demo`, `pnpm demo`).
+# No account and no data: it runs right after a clone, with no .env.
+suite: Landing on a phone
+tier: smoke
+tags: [demo, mobile]
+
+tests:
+  - name: opens with its headline and a way to book a demo
+    steps:
+      - goto: /
+      - expect_visible: { role: heading, name: "their know-how stays", exact: false }
+      - expect_visible: { role: link, name: Book a demo, nth: 0 }
+      - expect_fits_width: true
+
+  # On a phone the navigation hides behind a menu button: the click is what this checks.
+  - name: the menu opens and leads to the pricing
+    steps:
+      - goto: /
+      - click: { button: Open menu }
+      - click: { role: link, name: Pricing, in: dialog }
+      - expect_url: { matches: "/pricing/?([?#]|$)" }
+      - expect_visible: { css: h1 }
+      - expect_fits_width: true
+
+  - name: a question of the FAQ opens its answer
+    steps:
+      - goto: /
+      - expect_hidden: { text: "On-premise, in your cloud tenant", exact: false }
+      - click: { button: Where does our data live? }
+      - expect_visible: { text: "On-premise, in your cloud tenant", exact: false }

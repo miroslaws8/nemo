@@ -17,8 +17,6 @@ environments:
     api_url: https://api.staging.example.com
     credentials: STAGE
     login_origin: https://auth.staging.example.com
-    # After each deploy and on CI's schedule, the QA console runs these Hermes skills here.
-    agent_checks: [qa-smoke, qa-nav-smoke]
   prod:
     # Full parity with staging: no allowed_tiers.
     base_url: https://qa-automation.example.com
@@ -27,9 +25,15 @@ environments:
     login_origin: https://auth.example.com
     # Stored skills run here as promoted to prod (the skill's page → Promote to prod).
     skill_channel: prod
-    agent_checks: [qa-smoke] # read-only on prod
     guarded: true # pnpm ui / the console ask for an explicit confirmation before running here
     branch: main # the QA console's server runs prod's tests from main (the others: develop)
+  # The demo: the public landing of Edplay on a phone. No account (no credentials), so it signs in
+  # nowhere and creates nothing; its tests are tests/demo, and only it runs them. `pnpm demo`.
+  demo:
+    base_url: https://edplay.ai
+    device: Pixel 7 # Chromium with a phone's screen, user agent and touch
+    tests: demo
+    allowed_tiers: [smoke]
 
 tiers:
   smoke:
