@@ -1,0 +1,86 @@
+import { z } from "zod";
+
+// The `ai` section of e2e.config.yaml as written (snake_case). engine/ai/settings.ts turns it into
+// IAiSettings for one environment and profile. Kept apart from settings.ts so that engine/config.ts
+// can use it without importing what reads the config.
+
+/** How the engine talks to a model: a strategy each (engine/ai/protocols/). */
+export const AI_PROTOCOLS = ["openai", "anthropic"] as const;
+
+const roleNameSchema = z
+  .string()
+  .regex(/^[a-z][a-z0-9_-]*$/, "use lowercase letters, digits, - and _");
+
+const modelSchema = z.strictObject({
+  protocol: z.enum(AI_PROTOCOLS),
+  model: z.string().min(1),
+  // Another server of the protocol: OpenRouter, Ollama (http://localhost:11434/v1), vLLM, ….
+  base_url: z.url().optional(),
+  // The variable holding its API key, a QA_* name (the engine's .env loading reaches those);
+  // null for a server that takes none.
+  key: z
+    .string()
+    .regex(
+      /^QA_(?!CONSOLE_)[A-Z0-9_]+$/,
+      "a QA_* variable that is not a QA_CONSOLE_* setting, e.g. QA_AI_OPENAI_KEY"
+    )
+    .nullable(),
+  // It reads images: the judge sends screenshots.
+  vision: z.boolean().default(false),
+  // List prices, for the run's budget.
+  usd_per_million: z.strictObject({
+    input: z.number().min(0),
+    output: z.number().min(0),
+  }),
+});
+
+const judgeSchema = z.strictObject({
+  model: roleNameSchema,
+  escalate_to: roleNameSchema.optional(),
+  // Below this, an answer counts as unsure and the page is checked again.
+  min_confidence: z.number().min(0).max(1).default(0.7),
+  // Checks again with the same model before escalating.
+  retries: z.number().int().min(0).max(3).default(2),
+  // A confident "fail" fails the step (an ai_check may say otherwise for itself).
+  blocking: z.boolean().default(true),
+});
+
+export const aiSettingsSchema = z.strictObject({
+  models: z.record(roleNameSchema, modelSchema),
+  judge: judgeSchema,
+  budget_usd_per_run: z.number().positive().default(2),
+});
+
+/** An environment or a profile switches AI off with `ai: false`. */
+export const aiSwitchSchema = z.literal(false).optional();
+
+export type IAiSection = z.infer<typeof aiSettingsSchema>;
+
+/** The judge's roles must exist and read images; reported at their place in the file. */
+export function checkAiReferences(
+  ai: IAiSection,
+  report: (issuePath: PropertyKey[], message: string) => void
+): void {
+  const roles = Object.keys(ai.models);
+  const used: [string, string | undefined][] = [
+    ["model", ai.judge.model],
+    ["escalate_to", ai.judge.escalate_to],
+  ];
+  for (const [field, role] of used) {
+    if (role === undefined) {
+      continue;
+    }
+    const model = ai.models[role];
+    if (model === undefined) {
+      report(
+        ["ai", "judge", field],
+        `no model "${role}" in ai.models — models: ${roles.join(", ")}`
+      );
+    } else if (!model.vision) {
+      report(
+        ["ai", "judge", field],
+        `"${role}" is not marked vision: true; the judge sends screenshots`
+      );
+    }
+  }
+}

@@ -61,6 +61,10 @@
               "pattern": "^[a-z][a-z0-9-]*$"
             }
           },
+          "ai": {
+            "type": "boolean",
+            "const": false
+          },
           "guarded": {
             "default": false,
             "type": "boolean"
@@ -173,6 +177,10 @@
                 "pattern": "^(\\d+)(ms|s|m|h|d)$"
               }
             ]
+          },
+          "ai": {
+            "type": "boolean",
+            "const": false
           }
         },
         "required": [
@@ -282,6 +290,121 @@
       },
       "required": [
         "auto_check"
+      ],
+      "additionalProperties": false
+    },
+    "ai": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_-]*$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "protocol": {
+                "type": "string",
+                "enum": [
+                  "openai",
+                  "anthropic"
+                ]
+              },
+              "model": {
+                "type": "string",
+                "minLength": 1
+              },
+              "base_url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "key": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^QA_(?!CONSOLE_)[A-Z0-9_]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "vision": {
+                "default": false,
+                "type": "boolean"
+              },
+              "usd_per_million": {
+                "type": "object",
+                "properties": {
+                  "input": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "output": {
+                    "type": "number",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "input",
+                  "output"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "protocol",
+              "model",
+              "key",
+              "usd_per_million"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "judge": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "escalate_to": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "min_confidence": {
+              "default": 0.7,
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "retries": {
+              "default": 2,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 3
+            },
+            "blocking": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "model"
+          ],
+          "additionalProperties": false
+        },
+        "budget_usd_per_run": {
+          "default": 2,
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "models",
+        "judge"
       ],
       "additionalProperties": false
     }

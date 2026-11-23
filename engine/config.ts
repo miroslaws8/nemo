@@ -3,6 +3,11 @@ import path from "node:path";
 import { devices } from "@playwright/test";
 import { parse } from "yaml";
 import { z } from "zod";
+import {
+  aiSettingsSchema,
+  aiSwitchSchema,
+  checkAiReferences,
+} from "./ai/settings-schema";
 import { CONFIG_PATH, TESTS_DIRECTORY } from "./paths";
 import { durationSchema } from "./schema";
 import type { IE2eConfig } from "./types";
@@ -67,6 +72,8 @@ const environmentSettingsSchema = z.strictObject({
     })
     .optional(),
   allowed_tiers: z.array(nameSchema).min(1).optional(),
+  // `ai: false`: no AI here, whatever the `ai` section says.
+  ai: aiSwitchSchema,
   // Runs write real data with the shared QA account: tools ask for an explicit confirmation.
   guarded: z.boolean().default(false),
   // The git branch the QA console's server runs this environment's tests from.
@@ -99,6 +106,8 @@ const profileSettingsSchema = z.strictObject({
   description: z.string().optional(),
   tiers: z.array(nameSchema).min(1),
   global_timeout: durationSchema.optional(),
+  // `ai: false`: no AI in this profile's runs (e.g. a monitor), whatever the `ai` section says.
+  ai: aiSwitchSchema,
 });
 
 const safetySettingsSchema = z.strictObject({
@@ -147,6 +156,8 @@ const configShapeSchema = z.strictObject({
   cleanup: cleanupSettingsSchema,
   sweeper: sweeperSettingsSchema,
   error_monitor: errorMonitorSettingsSchema,
+  // The models AI features use, by role (engine/ai/, docs/guide.md → AI). None: AI is off.
+  ai: aiSettingsSchema.optional(),
 });
 
 type IConfigShape = z.infer<typeof configShapeSchema>;
@@ -209,6 +220,9 @@ function checkReferences(config: IConfigShape, context: z.RefinementCtx): void {
         );
       }
     }
+  }
+  if (config.ai !== undefined) {
+    checkAiReferences(config.ai, report);
   }
   for (const [environmentName, environment] of Object.entries(
     config.environments

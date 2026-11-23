@@ -10,6 +10,7 @@ pnpm --dir console/server install --frozen-lockfile
 pnpm --dir console/server typecheck
 pnpm format:check
 pnpm validate
+pnpm unit
 
 # Playwright must be able to build every environment × profile (projects, dependencies).
 for environment in staging prod; do

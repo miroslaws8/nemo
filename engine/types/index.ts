@@ -16,6 +16,7 @@ import type {
   TEMPLATE_PARAM_TYPES,
 } from "../schema";
 import type { skillFileSchema } from "../skill-schema";
+import type { AI_PROTOCOLS } from "../ai/settings-schema";
 
 export type IE2eConfig = z.infer<typeof e2eConfigSchema>;
 export type ICleanupPolicy = IE2eConfig["cleanup"]["on_pass"];
@@ -323,6 +324,35 @@ export interface IDeletionOutcome {
   record: IOwnedRecord | null;
   deleted: boolean;
   reason: string | null;
+}
+
+export type IAiProtocolName = (typeof AI_PROTOCOLS)[number];
+
+/** One model of the `ai` section, by role (e.g. "fast"). */
+export interface IAiModelSettings {
+  protocol: IAiProtocolName;
+  model: string;
+  // Another server of the protocol (OpenRouter, Ollama, …); null: the protocol's own.
+  baseUrl: string | null;
+  // The variable holding its key; null: the server takes none.
+  keyVariable: string | null;
+  vision: boolean;
+  usdPerMillion: { input: number; output: number };
+}
+
+export interface IJudgeSettings {
+  model: string;
+  escalateTo: string | null;
+  minConfidence: number;
+  retries: number;
+  blocking: boolean;
+}
+
+/** The AI settings of one run (engine/ai/settings.ts); null where AI is off. */
+export interface IAiSettings {
+  models: Record<string, IAiModelSettings>;
+  judge: IJudgeSettings;
+  budgetUsdPerRun: number;
 }
 
 /** How far a page reaches past the window's right edge (expect_fits_width). */
