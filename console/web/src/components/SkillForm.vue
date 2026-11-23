@@ -277,7 +277,7 @@ function setSection(
             "
           />
           <p class="text-xs text-muted-foreground">
-            Under ~/myqa-output/smoke-screens/&lt;env&gt;/
+            Under ~/nemo-output/smoke-screens/&lt;env&gt;/
           </p>
           <p
             v-for="(message, at) in errorsAt(['screenshots', 'folder'])"

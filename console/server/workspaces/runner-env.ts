@@ -3,7 +3,7 @@ import { buildEnvironment } from "../../../engine/environment";
 // What a server console hands the code of a branch: the system basics and the credentials of the
 // run's environment, never its own settings (sign-in, git and Bitbucket tokens) or another
 // environment's account. The credentials prefix comes from the console's e2e.config.yaml, not the
-// branch's. (Whoever may push to myqa runs code on the server: this narrows what that code is
+// branch's. (Whoever may push to nemo runs code on the server: this narrows what that code is
 // handed; it is not a sandbox.)
 
 const PASSED: readonly string[] = [

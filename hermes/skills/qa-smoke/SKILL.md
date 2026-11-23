@@ -22,7 +22,7 @@ Start at `<base>/dashboard`.
 3. Open `<base>/dashboard/courses`; report how many courses are listed (by section if grouped, e.g. Micro-learning / My courses; fall back to section heading counts if a card selector matches nothing).
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/smoke/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/smoke/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - `01-login.png`: the bare login form, before typing
 - `02-dashboard.png`
 - `03-courses.png`

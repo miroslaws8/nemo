@@ -108,7 +108,7 @@
             "folder": {
               "type": "string",
               "pattern": "^[a-z0-9][a-z0-9-]*$",
-              "description": "Its folder under ~/myqa-output/smoke-screens/<env>/."
+              "description": "Its folder under ~/nemo-output/smoke-screens/<env>/."
             },
             "files": {
               "minItems": 1,

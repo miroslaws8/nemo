@@ -28,7 +28,7 @@ Start at `<base>/dashboard/learning-paths`.
 6. Verify the courses attached (the detail shows the cards; count == number added).
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/lp/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/lp/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - `01-list.png`
 - `02-create-modal.png`
 - `03-detail-empty.png`

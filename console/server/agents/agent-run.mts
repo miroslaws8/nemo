@@ -9,7 +9,7 @@ import type { ILiveEventPayload } from "../../../engine/types/index.ts";
 import type { IAgentUsage } from "../../shared/types.ts";
 import type { IAgentRunConfig } from "../types.ts";
 
-// One agent check (docs/guide.md → QA Console → Agent checks): Hermes Agent runs one of myqa's
+// One agent check (docs/guide.md → QA Console → Agent checks): Hermes Agent runs one of nemo's
 // skills against an environment, and this tells the console how it goes, as a run of one test.
 // The console starts it as the environment's runner, in the run's tests, with <run dir>/agent.json
 // (agents/agent-runs.ts) and the model key in its provider's variable (config.keyVariable). It
@@ -26,7 +26,7 @@ import type { IAgentRunConfig } from "../types.ts";
 
 const TEST_ID = "agent";
 // Where the skills save their screenshots (hermes/qa-shared.md → Screenshots), under HOME.
-const SCREENSHOTS_FOLDER = "myqa-output";
+const SCREENSHOTS_FOLDER = "nemo-output";
 // Which QA account the vault holds, by login origin (a salted hash: no password).
 const VAULT_MARKER = "qa-console-vault.json";
 const TITLE_LENGTH = 140;

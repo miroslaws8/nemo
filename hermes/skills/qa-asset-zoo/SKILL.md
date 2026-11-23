@@ -52,20 +52,20 @@ cd ~/.hermes/skills/qa-asset-zoo/scripts && pnpm install --frozen-lockfile && pn
 2. **PROBE first on a new env** (cheap: builds ONE page with the first 3 types, generates them,
    dumps every API shape + the generation-status progression):
    ```
-   cd ~/myqa-output && PROBE=1 node ~/.hermes/skills/qa-asset-zoo/scripts/build-asset-zoo.mjs staging
+   cd ~/nemo-output && PROBE=1 node ~/.hermes/skills/qa-asset-zoo/scripts/build-asset-zoo.mjs staging
    ```
-   Read `~/myqa-output/smoke-screens/staging/asset-zoo/probe.json`. Confirm: instance/workspace +
+   Read `~/nemo-output/smoke-screens/staging/asset-zoo/probe.json`. Confirm: instance/workspace +
    API host resolved, asset-config fetched, blank chat created, a page was created, adds
    returned ok, and each asset reached `generation_status: completed` (watch the "waiting…" log
    lines), and the learner page rendered. Fix the script if any step failed before the full
    build.
 3. **Full build** (all batch types, 5/page, writes the manifest):
    ```
-   cd ~/myqa-output && node ~/.hermes/skills/qa-asset-zoo/scripts/build-asset-zoo.mjs staging
+   cd ~/nemo-output && node ~/.hermes/skills/qa-asset-zoo/scripts/build-asset-zoo.mjs staging
    ```
    (Use `local` or `prod` instead of `staging`.) Generation can take several minutes — the
    script polls until every asset is `completed`/`failed` (or a long timeout).
-4. Read the manifest `~/.hermes/asset-zoo-<env>.json` (copy under `~/myqa-output/smoke-screens/<env>/asset-zoo/manifest.json`): `pages`, `assets:[{type, asset_id, page_id, generation_status, ai, learner_url}]`, `missing_types`, `failed_generation`, `add_results`. Combine with exit code (0 = ok, 1 = failed, 2 = setup).
+4. Read the manifest `~/.hermes/asset-zoo-<env>.json` (copy under `~/nemo-output/smoke-screens/<env>/asset-zoo/manifest.json`): `pages`, `assets:[{type, asset_id, page_id, generation_status, ai, learner_url}]`, `missing_types`, `failed_generation`, `add_results`. Combine with exit code (0 = ok, 1 = failed, 2 = setup).
 
 ## Report
 `RESULT: PASS` or `RESULT: FAIL` on the first line, then:

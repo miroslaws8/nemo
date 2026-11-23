@@ -94,7 +94,7 @@ export const skillFieldsSchema = z.strictObject({
       folder: z
         .string()
         .regex(/^[a-z0-9][a-z0-9-]*$/, "a folder name, e.g. quiz")
-        .describe("Its folder under ~/myqa-output/smoke-screens/<env>/."),
+        .describe("Its folder under ~/nemo-output/smoke-screens/<env>/."),
       files: markdownList(
         "The screenshots to save, each with when to take it."
       ).min(1),

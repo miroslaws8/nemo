@@ -7,7 +7,7 @@ import type { ICommandResult, IGitSettings } from "../types";
 import { runProgram, tailOf } from "./commands";
 import { toolEnvironment } from "./runner-env";
 
-// A bare clone of myqa (<data dir>/git/myqa.git) that the server console runs tests from.
+// A bare clone of nemo (<data dir>/git/nemo.git) that the server console runs tests from.
 // Its branches mirror the repository's, fetched at most every GIT_FETCH_INTERVAL_MS. Every run
 // pins its commit (refs/qa-console/runs/<run id>), so a force-push or a deleted branch never takes
 // the YAML of a run that is still kept. The token travels in an HTTP header set through git's
@@ -44,7 +44,7 @@ export class GitRepo {
     ]);
     const sha = result.stdout.trim();
     if (result.code !== 0 || !SHA.test(sha)) {
-      throw new HttpError(404, `myqa has no branch "${branch}"`);
+      throw new HttpError(404, `nemo has no branch "${branch}"`);
     }
     return sha;
   }
@@ -162,7 +162,7 @@ export class GitRepo {
     if (result.code !== 0) {
       throw new HttpError(
         502,
-        `the console cannot fetch myqa: ${tailOf(result.stderr)}`
+        `the console cannot fetch nemo: ${tailOf(result.stderr)}`
       );
     }
     this.fetchedAt = Date.now();

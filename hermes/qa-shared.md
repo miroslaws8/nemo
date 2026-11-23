@@ -4,7 +4,7 @@ Common setup for every `qa-*` test skill. Each skill's SKILL.md says "read this
 file and follow it", then adds only its unique steps. Follow these sections unless a
 skill explicitly overrides them.
 
-This file and the skills live in the `myqa` repo (`hermes/`); `hermes/install.sh` links
+This file and the skills live in the `nemo` repo (`hermes/`); `hermes/install.sh` links
 them into `~/.hermes`, so edit them in the repo (a skill: its `skill.yaml`, then `pnpm skills`).
 
 ## Environment
@@ -129,12 +129,12 @@ The local browser daemon is flaky on heavy pages. Handle it, don't fail on it:
 
 ## Screenshots
 
-Save under `~/myqa-output/smoke-screens/<env>/<skill-subdir>/` (each skill names its subdir and
-filenames). `~/myqa-output` is the QA output folder `hermes/install.sh` creates (it may be a
+Save under `~/nemo-output/smoke-screens/<env>/<skill-subdir>/` (each skill names its subdir and
+filenames). `~/nemo-output` is the QA output folder `hermes/install.sh` creates (it may be a
 symlink to wherever you keep screenshots). IMPORTANT: the browser/exec tool's cwd is
 `~/.hermes`, so a relative `./smoke-screens/...` path — and `os.path.abspath()` of one —
 resolves to `~/.hermes/smoke-screens/...`, scattering screenshots. Always expand the home path:
-`folder = os.path.expanduser("~/myqa-output/smoke-screens/<env>/<skill-subdir>/")`, then
+`folder = os.path.expanduser("~/nemo-output/smoke-screens/<env>/<skill-subdir>/")`, then
 `os.makedirs(folder, exist_ok=True)` and capture with
 `shutil.copy(capture_screenshot(), os.path.join(folder, "<name>.png"))`
 (`capture_screenshot()` returns a temp path). Report absolute paths.

@@ -45,7 +45,7 @@ Any other words are a note from whoever started the skill: follow it within this
      (real content, not a blank/empty box or a stuck loader). Note it as visually confirmed.
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/asset-render/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/asset-render/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - `<type>-01-page.png`: the course view
 - `<type>-02-asset.png`: the asset scrolled into view
 

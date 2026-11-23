@@ -64,9 +64,9 @@ Playwright image (`pnpm validate` checks its version in every workflow too).
   message for every failure (`ci/notify-slack.mts`).
 - Secured repository variables: `QA_STAGE_EMAIL`, `QA_STAGE_PASSWORD`,
   `QA_PROD_EMAIL`, `QA_PROD_PASSWORD` (the QA accounts) and `SLACK_WEBHOOK_URL`.
-- The app's deploy pipelines start a run with `atlassian/trigger-pipeline` (`REPOSITORY: myqa`,
+- The app's deploy pipelines start a run with `atlassian/trigger-pipeline` (`REPOSITORY: nemo`,
   `CUSTOM_PIPELINE_NAME: e2e-staging` or `e2e-prod`, the expected build in `PIPELINE_VARIABLES`),
-  using a repository access token of myqa with Pipelines write access.
+  using a repository access token of nemo with Pipelines write access.
 - After a deploy it tested, an e2e step has the QA console run the environment's agent checks
   (`node ci/ingest.mts agents --after-deploy` in its after-script; the prod monitor runs none).
   For checks on a schedule too, add a Schedule per environment in Bitbucket: the repository's
@@ -155,7 +155,7 @@ folder of a server console), no database.
   running on an environment: both use the same QA account and its API limit.
 - CI needs the repository and a repository access token: in Bitbucket, the repository's **…** →
   **Settings** → **Security** → **Access tokens** → **Create access token**, with the permissions
-  **Pipelines: Read** and **Pipelines: Write** (the token is shown once). Put both in myqa's
+  **Pipelines: Read** and **Pipelines: Write** (the token is shown once). Put both in nemo's
   `.env` as `QA_CONSOLE_BITBUCKET_REPOSITORY=<workspace>/<repository>` and
   `QA_CONSOLE_BITBUCKET_TOKEN=…`, and start the console again. The token stays in the
   console's server; the console asks Bitbucket only while one of its pages is open (every 20 s
@@ -247,7 +247,7 @@ its environment and stays in `.hermes/.env` only while it runs (`ANTHROPIC_API_K
 
 On a Mac (`pnpm console`, `QA_CONSOLE_RUNNERS=self`) a check runs as you, with a terminal:
 Hermes may read whatever you may, `~/.hermes/.env` with its passwords among it. The skills keep
-to the app, but a model can stray (one opened screenshots of an older run in `~/myqa-output` by a
+to the app, but a model can stray (one opened screenshots of an older run in `~/nemo-output` by a
 path it guessed). A check that nobody watches belongs on the Docker or the team's console, where
 it runs as a runner user that reads nothing of the console's or of other environments.
 
@@ -352,7 +352,7 @@ in its data folder.
 
 ### Console settings
 
-The console reads `QA_CONSOLE_*` once at start, from the environment or else myqa's `.env`.
+The console reads `QA_CONSOLE_*` once at start, from the environment or else nemo's `.env`.
 Set up wrong, it does not start: it lists what to fix.
 
 | Setting | Default | What it sets |
@@ -365,7 +365,7 @@ Set up wrong, it does not start: it lists what to fix.
 | `QA_CONSOLE_IDP_API_URL` | — | Server, required: the app's API, e.g. `https://api.example.com` (`/api/auth`: who signed in) |
 | `QA_CONSOLE_OAUTH_CLIENT_ID` | — | Server, required: the console's public OAuth client on that IdP |
 | `QA_CONSOLE_USERS_FILE` | — | Server, required: who may use the console, and as what (below) |
-| `QA_CONSOLE_GIT_URL` | — | Server, required: the myqa repository the runs take their tests from, e.g. `https://github.com/<owner>/myqa.git` (below) |
+| `QA_CONSOLE_GIT_URL` | — | Server, required: the nemo repository the runs take their tests from, e.g. `https://github.com/<owner>/nemo.git` (below) |
 | `QA_CONSOLE_GIT_TOKEN` | — | A repository access token (**Repositories: Read**) for a private https repository |
 | `QA_CONSOLE_DATA_DIR` | `reports`; server `/data` | Where the run folders go (`<dir>/runs/`); a server also keeps its sessions and audit log (`state/`), its clone (`git/`), the packages of the commits it runs (`deps/`, hard links to pnpm's store `pnpm-store/`), Chromium for other Playwright versions (`browsers/`), run snapshots (`work/`) and the QA accounts' sessions (`auth/`, `runner-auth/`) there |
 | `QA_CONSOLE_MAX_ACTIVE_RUNS` | `2` | Runs going at once, 1–8 |
@@ -379,7 +379,7 @@ Set up wrong, it does not start: it lists what to fix.
 | `QA_CONSOLE_OPENAI_API_KEY` | — | Agent checks: the OpenAI models' API key (GPT-6 Luna). Neither key: no agent checks |
 | `QA_CONSOLE_HERMES` | `hermes`; the image `/usr/local/bin/qa-hermes` | Agent checks: the Hermes Agent command |
 | `QA_CONSOLE_AGENT_DAILY_USD` | `5` | Agent checks: what they may spend in a day (UTC), in dollars at list prices |
-| `QA_CONSOLE_SKILLS_BUCKET` | — | [Skill store](#skill-store): the S3 bucket skills live in, e.g. `myqa-skills`. None: skills stay where the mode keeps them. With it go its key, both or neither: |
+| `QA_CONSOLE_SKILLS_BUCKET` | — | [Skill store](#skill-store): the S3 bucket skills live in, e.g. `nemo-skills`. None: skills stay where the mode keeps them. With it go its key, both or neither: |
 | `QA_CONSOLE_SKILLS_ACCESS_KEY_ID`, `QA_CONSOLE_SKILLS_SECRET_ACCESS_KEY` | — | The bucket's key, one that may read and write: every console adds, promotes and deletes skills (a key that may only read: the console lists and runs them, and its changes fail) |
 | `QA_CONSOLE_SKILLS_ENDPOINT` | `https://s3.amazonaws.com` | The S3 API's address (https, except for 127.0.0.1 / localhost) |
 | `QA_CONSOLE_SKILLS_REGION` | `us-east-1` | The region requests are signed for (DigitalOcean Spaces takes any) |
@@ -440,7 +440,7 @@ Taken from the queue, a run is **Preparing**: the commit's files go to a folder 
 its packages (`pnpm install --frozen-lockfile --ignore-scripts` from its `pnpm-lock.yaml`, shared by
 every commit with the same lockfile; the three latest sets stay) link into it. A set's files are
 hard links to pnpm's store (`<data dir>/pnpm-store`), which drops what no set uses when the console
-starts. A commit from before myqa moved to pnpm (no `pnpm-lock.yaml`) does not run: its branch
+starts. A commit from before nemo moved to pnpm (no `pnpm-lock.yaml`) does not run: its branch
 needs a rebase on `develop`. A commit with another Playwright than the image's gets its Chromium
 once per version, installed by that Playwright into `<data dir>/browsers/<version>` (the two latest
 versions stay; the image's system libraries serve them). Stop works there too; a console that
@@ -456,7 +456,7 @@ account), its sessions or secrets; it writes only in its run's folder, its snaps
 sessions folder (`runner-auth/<user>`), and a staging runner cannot read prod's runs or sessions.
 Its listings of tests run as that user too, with a temporary folder of its own. The console does
 not start in this mode on a data folder that every user may write in (a runner could replace the
-console's folders there). Still, whoever may push to myqa runs code on the server, as the
+console's folders there). Still, whoever may push to nemo runs code on the server, as the
 runner of the environments they may run on.
 
 ### Run files on their own origin
@@ -487,7 +487,7 @@ pnpm console:docker                                # builds and starts → http:
 docker compose -f console/compose.yaml stop        # stops the runs first, as on the server
 ```
 
-`console/compose.yaml` takes myqa's `.env` and `~/.hermes/.env`, as the engine does (the IdP
+`console/compose.yaml` takes nemo's `.env` and `~/.hermes/.env`, as the engine does (the IdP
 and git settings, `QA_*` for the QA accounts), and sets what the container needs itself: server mode on port 7357, published at
 `http://127.0.0.1:7359` (run files at `http://localhost:7359`, another origin), `/data` in the
 volume `qa-console-data`, the users file mounted read-only, and the image's Hermes (a
@@ -709,7 +709,7 @@ hermes -z "/qa-smoke staging" --accept-hooks
   `~/.hermes/skills` (`QA_CONSOLE_SKILLS_*` in `.env`; for this a key that may read is enough).
 - Logins come from the Hermes vault (`hermes vault add` per login origin); the script-based skills
   read `QA_<ENV>_EMAIL` / `_PASSWORD` from `~/.hermes/.env`.
-- Screenshots go to `~/myqa-output/smoke-screens/<env>/<skill>/`; make `~/myqa-output` a symlink before
+- Screenshots go to `~/nemo-output/smoke-screens/<env>/<skill>/`; make `~/nemo-output` a symlink before
   installing to keep them elsewhere.
 - What a skill finds wrong on a page it also shows marked: before a `<name>-marked.png` screenshot
   the agent loads `hermes/qa-mark.js` into the page and frames each problem in red, draws a
@@ -742,7 +742,7 @@ pnpm validate      # fails while a SKILL.md is out of date or a skill.yaml is wr
 | `rules` | what to keep to all along |
 | `sections` | more sections before the steps (`title`, `text`), e.g. a one-time setup |
 | `steps` | what to do, in order: one Markdown text each |
-| `screenshots` | `folder` (under `~/myqa-output/smoke-screens/<env>/`) and `files`, each with when to take it |
+| `screenshots` | `folder` (under `~/nemo-output/smoke-screens/<env>/`) and `files`, each with when to take it |
 | `report` | what the report gives after its `RESULT: PASS` / `RESULT: FAIL` line |
 | `pass_if`, `fail_if`, `not_a_failure` | when it passes (any of; none: whenever no FAIL case holds), when it fails (any of), what does not fail it |
 

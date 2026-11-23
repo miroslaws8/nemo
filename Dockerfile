@@ -4,7 +4,7 @@
 # in /data/browsers.
 FROM mcr.microsoft.com/playwright:v1.65.0-noble
 
-# git: runs test commits of myqa; procps: ps finds runs again after a restart; tini: PID 1,
+# git: runs test commits of nemo; procps: ps finds runs again after a restart; tini: PID 1,
 # hands SIGTERM to the console (which stops its runs first) and reaps what their browsers leave;
 # sudo: branch code runs as qa-runner (open environments) or qa-runner-guarded (prod), never as
 # the console (QA_CONSOLE_RUNNERS=sudo; console/runner-sudoers). The console is in both groups.

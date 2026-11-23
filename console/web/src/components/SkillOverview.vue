@@ -90,7 +90,7 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
       <p class="mt-2 text-muted-foreground">
         In
         <code class="rounded-sm bg-muted px-1 py-px font-mono text-[0.85em]"
-          >~/myqa-output/smoke-screens/&lt;env&gt;/{{
+          >~/nemo-output/smoke-screens/&lt;env&gt;/{{
             fields.screenshots.folder
           }}/</code
         >

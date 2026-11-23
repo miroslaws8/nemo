@@ -57,7 +57,7 @@ import type {
   IWorkspace,
 } from "../types";
 
-// Agent checks (docs/guide.md → QA Console → Agent checks): Hermes Agent runs one of myqa's skills
+// Agent checks (docs/guide.md → QA Console → Agent checks): Hermes Agent runs one of nemo's skills
 // (hermes/skills of the run's commit) against an environment with one of AGENT_MODELS. A check
 // is a run like any other (queue, environment lock, Stop, live view); its process is
 // agent-run.mts, which turns Hermes's stream into the run's events. Each environment has an

@@ -23,7 +23,7 @@ Start at `<base>/dashboard`.
 4. For each destination (batch ~5 navigations per call): navigate (click its link, else go to its href), read `js("location.href")`, let it settle, and record OK/FAIL. FAIL if: 401/403/404/5xx, an error screen or `role=alert`, a genuinely blank/no-content page, a spinner with no content after ~8s, or a redirect back to login. Empty-state pages are OK.
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/nav/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/nav/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - one per section: `01-home.png`, `02-courses.png`, …; always keep a failing section's shot
 
 When something on a page is wrong or missing, also save a marked screenshot of it (`<name>-marked.png`), as the shared contract's Marking what is wrong section says, and name it in the report.

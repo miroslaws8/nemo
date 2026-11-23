@@ -103,7 +103,7 @@ export const agentUsageSchema = z.object({
   estimatedUsd: z.number().min(0),
 });
 
-/** An agent check: Hermes Agent runs one of myqa's skills (hermes/skills) with a model. */
+/** An agent check: Hermes Agent runs one of nemo's skills (hermes/skills) with a model. */
 export const agentRunSchema = z.object({
   skill: z.string().min(1),
   model: z.string().min(1),
@@ -500,7 +500,7 @@ export const meSchema = z.object({
   role: z.enum(ROLES),
 });
 
-// CI: the myqa pipelines on Bitbucket (console/server/sources), as the console shows them.
+// CI: the nemo pipelines on Bitbucket (console/server/sources), as the console shows them.
 
 export const CI_STATUSES = [
   "pending",

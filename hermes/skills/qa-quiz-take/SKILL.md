@@ -52,7 +52,7 @@ This is a multi-step flow but each wait is short (a per-question submit is a qui
 7. Verify the Results screen rendered: a score/outcome is shown (correct count or a percentage) and a retry/restart action exists.
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/quiz/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/quiz/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - `01-quiz-list.png`
 - `02-quiz-start.png`
 - `03-question.png`: during the answer loop, after the first question renders (the loop does not capture it by itself)

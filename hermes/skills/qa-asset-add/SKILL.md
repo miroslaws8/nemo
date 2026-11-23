@@ -32,7 +32,7 @@ Any other words are a note from whoever started the skill: follow it within this
 1. Resolve the asset type (default `hero`) and the environment (default `staging`) from the arguments.
 2. **Create the fresh blank course** via the setup script (exec/bash, not the browser):
    ```
-   cd ~/myqa-output && ZOO_BLANK_ONLY=1 node ~/.hermes/skills/qa-asset-zoo/scripts/build-asset-zoo.mjs <env>
+   cd ~/nemo-output && ZOO_BLANK_ONLY=1 node ~/.hermes/skills/qa-asset-zoo/scripts/build-asset-zoo.mjs <env>
    ```
    Parse the `ZOO_RESULT={...}` JSON line from stdout (also saved to
    `~/.hermes/asset-add-<env>.json`): note `edit_url`, `hub_id`, `title`, `page_id`.
@@ -84,7 +84,7 @@ Any other words are a note from whoever started the skill: follow it within this
      stuck loader). Note it as visually confirmed. Screenshot `04-rendered`.
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/asset-add/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/asset-add/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - `<type>-01-empty.png`
 - `<type>-02-modal.png`
 - `<type>-03-generating.png`

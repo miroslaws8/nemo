@@ -16,11 +16,11 @@ import type {
   ISkillRegistrySettings,
 } from "./types";
 
-// How this console runs, from QA_CONSOLE_* settings (the environment, else myqa's .env):
+// How this console runs, from QA_CONSOLE_* settings (the environment, else nemo's .env):
 //   local  — a developer's machine: loopback only, nobody signs in, tests from this working tree;
 //   server — the team's console at QA_CONSOLE_PUBLIC_URL: people sign in with their account
 //            of the app (QA_CONSOLE_IDP_URL, _IDP_API_URL, _OAUTH_CLIENT_ID) and get the role the
-//            users file (QA_CONSOLE_USERS_FILE) gives them; each run tests a commit of myqa
+//            users file (QA_CONSOLE_USERS_FILE) gives them; each run tests a commit of nemo
 //            (QA_CONSOLE_GIT_URL, with QA_CONSOLE_GIT_TOKEN for a private https repository).
 // A server image runs branch code as users of its own (QA_CONSOLE_RUNNERS=sudo, runners.ts).
 // Either mode may serve run files (reports, traces, screenshots: written by branch code) from

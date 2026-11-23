@@ -33,10 +33,10 @@ cd <skill-dir>/scripts && pnpm install --frozen-lockfile && pnpm exec playwright
 2. Run the script from the app's project root (so screenshots land there), passing the
    environment:
    ```
-   cd ~/myqa-output && node ~/.hermes/skills/qa-ai-course-intake/scripts/intake.mjs staging
+   cd ~/nemo-output && node ~/.hermes/skills/qa-ai-course-intake/scripts/intake.mjs staging
    ```
    (Use `local` or `prod` instead of `staging` for those envs.)
-3. Run the script ONCE. Read the result from the JSON file `~/myqa-output/smoke-screens/<env>/intake/result.json` (the script always writes it) — it holds the same object as the `INTAKE_RESULT=<json>` stdout line: `stage`, `turns` (each with the `answer` picked), `brief`, `screenshots`, `error`. Combine with the exit code (0 = brief reached, 1 = not reached, 2 = setup error). **Do NOT re-run the script if the stdout line looks truncated — read `result.json` instead.** Each run costs AI credits and leaves a `[SMOKE]` draft.
+3. Run the script ONCE. Read the result from the JSON file `~/nemo-output/smoke-screens/<env>/intake/result.json` (the script always writes it) — it holds the same object as the `INTAKE_RESULT=<json>` stdout line: `stage`, `turns` (each with the `answer` picked), `brief`, `screenshots`, `error`. Combine with the exit code (0 = brief reached, 1 = not reached, 2 = setup error). **Do NOT re-run the script if the stdout line looks truncated — read `result.json` instead.** Each run costs AI credits and leaves a `[SMOKE]` draft.
 4. Do not drive the browser yourself and do not click Confirm — the script already stops at the brief.
 
 ## Report

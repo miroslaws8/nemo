@@ -178,7 +178,7 @@ export interface ISweeper {
   sweep(env: string, runId: string, apply: boolean): Promise<ISweepResult>;
 }
 
-/** Where a server console gets its tests: the myqa repository. */
+/** Where a server console gets its tests: the nemo repository. */
 export interface IGitSettings {
   url: string;
   // A repository access token (Repositories: Read); only ever in git's environment.

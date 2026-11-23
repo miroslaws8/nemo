@@ -24,7 +24,7 @@ defineProps<{ overview: ICiOverview | null }>();
         <span class="font-mono text-xs text-foreground"
           >QA_CONSOLE_BITBUCKET_TOKEN=…</span
         >
-        in myqa's <span class="font-mono text-xs">.env</span> — a repository
+        in nemo's <span class="font-mono text-xs">.env</span> — a repository
         access token with Pipelines: Read and Write — and start the console
         again.
       </p>

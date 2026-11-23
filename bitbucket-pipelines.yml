@@ -1,4 +1,4 @@
-# CI for myqa: runs the YAML e2e tests against the deployed environments.
+# CI for nemo: runs the YAML e2e tests against the deployed environments.
 #
 #   custom: e2e-staging / e2e-prod   started by the app's deploy pipelines (atlassian/trigger-pipeline:
 #                                    staging deploys → branch develop, prod deploys → branch main) or

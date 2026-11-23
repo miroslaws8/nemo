@@ -82,12 +82,12 @@ stops checks for the rest of the day (UTC) once they spent `QA_CONSOLE_AGENT_DAI
 ### 1.4 The skill store (optional)
 
 1. **The bucket** — on AWS S3 or any S3-compatible store (DigitalOcean Spaces, MinIO, …): a
-   private bucket such as `myqa-skills` (it goes into `QA_CONSOLE_SKILLS_BUCKET`), and its
+   private bucket such as `nemo-skills` (it goes into `QA_CONSOLE_SKILLS_BUCKET`), and its
    endpoint into `QA_CONSOLE_SKILLS_ENDPOINT` (default `https://s3.amazonaws.com`).
 2. **Versioning** on, so that an object changed by hand can be got back (the console itself never
    rewrites a version):
    ```bash
-   aws s3api put-bucket-versioning --bucket myqa-skills \
+   aws s3api put-bucket-versioning --bucket nemo-skills \
      --versioning-configuration Status=Enabled \
      --endpoint-url <endpoint>
    ```
@@ -118,11 +118,11 @@ QA_CONSOLE_IDP_URL: https://auth.staging.example.com
 QA_CONSOLE_IDP_API_URL: https://api.staging.example.com
 QA_CONSOLE_OAUTH_CLIENT_ID: "<client id>"   # from 1.2
 QA_CONSOLE_USERS_FILE: /config/users.yaml
-QA_CONSOLE_GIT_URL: https://github.com/<owner>/myqa.git
+QA_CONSOLE_GIT_URL: https://github.com/<owner>/nemo.git
 QA_CONSOLE_MAX_ACTIVE_RUNS: "1"
 # QA_CONSOLE_BITBUCKET_REPOSITORY: <workspace>/<repository>   # the CI tab, with its token
 # QA_CONSOLE_AGENT_DAILY_USD: "5"
-# QA_CONSOLE_SKILLS_BUCKET: myqa-skills   # step 4, together with the key in the Secret
+# QA_CONSOLE_SKILLS_BUCKET: nemo-skills   # step 4, together with the key in the Secret
 ```
 
 Another files host name: `QA_CONSOLE_FILES_URL` here and the Ingress rule.
@@ -220,7 +220,7 @@ the skill store's endpoint. Allow them where egress is restricted.
 
 ```bash
 # the skill store: the same bucket, the developers' key from 1.4
-QA_CONSOLE_SKILLS_BUCKET=myqa-skills
+QA_CONSOLE_SKILLS_BUCKET=nemo-skills
 QA_CONSOLE_SKILLS_ACCESS_KEY_ID=<the developers' key id>
 QA_CONSOLE_SKILLS_SECRET_ACCESS_KEY=<the developers' key secret>
 # agent checks on this machine (optional)

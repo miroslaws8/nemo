@@ -81,7 +81,7 @@ function ownPlaywright(args: string[]): ICommandLine {
   return { program: process.execPath, args: [PLAYWRIGHT_CLI, ...args] };
 }
 
-// A commit's page on the hosts myqa may live on; null for any other.
+// A commit's page on the hosts nemo may live on; null for any other.
 const COMMIT_PAGES: {
   pattern: RegExp;
   page: (match: RegExpMatchArray) => string;
@@ -237,7 +237,7 @@ class WorkingTree implements IWorkspace {
   }
 }
 
-/** Snapshots of myqa's commits (a server console). */
+/** Snapshots of nemo's commits (a server console). */
 class GitSnapshots implements IWorkspace {
   readonly testsFrom = "git";
   private readonly repo: GitRepo;
@@ -260,7 +260,7 @@ class GitSnapshots implements IWorkspace {
     private readonly runners: IRunners
   ) {
     this.repo = new GitRepo(
-      path.join(settings.dataDir, "git", "myqa.git"),
+      path.join(settings.dataDir, "git", "nemo.git"),
       git
     );
     this.deps = new DepsCache(
@@ -525,7 +525,7 @@ class GitSnapshots implements IWorkspace {
     const lock = await this.repo.show(sha, "pnpm-lock.yaml");
     if (lock === null) {
       throw new Error(
-        `${commit} is from before myqa moved to pnpm (no pnpm-lock.yaml): rebase its branch on develop`
+        `${commit} is from before nemo moved to pnpm (no pnpm-lock.yaml): rebase its branch on develop`
       );
     }
     const depsKey = this.deps.keyOf(lock);

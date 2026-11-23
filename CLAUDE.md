@@ -33,7 +33,7 @@ report, PASS/FAIL; schema `engine/skill-schema.ts`) and filled into the Markdown
 shares, `hermes/skill-template.md`: `pnpm skills` writes its `SKILL.md`, the file Hermes reads.
 Never edit a `SKILL.md` by hand; `pnpm validate` fails while one is out of date. The templates the
 QA console starts a skill from are `hermes/skill-templates/<id>.yaml` (docs/guide.md → Skills).
-Keep them free of personal data and machine paths: use `~/.hermes/…` and `~/myqa-output/…`.
+Keep them free of personal data and machine paths: use `~/.hermes/…` and `~/nemo-output/…`.
 `hermes/qa-mark.js` is the helper an agent loads into the page to mark what is wrong before a
 screenshot (`qaMark`; the shared contract → Marking what is wrong): one JavaScript expression,
 which `pnpm validate` parses; the console links it into each check's home beside the contract

@@ -5,7 +5,7 @@
 set -euo pipefail
 
 HERMES_DIR="$HOME/.hermes"
-QA_OUTPUT_DIR="$HOME/myqa-output"
+QA_OUTPUT_DIR="$HOME/nemo-output"
 REPO_HERMES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP_DIR="$HERMES_DIR/backup-$(date +%Y%m%d-%H%M%S)"
 
@@ -38,8 +38,8 @@ for scripts in "$REPO_HERMES_DIR"/skills/*/scripts; do
   fi
 done
 
-# Skills save screenshots under ~/myqa-output/smoke-screens/<env>/<skill>/. To keep them somewhere
-# else, make ~/myqa-output a symlink to that folder before running this script.
+# Skills save screenshots under ~/nemo-output/smoke-screens/<env>/<skill>/. To keep them somewhere
+# else, make ~/nemo-output a symlink to that folder before running this script.
 if [ ! -e "$QA_OUTPUT_DIR" ]; then
   mkdir -p "$QA_OUTPUT_DIR"
   echo "created $QA_OUTPUT_DIR"
@@ -47,4 +47,4 @@ fi
 
 echo "Done. Credentials stay in the Hermes vault and $HERMES_DIR/.env (QA_* keys), never here."
 # Most skills live in the QA console's skill store, not in git: pnpm skills:pull writes them in.
-echo "Skills from the skill store: pnpm skills:pull (QA_CONSOLE_SKILLS_* in myqa's .env; docs/guide.md → Skills)."
+echo "Skills from the skill store: pnpm skills:pull (QA_CONSOLE_SKILLS_* in nemo's .env; docs/guide.md → Skills)."

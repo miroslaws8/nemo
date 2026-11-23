@@ -1,5 +1,5 @@
 {
-  "name": "myqa",
+  "name": "nemo",
   "private": true,
   "description": "Automated QA for web apps: end-to-end tests written in YAML, executed by Playwright Test, with a QA console and AI agent checks.",
   "license": "Apache-2.0",

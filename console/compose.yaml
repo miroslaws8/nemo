@@ -1,6 +1,6 @@
 # The server console on this machine, built and run the way the team's server runs it
 # (docs/guide.md → QA Console → Docker): pnpm console:docker → http://127.0.0.1:7359
-# myqa's .env (and ~/.hermes/.env) give the settings (QA_CONSOLE_IDP_*, _OAUTH_CLIENT_ID,
+# nemo's .env (and ~/.hermes/.env) give the settings (QA_CONSOLE_IDP_*, _OAUTH_CLIENT_ID,
 # _GIT_URL/_GIT_TOKEN, QA_* for the QA accounts); console/users.yaml (a copy of
 # users.example.yaml) the people.
 # Runs, the clone, packages and sessions stay in the volume qa-console-data.
@@ -12,7 +12,7 @@ services:
       context: ..
       dockerfile: Dockerfile
     image: qa-console:local
-    # Where the engine reads them too: ~/.hermes/.env, then myqa's .env (it wins).
+    # Where the engine reads them too: ~/.hermes/.env, then nemo's .env (it wins).
     env_file:
       - path: ${HOME}/.hermes/.env
         required: false

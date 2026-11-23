@@ -1,4 +1,4 @@
-# myqa
+# nemo
 
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Validate](https://github.com/miroslaws8/nemo/actions/workflows/validate.yml/badge.svg)](https://github.com/miroslaws8/nemo/actions/workflows/validate.yml)
@@ -65,7 +65,7 @@ e2e.config.yaml ──────┘
 Requirements: Node.js 24 and pnpm 10 (`npm install -g pnpm@latest-10`).
 
 ```bash
-git clone https://github.com/miroslaws8/nemo.git myqa && cd myqa
+git clone https://github.com/miroslaws8/nemo.git && cd nemo
 pnpm install
 pnpm exec playwright install chromium
 pnpm validate                       # offline: config, tests, templates, schemas, skills

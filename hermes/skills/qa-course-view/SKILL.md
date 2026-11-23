@@ -28,7 +28,7 @@ Start at `<base>/dashboard/courses`.
 6. Note the asset/content types seen (text, image, dialog, quiz, etc.).
 
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/course/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/course/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 - `01-courses-list.png`
 - `02-course-page1.png`
 - `03-course-page2.png` (if present)

@@ -48,7 +48,7 @@ Start at `<base>{{start_at}}`.
 
 {{#screenshots}}
 ## Screenshots
-Save them in `~/myqa-output/smoke-screens/<env>/{{screenshots_folder}}/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
+Save them in `~/nemo-output/smoke-screens/<env>/{{screenshots_folder}}/` as the shared contract's Screenshots section says (expand the home path: a relative `./` path lands in `~/.hermes`), and report their absolute paths:
 {{screenshots}}
 
 When something on a page is wrong or missing, also save a marked screenshot of it (`<name>-marked.png`), as the shared contract's Marking what is wrong section says, and name it in the report.

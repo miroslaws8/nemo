@@ -37,7 +37,7 @@ data:
   # The IdP's public OAuth client with the redirect https://qa.example.com/auth/callback.
   QA_CONSOLE_OAUTH_CLIENT_ID: "<client id>"
   QA_CONSOLE_USERS_FILE: /config/users.yaml
-  QA_CONSOLE_GIT_URL: https://github.com/<owner>/myqa.git
+  QA_CONSOLE_GIT_URL: https://github.com/<owner>/nemo.git
   # One run at a time to start with; two once the pod's resources prove enough (an agent check
   # beside a test run: 3 Gi more memory, below).
   QA_CONSOLE_MAX_ACTIVE_RUNS: "1"
@@ -47,7 +47,7 @@ data:
   # console reads skills from (and QA_CONSOLE_SKILLS_ENDPOINT for a store other than AWS S3). Set it together with its key in the Secret
   # (QA_CONSOLE_SKILLS_ACCESS_KEY_ID, QA_CONSOLE_SKILLS_SECRET_ACCESS_KEY): one without the other
   # and the console does not start.
-  # QA_CONSOLE_SKILLS_BUCKET: myqa-skills
+  # QA_CONSOLE_SKILLS_BUCKET: nemo-skills
 
 ---
 apiVersion: v1
