@@ -23,6 +23,38 @@ client, setups and cleanup are in `engine/` (`api-client.ts`, `setups/`, `resour
 - When the app is released to prod, merge `develop` into `main` here as well, so prod is tested
   against its own features only.
 
+## CI (GitHub Actions)
+
+`.github/workflows/` runs the same scripts in `ci/` as the Bitbucket pipelines below, on the same
+Playwright image (`pnpm validate` checks its version in every workflow too).
+
+| Workflow | Started by | What it runs |
+|---|---|---|
+| `Validate` (`validate.yml`) | every push to `main` / `develop`, every pull request | `ci/validate.sh` (no browser run) |
+| `E2E` (`e2e.yml`) | the app's deploys through the API, or Run workflow | `ci/run.sh` on `environment` with `profile`; tests from `develop` (staging) or `main` (prod), or the `ref` given |
+| `E2E` on its schedule | hourly, once `E2E_SCHEDULES` is `true` | profile `smoke` on prod (the prod monitor) |
+| `Sweep test data` (`sweep.yml`) | daily once `E2E_SCHEDULES` is `true`, or Run workflow | `ci/sweep.sh`: leftover test data on staging and prod |
+
+- **Secrets** (Settings → Secrets and variables → Actions): `QA_STAGE_EMAIL`,
+  `QA_STAGE_PASSWORD`, `QA_PROD_EMAIL`, `QA_PROD_PASSWORD`, and `SLACK_WEBHOOK_URL` (optional).
+  **Variable** `E2E_SCHEDULES=true` turns the schedules on; without it they are skipped, so a fork
+  without an app to test stays quiet.
+- An `E2E` job runs in the GitHub environment named like the test environment (`staging`,
+  `prod`): give `prod` required reviewers there to guard it, and keep its secrets there if you
+  like.
+- The app's deploy pipeline starts a run once its deploy is out; `ci/wait-for-deploy.ts` waits
+  until the expected build serves:
+  ```bash
+  gh workflow run e2e.yml -R <owner>/<repo> -f environment=staging \
+    -f expect_frontend_build=<tag> -f expect_api_build=<tag>
+  ```
+  (or `POST /repos/<owner>/<repo>/actions/workflows/e2e.yml/dispatches` with a token that may
+  run workflows).
+- Results: the job's Slack message on failure (on success too after a prod deploy), and the HTML
+  report, traces and results in the run's artifact `e2e-<env>-<run>` (14 days).
+- Not on GitHub Actions yet: the QA console's CI tab, CI runs live (`ci/ingest.mts`) and the
+  scheduled agent checks. The console reads Bitbucket Pipelines only.
+
 ## CI (Bitbucket Pipelines)
 
 `bitbucket-pipelines.yml` runs the tests against the deployed environments; the scripts are in `ci/`.

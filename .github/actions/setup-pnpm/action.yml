@@ -1,0 +1,18 @@
+# pnpm 10 with its store in the workspace, cached by the lockfiles (as the Bitbucket pipelines'
+# pnpm cache): node_modules hard-links to it.
+name: Set up pnpm
+description: pnpm 10 and a cached store in the workspace
+runs:
+  using: composite
+  steps:
+    - name: Install pnpm
+      shell: bash
+      run: |
+        npm install -g pnpm@latest-10
+        pnpm config set store-dir "$PWD/.pnpm-store"
+    - name: Cache the pnpm store
+      uses: actions/cache@v4
+      with:
+        path: .pnpm-store
+        key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'console/server/pnpm-lock.yaml') }}
+        restore-keys: pnpm-${{ runner.os }}-

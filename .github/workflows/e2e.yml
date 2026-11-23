@@ -1,0 +1,98 @@
+# The YAML e2e tests against a deployed environment (Bitbucket: custom e2e-staging / e2e-prod,
+# e2e-prod-monitor). Started by
+#   - the app's deploy pipeline, through the API (README → CI):
+#       gh workflow run e2e.yml -R <owner>/<repo> -f environment=staging -f expect_frontend_build=<tag>
+#   - by hand: Actions → E2E → Run workflow (a pull request's branch: set `ref`)
+#   - the schedule below: smoke tests on prod (the prod monitor), once the repository variable
+#     E2E_SCHEDULES is true (Settings → Secrets and variables → Actions → Variables)
+# Secrets: QA_STAGE_EMAIL, QA_STAGE_PASSWORD, QA_PROD_EMAIL, QA_PROD_PASSWORD (the QA accounts),
+# SLACK_WEBHOOK_URL (optional). The job runs in the GitHub environment of the same name: give
+# `prod` required reviewers there to guard it as the QA console does.
+name: E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environment (e2e.config.yaml)
+        type: choice
+        options: [staging, prod]
+        default: staging
+      profile:
+        description: Run profile
+        type: choice
+        options: [post-deploy, smoke]
+        default: post-deploy
+      expect_frontend_build:
+        description: Image tag of the frontend deploy to wait for (empty = don't wait)
+        required: false
+        default: ""
+      expect_api_build:
+        description: Image tag of the API deploy to wait for (empty = don't wait)
+        required: false
+        default: ""
+      ref:
+        description: Branch to take the tests from (empty = develop for staging, main for prod)
+        required: false
+        default: ""
+  schedule:
+    # The prod monitor: smoke on prod, from main (schedules run on the default branch).
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run per environment at a time: they share its QA account and its API limit.
+  group: e2e-${{ inputs.environment || 'prod' }}
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    name: E2E ${{ inputs.environment || 'prod' }} · ${{ inputs.profile || 'smoke' }}
+    if: github.event_name != 'schedule' || vars.E2E_SCHEDULES == 'true'
+    runs-on: ubuntu-latest
+    # Above the 15m deploy wait + the post-deploy profile's 60m global_timeout.
+    timeout-minutes: 90
+    environment: ${{ inputs.environment || 'prod' }}
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      options: --ipc=host
+    env:
+      E2E_ENV: ${{ inputs.environment || 'prod' }}
+      E2E_PROFILE: ${{ inputs.profile || 'smoke' }}
+      E2E_EXPECT_FRONTEND_BUILD: ${{ inputs.expect_frontend_build }}
+      E2E_EXPECT_API_BUILD: ${{ inputs.expect_api_build }}
+      E2E_RUN_ID: ${{ github.run_number }}
+      # A green run after a prod deploy is worth a Slack message too (not the monitor's).
+      E2E_NOTIFY_SUCCESS: ${{ github.event_name == 'workflow_dispatch' && inputs.environment == 'prod' }}
+      QA_STAGE_EMAIL: ${{ secrets.QA_STAGE_EMAIL }}
+      QA_STAGE_PASSWORD: ${{ secrets.QA_STAGE_PASSWORD }}
+      QA_PROD_EMAIL: ${{ secrets.QA_PROD_EMAIL }}
+      QA_PROD_PASSWORD: ${{ secrets.QA_PROD_PASSWORD }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The tests of what runs there: develop for staging, main for prod (as `branch` in
+          # e2e.config.yaml).
+          ref: ${{ inputs.ref || (inputs.environment == 'staging' && 'develop' || 'main') }}
+      - uses: ./.github/actions/setup-pnpm
+      - name: Tests
+        id: tests
+        run: bash ci/run.sh
+      - name: Slack
+        if: always()
+        env:
+          E2E_STEP_OUTCOME: ${{ steps.tests.outcome }}
+        run: node ci/notify-slack.mts || true
+      - name: Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ env.E2E_ENV }}-${{ github.run_number }}
+          path: |
+            reports/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14

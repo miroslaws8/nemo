@@ -1,0 +1,41 @@
+# Deletes the test user's leftover test data on staging and prod (Bitbucket: custom e2e-sweep):
+# daily once the repository variable E2E_SCHEDULES is true, or by hand. Only data the guard lets
+# go: the title prefix, not protected, the test user's own (ci/sweep.sh, the sweeper in
+# e2e.config.yaml).
+name: Sweep test data
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      environments:
+        description: Environments to sweep, space-separated
+        required: false
+        default: staging prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-sweep
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    if: github.event_name != 'schedule' || vars.E2E_SCHEDULES == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+      options: --ipc=host
+    env:
+      E2E_SWEEP_ENVS: ${{ inputs.environments || 'staging prod' }}
+      QA_STAGE_EMAIL: ${{ secrets.QA_STAGE_EMAIL }}
+      QA_STAGE_PASSWORD: ${{ secrets.QA_STAGE_PASSWORD }}
+      QA_PROD_EMAIL: ${{ secrets.QA_PROD_EMAIL }}
+      QA_PROD_PASSWORD: ${{ secrets.QA_PROD_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: bash ci/sweep.sh

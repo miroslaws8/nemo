@@ -13,11 +13,12 @@ End-to-end tests are written in YAML (`tests/**/*.test.yaml`) and run by Playwri
 a TypeScript engine (`engine/`). `e2e.config.yaml` holds environments, tiers, run profiles, safety
 and cleanup settings. `README.md` documents the test format.
 
-`bitbucket-pipelines.yml` + `ci/` run the tests in CI: `ci/run.sh` (install → wait for the deploy →
+`.github/workflows/` (GitHub Actions) and `bitbucket-pipelines.yml` both run the scripts in `ci/`: `ci/run.sh` (install → wait for the deploy →
 playwright), `ci/validate.sh` (every push/PR), `ci/sweep.sh` (scheduled cleanup),
 `ci/wait-for-deploy.ts`, `ci/notify-slack.mts` and `ci/ingest.mts` (dependency-free, run by plain
-`node`: keep their imports type-only). The Playwright image tag (here and in the console's `Dockerfile`) must
-equal `@playwright/test` in package.json: `pnpm validate` checks both.
+`node`: keep their imports type-only; `notify-slack.mts` knows both CIs through `CI_PROVIDERS`).
+The Playwright image tag (in both CIs and in the console's `Dockerfile`) must equal
+`@playwright/test` in package.json: `pnpm validate` checks them all.
 
 `console/` is the QA Console (README → QA Console): a web app that starts runs, shows them live,
 stops, retries and cleans up after them — on a developer's machine (`local` mode) or for the team

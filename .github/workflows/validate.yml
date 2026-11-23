@@ -1,0 +1,24 @@
+# Every push and pull request: config, tests, templates, schemas, skills, types and formatting.
+# No browser run, no credentials, nothing deployed (ci/validate.sh).
+name: Validate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # The browsers' image, as for the tests: its version must equal @playwright/test in
+    # package.json (pnpm validate checks it).
+    container:
+      image: mcr.microsoft.com/playwright:v1.65.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-pnpm
+      - run: bash ci/validate.sh

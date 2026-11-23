@@ -18,6 +18,7 @@ import { parseYamlText } from "../yaml-document";
 const PACKAGE_PATH = path.join(E2E_ROOT, "package.json");
 // What runs on a Playwright image: CI, and the server QA console.
 const IMAGE_FILES = ["bitbucket-pipelines.yml", "Dockerfile"];
+const WORKFLOWS_DIR = path.join(".github", "workflows");
 const PLAYWRIGHT_IMAGE_PATTERN =
   /mcr\.microsoft\.com\/playwright:v(\d+\.\d+\.\d+)/g;
 const EXACT_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
@@ -125,6 +126,18 @@ function findBrokenMarkHelper(): string[] {
   }
 }
 
+/** The GitHub Actions workflows, relative to the repo root. */
+function workflowFiles(): string[] {
+  const folder = path.join(E2E_ROOT, WORKFLOWS_DIR);
+  if (!fs.existsSync(folder)) {
+    return [];
+  }
+  return fs
+    .readdirSync(folder)
+    .filter((name) => /\.ya?ml$/.test(name))
+    .map((name) => path.join(WORKFLOWS_DIR, name));
+}
+
 // The browsers come from the Playwright Docker image, so its tag must equal @playwright/test in
 // package.json.
 function findPlaywrightVersionProblems(): string[] {
@@ -137,21 +150,21 @@ function findPlaywrightVersionProblems(): string[] {
       `package.json: pin @playwright/test to an exact version (found "${pinned}")`,
     ];
   }
-  return IMAGE_FILES.filter((file) =>
-    fs.existsSync(path.join(E2E_ROOT, file))
-  ).flatMap((file) =>
-    [
-      ...fs
-        .readFileSync(path.join(E2E_ROOT, file), "utf8")
-        .matchAll(PLAYWRIGHT_IMAGE_PATTERN),
-    ]
-      .map((match) => match[1])
-      .filter((imageVersion) => imageVersion !== pinned)
-      .map(
-        (imageVersion) =>
-          `${file} uses playwright:v${imageVersion}, package.json pins ${pinned}`
-      )
-  );
+  return [...IMAGE_FILES, ...workflowFiles()]
+    .filter((file) => fs.existsSync(path.join(E2E_ROOT, file)))
+    .flatMap((file) =>
+      [
+        ...fs
+          .readFileSync(path.join(E2E_ROOT, file), "utf8")
+          .matchAll(PLAYWRIGHT_IMAGE_PATTERN),
+      ]
+        .map((match) => match[1])
+        .filter((imageVersion) => imageVersion !== pinned)
+        .map(
+          (imageVersion) =>
+            `${file} uses playwright:v${imageVersion}, package.json pins ${pinned}`
+        )
+    );
 }
 
 // Each check reports on its own, so one broken file does not hide the other problems.

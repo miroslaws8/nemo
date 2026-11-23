@@ -98,12 +98,47 @@ function deployLine(): string | null {
         .join(" · ")}`;
 }
 
+// The CI this step runs on: Bitbucket Pipelines or GitHub Actions. `link`: the run's page, null
+// when this is not that CI; `failed`: whether the step's tests failed.
+interface ICiProvider {
+  link: () => string | null;
+  failed: () => boolean;
+}
+
+const CI_PROVIDERS: ICiProvider[] = [
+  {
+    link: () => {
+      const origin = process.env.BITBUCKET_GIT_HTTP_ORIGIN;
+      const build = process.env.BITBUCKET_BUILD_NUMBER;
+      return origin && build
+        ? `<${origin}/pipelines/results/${build}|Pipeline #${build}>`
+        : null;
+    },
+    failed: () => (process.env.BITBUCKET_EXIT_CODE ?? "0") !== "0",
+  },
+  {
+    link: () => {
+      const server = process.env.GITHUB_SERVER_URL;
+      const repository = process.env.GITHUB_REPOSITORY;
+      const runId = process.env.GITHUB_RUN_ID;
+      const runNumber = process.env.GITHUB_RUN_NUMBER;
+      return server && repository && runId
+        ? `<${server}/${repository}/actions/runs/${runId}|Run #${
+            runNumber ?? runId
+          }>`
+        : null;
+    },
+    // The workflow passes its test step's outcome (steps.<id>.outcome).
+    failed: () => process.env.E2E_STEP_OUTCOME === "failure",
+  },
+];
+
+function currentProvider(): ICiProvider | null {
+  return CI_PROVIDERS.find((provider) => provider.link() !== null) ?? null;
+}
+
 function pipelineLink(): string | null {
-  const origin = process.env.BITBUCKET_GIT_HTTP_ORIGIN;
-  const build = process.env.BITBUCKET_BUILD_NUMBER;
-  return origin && build
-    ? `<${origin}/pipelines/results/${build}|Pipeline #${build}>`
-    : null;
+  return currentProvider()?.link() ?? null;
 }
 
 function listed(lines: string[]): string[] {
@@ -118,7 +153,7 @@ function listed(lines: string[]): string[] {
 function buildMessage(): string | null {
   const environment = process.env.E2E_ENV ?? "?";
   const profile = process.env.E2E_PROFILE ?? "?";
-  const stepFailed = (process.env.BITBUCKET_EXIT_CODE ?? "0") !== "0";
+  const stepFailed = currentProvider()?.failed() ?? false;
   const heading = `E2E ${environment} · ${profile}`;
   const ready = readJson(READY_PATH);
   const report = readJson(RESULTS_PATH);
