@@ -6,21 +6,13 @@ import {
   type BrowserContext,
 } from "@playwright/test";
 import { z } from "zod";
-import { instanceSchema } from "./api-schemas";
 import { rateLimitPauseMs, sleep, TOO_MANY_REQUESTS } from "./rate-limit";
-import type { IEnvironment, IInstance, INotify, IPage } from "./types";
+import type { IEnvironment, INotify } from "./types";
 
 const storageStateSchema = z.object({
   cookies: z.array(z.object({ name: z.string(), value: z.string() })),
 });
 
-const sessionMetaSchema = z.object({ apiOrigin: z.string().url() });
-
-const pageMetaSchema = z.object({
-  meta: z.object({ last_page: z.coerce.number().int().min(1) }),
-});
-
-const ACCESS_TOKEN_COOKIE = "idp_access_token";
 const NOT_FOUND = 404;
 const UNAUTHORIZED = 401;
 
@@ -37,6 +29,7 @@ function readJsonFile(filePath: string): unknown {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
+// A body wrapped in { data: … } (Laravel resources, JSON:API) is read as what it wraps.
 function unwrapData(body: unknown): unknown {
   if (typeof body === "object" && body !== null && "data" in body) {
     return body.data;
@@ -44,25 +37,24 @@ function unwrapData(body: unknown): unknown {
   return body;
 }
 
-function findAccessToken(cookies: { name: string; value: string }[]): string {
-  const tokenCookie = cookies.find(
-    (cookie) => cookie.name === ACCESS_TOKEN_COOKIE
-  );
+function findToken(
+  cookies: { name: string; value: string }[],
+  cookieName: string
+): string {
+  const tokenCookie = cookies.find((cookie) => cookie.name === cookieName);
   if (!tokenCookie) {
-    throw new Error(`No ${ACCESS_TOKEN_COOKIE} cookie in the session`);
+    throw new Error(
+      `No ${cookieName} cookie in the session (api_token_cookie in e2e.config.yaml)`
+    );
   }
   return decodeURIComponent(tokenCookie.value);
 }
 
-/** Talks to the app's API (a separate host from the app) as the logged-in test user. */
+/** Talks to the app's API (api_url, else the site's origin) as the signed-in test user. */
 export class ApiClient {
-  private instance: IInstance | null = null;
-
   private constructor(
     private readonly context: APIRequestContext,
     private readonly environment: IEnvironment,
-    // null: an environment without an account (engine/auth.setup.ts never ran), so no token.
-    private readonly savedToken: string | null,
     private readonly browserContext: BrowserContext | null,
     readonly origin: string,
     private readonly notify: INotify | null
@@ -81,15 +73,7 @@ export class ApiClient {
     if (!environment.signsIn) {
       return ApiClient.signedOut(environment, notify);
     }
-    const storageState = storageStateSchema.parse(
-      readJsonFile(environment.storageStatePath)
-    );
-    const session = sessionMetaSchema.parse(
-      readJsonFile(environment.sessionMetaPath)
-    );
-    const origin = environment.apiUrl ?? session.apiOrigin;
-
-    // The app sends the IDP token as a Bearer header; cookies alone get a 401.
+    const origin = environment.apiUrl ?? new URL(environment.baseUrl).origin;
     const context = await request.newContext({
       baseURL: origin,
       storageState: environment.storageStatePath,
@@ -100,14 +84,7 @@ export class ApiClient {
       },
     });
 
-    return new ApiClient(
-      context,
-      environment,
-      findAccessToken(storageState.cookies),
-      browserContext,
-      origin,
-      notify
-    );
+    return new ApiClient(context, environment, browserContext, origin, notify);
   }
 
   /** No account, no session: the origin is api_url, else the site itself, and calls carry no token. */
@@ -120,7 +97,7 @@ export class ApiClient {
       baseURL: origin,
       extraHTTPHeaders: { Accept: "application/json" },
     });
-    return new ApiClient(context, environment, null, null, origin, notify);
+    return new ApiClient(context, environment, null, origin, notify);
   }
 
   async get<TSchema extends z.ZodType>(
@@ -149,29 +126,6 @@ export class ApiClient {
     return this.parse(response, schema, label);
   }
 
-  /** One page of a Laravel paginated list: its items and the number of the last page. */
-  async getPage<TItem extends z.ZodType>(
-    apiPath: string,
-    itemSchema: TItem,
-    page: number
-  ): Promise<IPage<z.infer<TItem>>> {
-    const separator = apiPath.includes("?") ? "&" : "?";
-    const pagePath = `${apiPath}${separator}page=${page}`;
-    const label = `GET ${pagePath}`;
-    const response = await this.send(label, (headers) =>
-      this.context.get(pagePath, { headers })
-    );
-    const body = await this.readBody(response, label);
-    const meta = pageMetaSchema.safeParse(body);
-    const items = z.array(itemSchema).safeParse(unwrapData(body));
-    if (!meta.success || !items.success) {
-      throw new Error(
-        `GET ${pagePath} → not a paginated list of the expected items`
-      );
-    }
-    return { items: items.data, lastPage: meta.data.meta.last_page };
-  }
-
   async post<TSchema extends z.ZodType>(
     apiPath: string,
     body: object,
@@ -192,45 +146,25 @@ export class ApiClient {
     await this.readBody(response, label);
   }
 
-  async resolveInstance(): Promise<IInstance> {
-    if (this.instance) {
-      return this.instance;
-    }
-
-    const instance = await this.get(
-      `/api/instances/alias/${this.environment.alias}`,
-      instanceSchema
-    );
-    const workspaceId = instance.workspace_id ?? instance.workspace?.id;
-
-    if (workspaceId === undefined) {
-      throw new Error(
-        `Instance "${this.environment.alias}" has no workspace — set QA_${this.environment.envPrefix}_ALIAS if the alias is wrong`
-      );
-    }
-
-    this.instance = { instanceId: instance.id, workspaceId };
-    return this.instance;
-  }
-
-  /** The instance alias, for the /api/instances/alias/:alias/… routes. */
-  get alias(): string {
-    return this.environment.alias;
-  }
-
   async dispose(): Promise<void> {
     await this.context.dispose();
   }
 
+  // The session's cookies go along with every call; an app whose API wants a Bearer token names
+  // the cookie that holds it (api_token_cookie). Read at the call, so a test that never calls the
+  // API never needs it; inside a test, from the browser, whose app may have refreshed it.
   private async authorization(): Promise<Record<string, string>> {
-    if (this.savedToken === null) {
+    const cookieName = this.environment.apiTokenCookie;
+    if (cookieName === null || !this.environment.signsIn) {
       return {};
     }
-    const token =
+    const cookies =
       this.browserContext === null
-        ? this.savedToken
-        : findAccessToken(await this.browserContext.cookies());
-    return { Authorization: `Bearer ${token}` };
+        ? storageStateSchema.parse(
+            readJsonFile(this.environment.storageStatePath)
+          ).cookies
+        : await this.browserContext.cookies();
+    return { Authorization: `Bearer ${findToken(cookies, cookieName)}` };
   }
 
   /** Sends a request, waiting out the API's rate limit (429) between attempts. */

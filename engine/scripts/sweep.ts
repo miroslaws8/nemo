@@ -1,7 +1,7 @@
 import { ApiClient } from "../api-client";
-import { authUserSchema } from "../api-schemas";
-import { RESOURCE_GATEWAYS } from "../cleanup/gateways";
+import { gatewayFor, RESOURCE_GATEWAYS } from "../cleanup/gateways";
 import { deletionRefusal } from "../cleanup/guard";
+import { fetchTestUserId } from "../cleanup/test-user";
 import { loadE2eConfig } from "../config";
 import { buildEnvironment, selectedEnvironmentName } from "../environment";
 import { RUN_ID_PATTERN } from "../run-info";
@@ -104,7 +104,7 @@ async function findCandidates(
   selection: ISweepSelection
 ): Promise<IOwnedRecord[]> {
   const candidates: IOwnedRecord[] = [];
-  for (const gateway of Object.values(RESOURCE_GATEWAYS)) {
+  for (const gateway of RESOURCE_GATEWAYS) {
     const owned = await gateway.listOwned(api, testUserId);
     candidates.push(
       ...owned.filter(
@@ -124,7 +124,7 @@ async function deleteCandidate(
   record: IOwnedRecord,
   testUserId: number
 ): Promise<string> {
-  const gateway = RESOURCE_GATEWAYS[record.kind];
+  const gateway = gatewayFor(record.kind);
   const current = record.trashed ? record : await gateway.fetch(api, record.id);
   if (current === null) {
     return `already gone: ${describeRecord(record)}`;
@@ -139,8 +139,13 @@ async function deleteCandidate(
 
 function printText(report: ISweepReport): void {
   console.log(
-    `${report.environment}: ${report.candidates.length} record(s) of user ${report.userId} start with "${report.dataPrefix}" and ${report.selection}`
+    report.userId === null
+      ? `${report.environment}: nothing to look for — no resource gateway is registered (engine/cleanup/gateways.ts) or the environment has no account`
+      : `${report.environment}: ${report.candidates.length} record(s) of user ${report.userId} start with "${report.dataPrefix}" and ${report.selection}`
   );
+  if (report.userId === null) {
+    return;
+  }
   for (const candidate of report.candidates) {
     console.log(`  ${describeCandidate(candidate)}`);
   }
@@ -162,9 +167,24 @@ async function sweep(options: ISweepOptions): Promise<ISweepReport> {
   const config = loadE2eConfig();
   const selection = selectionFor(options, config);
 
+  // Nothing to look for: no gateway is registered, or the environment has no account (and so no
+  // data of its own). No API call is made.
+  if (RESOURCE_GATEWAYS.length === 0 || !environment.signsIn) {
+    return {
+      environment: environment.name,
+      userId: null,
+      dataPrefix: config.safety.data_prefix,
+      selection: selection.label,
+      candidates: [],
+      applied: options.apply,
+      outcomes: [],
+      refusal: null,
+    };
+  }
+
   const api = await ApiClient.create(environment);
   try {
-    const testUser = await api.get("/api/auth", authUserSchema);
+    const testUser = { id: await fetchTestUserId(api) };
     const candidates = await findCandidates(api, testUser.id, selection);
     const report: ISweepReport = {
       environment: environment.name,

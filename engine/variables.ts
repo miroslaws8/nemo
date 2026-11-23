@@ -7,7 +7,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// A path segment that is a number indexes into a list: ${course.pages.1.learner_url}.
+// A path segment that is a number indexes into a list: ${order.items.1.name}.
 function readSegment(current: unknown, segment: string): unknown {
   if (Array.isArray(current)) {
     const index = Number(segment);

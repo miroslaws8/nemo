@@ -1,9 +1,9 @@
 import { z } from "zod";
-import { findLastAssetId } from "./assets";
 import { defineStep } from "./define-step";
 
-// The engine only captures evidence: the screenshot and the question are recorded, and the
-// Hermes /qa-test skill judges them with vision after the run. The test does not fail here.
+// The engine only captures evidence: a screenshot of the whole page and the question are attached
+// to the test (annotation "ai_check") for a person or a vision model to judge after the run.
+// The test does not fail here.
 export const aiCheckStep = defineStep({
   keyword: "ai_check",
   schema: z.string().min(5),
@@ -11,14 +11,7 @@ export const aiCheckStep = defineStep({
   run: async (question, context) => {
     context.aiCheckCount += 1;
     const attachment = `ai-check-${context.aiCheckCount}`;
-    const assetId = findLastAssetId(context);
-
-    const screenshot =
-      assetId === null
-        ? await context.page.screenshot({ fullPage: true })
-        : await context.page
-            .locator(`[data-asset-id="${assetId}"]`)
-            .screenshot();
+    const screenshot = await context.page.screenshot({ fullPage: true });
 
     await context.testInfo.attach(attachment, {
       body: screenshot,

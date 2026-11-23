@@ -7,6 +7,6 @@ tags: []
 tests:
   - name: opens the page without errors
     steps:
-      - goto: /dashboard
-      - expect_visible: { role: link, name: Home, nth: 0 }
+      - goto: /
+      - expect_visible: { css: h1 }
       - expect_no_errors: true

@@ -99,15 +99,9 @@ export const expectHiddenStep = defineStep({
   },
 });
 
-// Copy the app actually renders on failure (translations/en.json). Bare status codes are not
-// checked: generated course text can legitimately contain numbers like "500".
-const ERROR_PHRASES = [
-  "something went wrong",
-  "page not found",
-  "chat not found",
-  "workspace not found",
-  "could not be loaded",
-];
+// What an app's error screens say. Bare status codes are not checked: ordinary text can
+// legitimately contain numbers like "500". Add your app's own error copy here.
+const ERROR_PHRASES = ["something went wrong", "page not found"];
 
 const ERROR_PAGE_PATH = /^\/(403|404)\/?$/;
 

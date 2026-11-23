@@ -30,9 +30,28 @@
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9_-]*(\\/[a-z0-9][a-z0-9_-]*)*$"
           },
-          "alias": {
+          "api_token_cookie": {
             "type": "string",
             "minLength": 1
+          },
+          "login": {
+            "type": "object",
+            "properties": {
+              "path": {
+                "default": "/",
+                "type": "string",
+                "pattern": "^\\/"
+              },
+              "submit": {
+                "type": "string",
+                "minLength": 1
+              },
+              "done": {
+                "type": "string",
+                "pattern": "^\\/"
+              }
+            },
+            "additionalProperties": false
           },
           "allowed_tiers": {
             "minItems": 1,

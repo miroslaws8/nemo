@@ -4,7 +4,7 @@ import type {
   IOwnedRecord,
   ITrackedResource,
 } from "../types";
-import { RESOURCE_GATEWAYS } from "./gateways";
+import { gatewayFor } from "./gateways";
 import { deletionRefusal } from "./guard";
 
 function describeError(error: unknown): string {
@@ -18,7 +18,7 @@ async function findRecords(
   api: ApiClient,
   testUserId: number
 ): Promise<IOwnedRecord[]> {
-  const gateway = RESOURCE_GATEWAYS[resource.kind];
+  const gateway = gatewayFor(resource.kind);
   if (resource.id !== null) {
     const record = await gateway.fetch(api, resource.id);
     return record === null ? [] : [record];
@@ -47,7 +47,7 @@ async function deleteResource(
         outcomes.push({ resource, record, deleted: false, reason: refusal });
         continue;
       }
-      await RESOURCE_GATEWAYS[resource.kind].remove(api, record);
+      await gatewayFor(resource.kind).remove(api, record);
       outcomes.push({ resource, record, deleted: true, reason: null });
     }
     return outcomes;

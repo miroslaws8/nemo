@@ -27,165 +27,7 @@
       "items": {
         "anyOf": [
           {
-            "type": "string",
-            "enum": [
-              "asset_zoo",
-              "blank_course",
-              "published_course",
-              "quiz",
-              "resolve_asset"
-            ]
-          },
-          {
-            "type": "object",
-            "properties": {
-              "asset_zoo": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "as": {
-                        "default": "zoo",
-                        "type": "string",
-                        "pattern": "^[a-z_][a-z0-9_]*$"
-                      },
-                      "title": {
-                        "default": "[SMOKE] Asset Zoo",
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "asset_zoo"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "blank_course": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "as": {
-                        "default": "course",
-                        "type": "string",
-                        "pattern": "^[a-z_][a-z0-9_]*$"
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "blank_course"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "published_course": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "as": {
-                        "default": "course",
-                        "type": "string",
-                        "pattern": "^[a-z_][a-z0-9_]*$"
-                      },
-                      "pages": {
-                        "default": 2,
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 5
-                      },
-                      "asset": {
-                        "default": "content_block",
-                        "type": "string",
-                        "minLength": 1
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "published_course"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "quiz": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "as": {
-                        "default": "quiz",
-                        "type": "string",
-                        "pattern": "^[a-z_][a-z0-9_]*$"
-                      },
-                      "questions": {
-                        "default": 2,
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 10
-                      }
-                    },
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "quiz"
-            ],
-            "additionalProperties": false
-          },
-          {
-            "type": "object",
-            "properties": {
-              "resolve_asset": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {},
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "null"
-                  }
-                ]
-              }
-            },
-            "required": [
-              "resolve_asset"
-            ],
-            "additionalProperties": false
+            "not": {}
           }
         ]
       }
@@ -1505,122 +1347,6 @@
         {
           "type": "object",
           "properties": {
-            "wait_asset": {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "timeout": {
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "string",
-                      "pattern": "^(\\d+)(ms|s|m|h|d)$"
-                    }
-                  ]
-                },
-                "ui_timeout": {
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "string",
-                      "pattern": "^(\\d+)(ms|s|m|h|d)$"
-                    }
-                  ]
-                }
-              },
-              "additionalProperties": false
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "when": {
-              "type": "string",
-              "minLength": 1
-            },
-            "unless": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "wait_asset"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
-            "expect_asset": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0,
-                  "maximum": 9007199254740991
-                },
-                "min_height": {
-                  "type": "number",
-                  "minimum": 0
-                },
-                "not_text": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "minLength": 1
-                  }
-                },
-                "images_loaded": {
-                  "type": "boolean"
-                },
-                "timeout": {
-                  "anyOf": [
-                    {
-                      "type": "integer",
-                      "exclusiveMinimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    {
-                      "type": "string",
-                      "pattern": "^(\\d+)(ms|s|m|h|d)$"
-                    }
-                  ]
-                }
-              },
-              "additionalProperties": false
-            },
-            "name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "when": {
-              "type": "string",
-              "minLength": 1
-            },
-            "unless": {
-              "type": "string",
-              "minLength": 1
-            }
-          },
-          "required": [
-            "expect_asset"
-          ],
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "properties": {
             "ai_check": {
               "type": "string",
               "minLength": 5
@@ -1651,11 +1377,7 @@
               "properties": {
                 "kind": {
                   "type": "string",
-                  "enum": [
-                    "course",
-                    "quiz",
-                    "learning_path"
-                  ]
+                  "minLength": 1
                 },
                 "title": {
                   "type": "string",
@@ -1689,32 +1411,16 @@
         {
           "type": "object",
           "properties": {
-            "add_asset_via_modal": {
+            "open_menu_link": {
               "type": "object",
               "properties": {
-                "label": {
+                "link": {
                   "type": "string",
-                  "description": "The card name in the modal (assets-mock.ts → name), e.g. Hero Section"
-                },
-                "ai": {
-                  "anyOf": [
-                    {
-                      "type": "boolean"
-                    },
-                    {
-                      "type": "string",
-                      "pattern": "^\\$\\{[^}]+\\}$"
-                    }
-                  ],
-                  "description": "Whether the type is AI-generated (it then has the AI toggle and a prompt)"
-                },
-                "prompt": {
-                  "type": "string",
-                  "description": "What the AI should write about"
+                  "description": "The link's name in the menu, e.g. Pricing"
                 }
               },
               "required": [
-                "label"
+                "link"
               ],
               "additionalProperties": false
             },
@@ -1732,10 +1438,10 @@
             }
           },
           "required": [
-            "add_asset_via_modal"
+            "open_menu_link"
           ],
           "additionalProperties": false,
-          "description": "On an empty builder page: opens the Add Asset modal, picks the card by its name, fills the prompt when the type is AI-generated, and confirms."
+          "description": "On a phone the site's navigation hides behind a menu button: opens it and follows one of its links (the menu is a dialog, so the same link in the footer is not taken)."
         },
         {
           "type": "object",

@@ -12,7 +12,6 @@ import type {
 import type {
   durationSchema,
   LOCATOR_KEYS,
-  RESOURCE_KINDS,
   targetSchema,
   TEMPLATE_PARAM_TYPES,
 } from "../schema";
@@ -51,7 +50,6 @@ export interface IEnvironment {
   name: string;
   baseUrl: string;
   envPrefix: string;
-  alias: string;
   apiUrl: string | null;
   allowedTiers: string[] | null;
   // It has a QA account (`credentials`): its runs sign in first. Otherwise they run signed out.
@@ -70,7 +68,14 @@ export interface IEnvironment {
   // Which version of a stored skill its agent checks run (skill_channel).
   skillChannel: ISkillChannel;
   storageStatePath: string;
-  sessionMetaPath: string;
+  // The session cookie holding the API's Bearer token (api_token_cookie); null: cookies only.
+  apiTokenCookie: string | null;
+  // Where the login starts (login.path) and the submit button's name (login.submit; null: the
+  // form's own submit button).
+  loginPath: string;
+  loginSubmit: string | null;
+  // The path the app lands on once signed in (login.done); null: anywhere past the form.
+  loginDone: string | null;
 }
 
 export interface IResolvedTier {
@@ -123,11 +128,6 @@ export interface ISkillParse {
 export interface ICredentials {
   email: string;
   password: string;
-}
-
-export interface IInstance {
-  instanceId: number;
-  workspaceId: number;
 }
 
 export type IVariables = Record<string, unknown>;
@@ -284,7 +284,8 @@ export interface ITestSuite {
   cases: ITestCase[];
 }
 
-export type IResourceKind = (typeof RESOURCE_KINDS)[number];
+// A kind of record the app's gateways know (engine/cleanup/gateways.ts), e.g. "order".
+export type IResourceKind = string;
 
 /** Something a test created; `id` null means "find it by its exact title" at cleanup. */
 export interface ITrackedResource {
@@ -332,24 +333,6 @@ export interface IOverflow {
 
 export interface IQaUser {
   id: number;
-}
-
-/** A course page as the builder API returns it; learners' URLs use the hash, the API the id. */
-export interface ICoursePage {
-  id: number;
-  hash: string;
-}
-
-/** A course a setup created through the API (engine/course-builder.ts). */
-export interface ICreatedCourse {
-  title: string;
-  hubId: number;
-  chatId: number;
-  instanceId: number;
-  workspaceId: number;
-  sectionId: number;
-  builderUrl: string;
-  pages: ICoursePage[];
 }
 
 /** ci/wait-for-deploy.ts: the expected build serves, a newer one already serves, or neither in time. */
@@ -445,7 +428,7 @@ export interface ISweepCandidate
 /** What a sweep found and did; printed as text, or as JSON with --json. */
 export interface ISweepReport {
   environment: string;
-  userId: number;
+  userId: number | null;
   dataPrefix: string;
   selection: string;
   candidates: ISweepCandidate[];
@@ -454,14 +437,9 @@ export interface ISweepReport {
   refusal: string | null;
 }
 
-export interface IPage<TItem> {
-  items: TItem[];
-  lastPage: number;
-}
-
 /** A request of the page that the API refused with 429, its rate limit (see engine/rate-limit.ts). */
 export interface IRateLimitHit {
-  /** e.g. "GET /api/workspaces/1/knowledge-base/files" */
+  /** e.g. "GET /api/orders" */
   request: string;
   /** When the API takes requests again (epoch ms). */
   retryAt: number;

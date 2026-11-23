@@ -166,9 +166,6 @@ export const variableNameSchema = z
     `reserved names: ${RESERVED_VARIABLES.join(", ")}`
   );
 
-/** What the tests create; each kind knows how to find, check and delete its records. */
-export const RESOURCE_KINDS = ["course", "quiz", "learning_path"] as const;
-
 export const eachSchema = z
   .strictObject({
     as: variableNameSchema,
@@ -239,7 +236,7 @@ export const testFileSchema = z.strictObject({
         .regex(/^[a-z0-9-]+$/, "tags are lowercase words joined by dashes")
     )
     .default([]),
-  // A setup name, or { name: { ...params } } to pass params (e.g. { blank_course: { as: other } }).
+  // A setup name, or { name: { ...params } } to pass params (e.g. { order: { as: other_order } }).
   setup: z.array(z.union([z.string().min(1), recordSchema])).default([]),
   each: eachSchema.optional(),
   tests: z.array(testSchema).min(1),

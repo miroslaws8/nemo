@@ -44,7 +44,28 @@ const environmentSettingsSchema = z.strictObject({
       "a folder under tests/, e.g. demo"
     )
     .optional(),
-  alias: z.string().min(1).optional(),
+  // The cookie of the signed-in session that holds the API's Bearer token, for an app whose API
+  // takes one; left out, API calls send the session's cookies only.
+  api_token_cookie: z.string().min(1).optional(),
+  // How the login project signs in (engine/auth.setup.ts): the page that shows (or redirects to)
+  // the sign-in form and the name of its submit button. The fields are the form's email and
+  // password inputs.
+  login: z
+    .strictObject({
+      path: z
+        .string()
+        .regex(/^\//, "a path from base_url, e.g. /login")
+        .default("/"),
+      submit: z.string().min(1).optional(),
+      // The path the app lands on once signed in, e.g. /dashboard; left out: anywhere on the
+      // app past the form. Set it when the app finishes signing in after a redirect of its own
+      // (an OAuth callback), or the session is saved before the app has stored it.
+      done: z
+        .string()
+        .regex(/^\//, "a path from base_url, e.g. /dashboard")
+        .optional(),
+    })
+    .optional(),
   allowed_tiers: z.array(nameSchema).min(1).optional(),
   // Runs write real data with the shared QA account: tools ask for an explicit confirmation.
   guarded: z.boolean().default(false),

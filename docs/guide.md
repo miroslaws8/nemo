@@ -93,7 +93,7 @@ pnpm ui                                                          # UI mode: watc
 pnpm ui --profile post-deploy                                    # …with every tier (--env prod needs --confirm prod)
 pnpm validate                                                    # offline check of config, tests, templates, schemas, skills
 pnpm skills                                                      # Hermes skills: each SKILL.md from its skill.yaml
-pnpm new regression quizzes/take-quiz "Quiz — take"              # new test file from the tier's scaffold
+pnpm new regression orders/checkout "Order — check out"          # new test file from the tier's scaffold
 pnpm sweep --env staging                                         # list leftover test data (dry run)
 pnpm sweep --env staging --apply                                 # …and delete it
 pnpm sweep --env staging --run <run id>                          # one run's data, whatever its age
@@ -506,7 +506,7 @@ deploy, turning the skill store on, CI, and what must stay as it is.
 
 | Section | What it sets |
 |---|---|
-| `environments` | `base_url`, `api_url`, `credentials` prefix (left out: a public site, tested signed out — no login, no setups, no `track`); `device` a Playwright device its tests run as (`Pixel 7`, `iPhone 15`: screen, user agent, touch); `tests` its own folder under `tests/` (the others leave that folder out); optional `allowed_tiers` to keep tiers off an environment, `guarded: true` to ask for a confirmation before interactive runs (`pnpm ui`, the console), `branch` the server console tests it from (default `develop`), `local_only: true` for one only a developer's machine reaches (the app on localhost: the server console neither shows nor runs it), `login_origin` the origin of its sign-in page (the console's agent checks put the QA account into Hermes's vault for it), `agent_checks` the Hermes skills CI has the console run there after a deploy and on a schedule |
+| `environments` | `base_url`, `api_url`, `credentials` prefix (left out: a public site, tested signed out — no login, no setups, no `track`); `login` how the login project signs in (`path` where it starts, `submit` its button's name, `done` the path the app lands on once signed in); `api_token_cookie` the session cookie whose token the API takes as a Bearer header; `device` a Playwright device its tests run as (`Pixel 7`, `iPhone 15`: screen, user agent, touch); `tests` its own folder under `tests/` (the others leave that folder out); optional `allowed_tiers` to keep tiers off an environment, `guarded: true` to ask for a confirmation before interactive runs (`pnpm ui`, the console), `branch` the server console tests it from (default `develop`), `local_only: true` for one only a developer's machine reaches (the app on localhost: the server console neither shows nor runs it), `login_origin` the origin of its sign-in page (the console's agent checks put the QA account into Hermes's vault for it), `agent_checks` the Hermes skills CI has the console run there after a deploy and on a schedule |
 | `tiers` | per tier: `workers`, `retries`, `needs` (tiers that must pass first), `read_only` |
 | `profiles` | which tiers one run includes, `global_timeout` |
 | `default_profile` | the profile of a bare run |
@@ -560,17 +560,15 @@ convention; the `tier` field is what counts.
 | `expect_no_errors` | `true` — the error check below, at this point of the test |
 | `expect_fits_width` | `true` — the page is no wider than the window: nothing scrolls sideways (the phone check; names the element that sticks out) |
 | `repeat` | `until` (a target), `max` rounds (default 25), `steps` — runs the steps until the target shows |
-| `wait_asset` | `type`, `timeout` — polls the API until the new asset finishes generating, then waits for it on the page |
-| `expect_asset` | `id` (default: the last asset), `min_height`, `not_text`, `images_loaded`, `timeout` |
 | `track` | `kind` + `title` — registers data made through the UI for cleanup |
-| `ai_check` | a question; the screenshot is judged afterwards by Hermes (vision) |
+| `ai_check` | a question; a screenshot of the whole page and the question are attached to the test for a person or a vision model to judge afterwards (the test does not fail on it) |
 
 Every step also takes `name` (report title), `when` and `unless` (a variable path). In the report
 each step is numbered (`03`, and `03.1`, `03.2` inside a template or a `repeat` round) and points
 at its YAML line.
 
 ```yaml
-- repeat:                                  # one round per quiz question
+- repeat:                                  # one round per question of a quiz
     until: { text: Quiz Completed }
     max: 10
     steps:
@@ -589,7 +587,7 @@ the app afresh, so a busy run can reach it. A 429 is not an app error:
 - the engine's own API calls (setups, cleanup, sweep) wait until the limit resets and retry;
 - when a step fails after the page got a 429, the steps from the page's `goto` run again once the
   limit resets (up to twice), if every step in between only checks the page (`expect`,
-  `expect_visible`, `expect_hidden`, `expect_url`, `expect_asset`, `expect_no_errors`). The
+  `expect_visible`, `expect_hidden`, `expect_url`, `expect_fits_width`, `expect_no_errors`). The
   report shows a `rate limited` annotation;
 - a test that still fails says in its error that the rate limit refused requests of the page.
 
@@ -598,36 +596,41 @@ the app afresh, so a busy run can reach it. A 429 is not an app error:
 case-sensitive), `has_text` / `has_not_text` (keep the matches that contain, or lack, a text —
 e.g. a row by its title) and `nth`.
 
-**Variables:** `${env.name}`, `${env.base_url}`; each row (`${asset.type}`, `${asset.label}`,
-`${asset.ai}`); whatever the setups set (below); `wait_asset` → `${last_asset.id}`. A number in
-the path picks a list item: `${course.pages.1.title}`.
+**Variables:** `${env.name}`, `${env.base_url}`; each row (`${section.name}`, `${section.path}`);
+whatever the setups set (below). A number in the path picks a list item: `${order.items.1.name}`.
 
 ## Setups
 
-| Setup | Mode | What it does |
-|---|---|---|
-| `blank_course` | creates | a `[SMOKE] E2E …` course with one empty page, through the API (no credits) → `${course.edit_url}`, `.hub_id`, `.page_id`, `.title` |
-| `published_course` | creates | a published course of `pages` pages (default 2), one manual `asset` each (default `content_block`, no credits) → `${course.pages.N.learner_url}`, `.hash`, `.title`, `.preview_url` |
-| `quiz` | creates | a knowledge quiz of `questions` single-choice questions (default 2), the right option first → `${quiz.player_url}`, `.id`, `.questions` |
-| `resolve_asset` | read-only | checks the `asset` row's `ai` against the backend's manual-only list |
-| `asset_zoo` | read-only | finds the `asset` row's asset in the `[SMOKE] Asset Zoo` fixture (built by a Hermes skill of the app) → `${zoo.preview_url}`, `.asset_id`; skips the test where no zoo exists |
+A setup prepares a test's data before it runs, through the app's API: a fresh record, titled with
+the data prefix and registered for cleanup (mode `creates`), or one that already exists (mode
+`readonly`); it puts what the test needs into a variable, e.g. `${order.url}`. None ship — they
+are the app's own. A setup is a file in `engine/setups/` with `defineSetup({ name, mode, params,
+run })` and one line in `engine/setups/index.ts`; `pnpm schema` then offers it in the editor.
 
-The creating setups take `as` to put a second one in another variable:
-`setup: [{ blank_course: { as: course_a } }, { blank_course: { as: course_b } }]`.
+```yaml
+setup: [order]                                   # like beforeEach()
+setup: [{ order: { as: other_order } }]          # params, e.g. a second one in another variable
+```
+
+A read-only tier may not use a creating setup, and an environment without an account no setup.
 
 ## Test data and cleanup
 
-- Everything a test creates is named `[SMOKE] E2E <run id> <test title>` (`${test.data_title}`)
+- Everything a test creates is named `<data_prefix><run id> <test title>` (`${test.data_title}`)
   and registered: setups do it themselves; data made through the UI is registered with
-  `- track: { kind: learning_path, title: "${test.data_title}" }` (kinds: course, quiz,
-  learning_path).
+  `- track: { kind: order, title: "${test.data_title}" }`.
+- The kinds are the app's: one **gateway** per kind in `engine/cleanup/gateways.ts` reads a record
+  back by id, lists the test user's own and deletes one, through the app's API
+  (`ApiClient`: `get`, `find`, `post`, `delete`). Who the test user is comes from one hook,
+  `fetchTestUserId` in `engine/cleanup/test-user.ts`. None ship; until they are written, `track`
+  refuses every kind and `pnpm sweep` has nothing to look for.
 - The run id is the CI build number, or `c<date>-<time>-<random>` for a local run.
-- After the test, per `cleanup` in the config: a passing test deletes its data (a course is
-  moved to the trash and then deleted for good); a failing one keeps it and the report lists it
-  under "kept for debugging"; a test interrupted by a stopped run (Ctrl+C, the console's Stop)
-  follows `on_interrupt` (delete).
+- After the test, per `cleanup` in the config: a passing test deletes its data; a failing one
+  keeps it and the report lists it under "kept for debugging"; a test interrupted by a stopped run
+  (Ctrl+C, the console's Stop) follows `on_interrupt` (delete).
 - Before deleting, the record is read again and must still start with the prefix, not be
-  protected and belong to the test user — anything else is skipped and reported, never deleted.
+  protected and belong to the test user — anything else is skipped and reported, never deleted
+  (`engine/cleanup/guard.ts`).
 - `pnpm sweep` deletes the test user's prefixed leftovers older than `sweeper.older_than`;
   `--run <run id>` takes one run's data instead, whatever its age. Without `--apply` it only
   lists them, it stops if there are more than `max_deletes`, and `--json` prints one JSON object.
@@ -638,29 +641,25 @@ Built-in variables: `${env.name}`, `${env.base_url}`, `${run.id}`, `${run.timest
 ## Templates — reusable blocks of steps
 
 A template (`templates/**/*.template.yaml`) is a named block of steps with typed params; a test
-calls it like a step. Example, `templates/builder/add-asset-via-modal.template.yaml`:
+calls it like a step. Example, `templates/demo/menu-link.template.yaml`:
 
 ```yaml
-template: add_asset_via_modal                      # becomes a step keyword
-title: add ${params.label} via the Add Asset modal # its report title
+template: open_menu_link                           # becomes a step keyword
+title: open ${params.link} from the mobile menu    # its report title
 params:
-  label:  { type: string }                         # string | number | boolean | duration
-  ai:     { type: boolean, default: true }         # a default makes the param optional
-steps:
-  - fill: { css: "#asset-search-input", value: "${params.label}" }
-  - expect: { role: switch, in: dialog, checked: true }
-    when: params.ai
+  link: { type: string }                           # string | number | boolean | duration
+steps:                                             # a default makes a param optional
+  - click: { button: Open menu }
+  - click: { role: link, name: "${params.link}", in: dialog }
 ```
 
 ```yaml
 # in a test
-- add_asset_via_modal:
-    label: ${asset.label}
-    ai: ${asset.ai}
+- open_menu_link: { link: Pricing }
 ```
 
 - Inside a template, `${params.x}` and `when: params.x` read its params; everything else
-  (`${course.…}`, `${last_asset.…}`) is the test's own variables, shared in both directions.
+  (`${section.…}`, what the setups set) is the test's own variables, shared in both directions.
 - Templates may call templates; params are checked when the files load (missing, unknown, wrong
   type) and again at run time for `${…}` values. Calls that loop are rejected.
 - `pnpm schema` adds every template, with its params, to the editor autocompletion.
@@ -747,11 +746,7 @@ commit both files; the QA console offers it in New run once its branch has it.
 
 ## Side effects
 
-The creating setups and `track` make `[SMOKE] E2E …` courses, quizzes and learning paths
-(deleted after a pass, kept after a failure); `published_course` publishes its course (shared
-with no one), and the quiz test records an attempt on its own quiz. The smoke tier only reads,
-the `ai` tier spends AI credits. `E2E_ENV=prod` runs the same tiers on prod unless
+The demo (`tests/demo/`) only reads a public site. Your own creating setups and `track` make
+`[SMOKE] E2E …` records (deleted after a pass, kept after a failure). The smoke tier only reads,
+the `ai` tier spends the app's AI credits. `E2E_ENV=prod` runs the same tiers on prod unless
 `allowed_tiers` says otherwise.
-
-The test account must be an Owner/Admin of a workspace whose plan has certificates and custom
-integrations (Workforce): the navigation rows for those sections fail otherwise.

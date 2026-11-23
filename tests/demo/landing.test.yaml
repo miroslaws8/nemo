@@ -17,8 +17,7 @@ tests:
   - name: the menu opens and leads to the pricing
     steps:
       - goto: /
-      - click: { button: Open menu }
-      - click: { role: link, name: Pricing, in: dialog }
+      - open_menu_link: { link: Pricing } # templates/demo/menu-link.template.yaml
       - expect_url: { matches: "/pricing/?([?#]|$)" }
       - expect_visible: { css: h1 }
       - expect_fits_width: true

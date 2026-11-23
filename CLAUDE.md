@@ -5,11 +5,13 @@ Guidance for AI coding agents working in this repository.
 ## What this repo is
 
 QA automation for a web app and its API, kept apart from the app and run against deployed
-environments (staging, prod). The tests, data and skill shipped here are a demo: the public
-landing of edplay.ai on a phone (environment `demo`: no `credentials`, so no login and no data;
-`device: Pixel 7`; its tests in `tests/demo`, which no other environment runs; `pnpm demo`).
-The app-specific engine code (the API client, setups, resources, cleanup gateways and
-`auth.setup.ts`) is that of an e-learning app at `*.example.com`, for an environment that signs in.
+environments (staging, prod). The tests, data, template and skill shipped here are a demo: the
+public landing of edplay.ai on a phone (environment `demo`: no `credentials`, so no login and no
+data; `device: Pixel 7`; its tests in `tests/demo`, which no other environment runs; `pnpm demo`).
+No app-specific engine code ships: an app adds its setups (`engine/setups/`), one cleanup gateway
+per kind of record (`engine/cleanup/gateways.ts`) and `fetchTestUserId`
+(`engine/cleanup/test-user.ts`); the login project signs in through an email + password form
+(`login` in `e2e.config.yaml`), and an app with another sign-in replaces `engine/auth.setup.ts`.
 
 End-to-end tests are written in YAML (`tests/**/*.test.yaml`) and run by Playwright Test through
 a TypeScript engine (`engine/`). `e2e.config.yaml` holds environments, tiers, run profiles, safety

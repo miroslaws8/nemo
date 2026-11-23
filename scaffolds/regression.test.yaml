@@ -1,15 +1,15 @@
 # yaml-language-server: $schema=__SCHEMA_PATH__
-# Regression tests may create data (titles start with safety.data_prefix); no AI credits.
+# Regression tests may create data: name it ${test.data_title} (it starts with safety.data_prefix)
+# and register what the UI creates with `- track: { kind, title }`, so it is deleted afterwards.
+# Data made through the API before the test comes from a setup (`setup: [<name>]`); both need the
+# app's own code (docs/guide.md → Setups, Test data and cleanup).
 suite: __SUITE__
 tier: regression
 tags: []
 
-# A fresh course with one empty page per test, created through the API.
-setup: [blank_course]
-
 tests:
-  - name: works on a fresh course
+  - name: works through the UI
     steps:
-      - goto: ${course.edit_url}
-      - expect_visible: { text: This page is empty }
+      - goto: /
+      - expect_visible: { css: h1 }
       - expect_no_errors: true

@@ -697,7 +697,7 @@ export const ingestCursorSchema = z.object({
 /** What `pnpm sweep --json` prints (engine/scripts/sweep.ts). */
 export const sweepReportSchema = z.object({
   environment: z.string(),
-  userId: z.number().int(),
+  userId: z.number().int().nullable(), // null: nothing to look for (no gateway, or no account)
   dataPrefix: z.string(),
   selection: z.string(),
   candidates: z.array(

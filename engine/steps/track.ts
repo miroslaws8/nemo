@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { loadE2eConfig } from "../config";
-import { RESOURCE_KINDS } from "../schema";
+import { GATEWAYS_BY_KIND } from "../cleanup/gateways";
 import { defineStep } from "./define-step";
 
 // Data a test creates through the UI has no id the engine knows; registering its exact title lets
@@ -8,7 +8,14 @@ import { defineStep } from "./define-step";
 export const trackStep = defineStep({
   keyword: "track",
   schema: z.strictObject({
-    kind: z.enum(RESOURCE_KINDS),
+    // A kind of record engine/cleanup/gateways.ts knows how to find and delete.
+    kind: z
+      .string()
+      .min(1)
+      .refine(
+        (kind) => GATEWAYS_BY_KIND.has(kind),
+        "no resource gateway of this kind (engine/cleanup/gateways.ts)"
+      ),
     title: z.string().min(1),
   }),
   createsData: true,

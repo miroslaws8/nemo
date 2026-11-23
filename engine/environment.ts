@@ -76,7 +76,7 @@ export function selectedEnvironmentName(): string {
   return (process.env.E2E_ENV ?? DEFAULT_ENVIRONMENT).toLowerCase();
 }
 
-/** An environment from e2e.config.yaml; QA_<NAME>_URL / _ALIAS / _API override it. */
+/** An environment from e2e.config.yaml; QA_<NAME>_URL / _API override it. */
 export function buildEnvironment(name: string): IEnvironment {
   const config = loadE2eConfig();
   const settings = config.environments[name];
@@ -102,10 +102,6 @@ export function buildEnvironment(name: string): IEnvironment {
     name,
     baseUrl,
     envPrefix: prefix,
-    alias:
-      process.env[`QA_${prefix}_ALIAS`] ??
-      settings.alias ??
-      new URL(baseUrl).hostname.split(".")[0],
     apiUrl: apiUrl === undefined ? null : withoutTrailingSlash(apiUrl),
     allowedTiers: settings.allowed_tiers ?? null,
     signsIn: settings.credentials !== undefined,
@@ -120,7 +116,10 @@ export function buildEnvironment(name: string): IEnvironment {
         ? null
         : new URL(settings.login_origin).origin,
     storageStatePath: path.join(authDirectory, `${name}.json`),
-    sessionMetaPath: path.join(authDirectory, `${name}.meta.json`),
+    apiTokenCookie: settings.api_token_cookie ?? null,
+    loginPath: settings.login?.path ?? "/",
+    loginSubmit: settings.login?.submit ?? null,
+    loginDone: settings.login?.done ?? null,
   };
 }
 

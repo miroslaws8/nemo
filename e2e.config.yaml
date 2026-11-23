@@ -5,23 +5,30 @@
 # A bare `pnpm exec playwright test` runs default_profile on staging.
 
 environments:
-  # The tests run in a workspace of their own (QA Automation, account qa@example.com) in every
-  # environment, apart from real workspaces.
+  # Your app: replace these hosts. Each signs in with its QA account (credentials: QA_<NAME>_EMAIL
+  # and _PASSWORD), a dedicated test account kept apart from real ones.
   local:
     base_url: http://qa-automation.localhost:5173
     credentials: LOCAL # QA_LOCAL_EMAIL / QA_LOCAL_PASSWORD
+    login: { path: /dashboard, submit: Sign in, done: /dashboard }
+    api_token_cookie: idp_access_token
     local_only: true # the app on this machine: the server QA console does not offer it
     login_origin: http://localhost:8090 # the sign-in page (the console's agent checks log in here)
   staging:
     base_url: https://qa-automation.staging.example.com
     api_url: https://api.staging.example.com
     credentials: STAGE
+    # Where the sign-in starts, its submit button, and where the app lands once signed in.
+    login: { path: /dashboard, submit: Sign in, done: /dashboard }
+    api_token_cookie: idp_access_token # the API takes the session's token as a Bearer header
     login_origin: https://auth.staging.example.com
   prod:
     # Full parity with staging: no allowed_tiers.
     base_url: https://qa-automation.example.com
     api_url: https://api.example.com # the login fails loudly if the app calls another host
     credentials: PROD
+    login: { path: /dashboard, submit: Sign in, done: /dashboard }
+    api_token_cookie: idp_access_token
     login_origin: https://auth.example.com
     # Stored skills run here as promoted to prod (the skill's page → Promote to prod).
     skill_channel: prod
@@ -67,9 +74,9 @@ safety:
   # Titles of everything the tests create start with this; nothing else is ever deleted.
   data_prefix: "[SMOKE] E2E "
   # Never deleted, whatever the prefix rule says (shared fixtures).
-  protected_titles: ["[SMOKE] Asset Zoo"]
+  protected_titles: []
 
-# What happens to the data a test created (courses, quizzes, learning paths) once it finishes.
+# What happens to the data a test created (the records of engine/cleanup/gateways.ts) once it finishes.
 # Deletion re-reads each record first: the title prefix and the test user as owner must match.
 cleanup:
   on_pass: delete

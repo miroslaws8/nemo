@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../schema/template-file.schema.json
+template: open_menu_link
+title: open ${params.link} from the mobile menu
+description: >-
+  On a phone the site's navigation hides behind a menu button: opens it and follows one of its
+  links (the menu is a dialog, so the same link in the footer is not taken).
+
+params:
+  link:
+    type: string
+    description: The link's name in the menu, e.g. Pricing
+
+steps:
+  - click: { button: Open menu }
+  - click: { role: link, name: "${params.link}", in: dialog }

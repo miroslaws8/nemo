@@ -1,7 +1,7 @@
 import { test as base, type TestInfo } from "@playwright/test";
 import { ApiClient } from "./api-client";
-import { authUserSchema } from "./api-schemas";
 import { deleteTracked } from "./cleanup/cleaner";
+import { fetchTestUserId } from "./cleanup/test-user";
 import { loadE2eConfig } from "./config";
 import { getEnvironment } from "./environment";
 import { ErrorMonitor } from "./error-monitor";
@@ -79,8 +79,7 @@ export const test = base.extend<IE2eTestFixtures, IE2eWorkerFixtures>({
       const fetchUser = async (): Promise<IQaUser> => {
         const api = await ApiClient.create(environment);
         try {
-          const found = await api.get("/api/auth", authUserSchema);
-          return { id: found.id };
+          return { id: await fetchTestUserId(api) };
         } finally {
           await api.dispose();
         }

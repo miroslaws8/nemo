@@ -31,8 +31,11 @@ tests:
   Playwright test. Data-driven tests (`each:`), reusable templates, tags and editor
   autocompletion from JSON Schemas come with it.
 - **Safe on real environments.** Everything a test creates is titled with a prefix and cleaned
-  up afterwards; deletion re-reads each record and refuses anything the test user does not own or
-  that is protected. A sweeper removes what a failed run left behind.
+  up afterwards through gateways you write for your app's records; deletion re-reads each record
+  and refuses anything the test user does not own or that is protected. A sweeper removes what a
+  failed run left behind.
+- **Phones and public sites.** An environment can run as a device (`device: Pixel 7`) and
+  without an account; `expect_fits_width` fails a page that scrolls sideways.
 - **Tiers and profiles.** `smoke` (read-only, also the prod monitor), `regression` (creates data)
   and `ai` (spends credits, so it runs only after a green smoke tier), combined into profiles
   such as `post-deploy`.
@@ -99,20 +102,19 @@ Point it at your app:
    pnpm console:setup && pnpm console                 # → http://127.0.0.1:7357
    ```
 
-A new test from a scaffold: `pnpm new regression quizzes/take-quiz "Quiz — take"`.
+A new test from a scaffold: `pnpm new smoke home "Home page"`.
 
 ## Adapting it to your app
 
-The engine, the console and the skill framework are generic. What ships besides them is a demo
-(`tests/demo/`, `data/demo-pages.yaml`, the skill `qa-landing-mobile`: a public landing on a
-phone) and the engine code of the app nemo was built for, an e-learning app with courses and
-quizzes behind a sign-in — the parts to write for your own app:
+The engine, the console and the skill framework are generic. What ships besides them is a demo:
+`tests/demo/`, `data/demo-pages.yaml`, `templates/demo/` and the skill `qa-landing-mobile`, a
+public landing on a phone. For your own app you write:
 
-| Part | Generic | Example-specific: replace for your app |
+| Part | Ships, generic | You write for your app |
 |---|---|---|
-| Tests | the format, steps, tiers, templates, scaffolds | `tests/`, `data/`, `templates/` |
-| Sign-in | the session handling, `QA_<ENV>_*` credentials, signed-out environments | the login form in `engine/auth.setup.ts` |
-| Test data | registry, cleanup guard, sweeper, data prefix | the API client and records (`engine/api-client.ts`, `api-schemas.ts`), setups (`engine/setups/`), cleanup gateways (`engine/cleanup/gateways.ts`), asset steps (`engine/steps/assets.ts`) |
+| Tests | the format, steps, tiers, templates, scaffolds, signed-out and phone environments | `tests/`, `data/`, `templates/` |
+| Sign-in | the login project for an email + password form (`login` in `e2e.config.yaml`), `QA_<ENV>_*` credentials | a sign-in of another kind: `engine/auth.setup.ts` |
+| Test data | the API client, the registry, cleanup guard, sweeper, data prefix | setups (`engine/setups/`), one cleanup gateway per kind of record (`engine/cleanup/gateways.ts`), who the test user is (`engine/cleanup/test-user.ts`) |
 | Agent checks | the console's runner, the skill format and linter, `hermes/skill-template.md`, `hermes/skill-templates/` | `hermes/skills/`, the environments in `hermes/qa-shared.md` |
 | Console sign-in | OAuth 2 authorization code with PKCE, roles, audit | the IdP's "who am I" call (`/api/auth`, `console/server/auth/`) |
 

@@ -5,8 +5,8 @@ import { E2E_ROOT } from "../paths";
 import { renderScaffold } from "../scaffolds";
 
 // Creates a test file from the tier's scaffold:
-//   pnpm new regression quizzes/take-quiz "Quiz — take"
-//   → tests/regression/quizzes/take-quiz.test.yaml
+//   pnpm new regression orders/checkout "Order — check out"
+//   → tests/regression/orders/checkout.test.yaml
 
 const USAGE = 'Usage: pnpm new <tier> <path> ["Suite name"]';
 const RELATIVE_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*(\/[a-z0-9][a-z0-9-]*)*$/;
