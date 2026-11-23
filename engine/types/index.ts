@@ -16,6 +16,7 @@ import type {
   TEMPLATE_PARAM_TYPES,
 } from "../schema";
 import type { skillFileSchema } from "../skill-schema";
+import type { judgeAnswerSchema } from "../ai/json-answer";
 import type { AI_PROTOCOLS } from "../ai/settings-schema";
 
 export type IE2eConfig = z.infer<typeof e2eConfigSchema>;
@@ -371,6 +372,34 @@ export interface IModelProtocol {
     request: IModelRequest,
     fetchImpl?: typeof fetch
   ): Promise<IModelReply>;
+}
+
+/** A model's answer to an ai_check (engine/ai/json-answer.ts). */
+export type IJudgeAnswer = z.infer<typeof judgeAnswerSchema>;
+export type IVerdict = IJudgeAnswer["verdict"];
+export type IRegion = IJudgeAnswer["regions"][number];
+
+/** What the judge shows a model: the page as a user sees it, and as assistive tech reads it. */
+export interface IEvidence {
+  png: Buffer;
+  aria: string;
+  url: string;
+}
+
+/** One look by one model; `error` when it gave no answer (provider error, no key, budget). */
+export interface IJudgeAttempt {
+  model: string;
+  answer: IJudgeAnswer | null;
+  error: string | null;
+}
+
+export type IJudgementOutcome = IVerdict | "not_judged";
+
+/** The judge's decision on an ai_check, with every attempt that led to it. */
+export interface IJudgement {
+  outcome: IJudgementOutcome;
+  final: IJudgeAnswer | null;
+  attempts: IJudgeAttempt[];
 }
 
 /** A role's model, ready to call (engine/ai/client.ts). */
