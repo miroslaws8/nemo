@@ -8,6 +8,9 @@ End-to-end QA for web apps that runs against your deployed environments: tests w
 and **agent checks** in which an LLM agent explores the app like a tester and reports
 PASS / FAIL with screenshots.
 
+Built at [Edplay](https://edplay.ai), where it tests Edplay's own apps, and shared as open
+source for everyone who tests web apps.
+
 ```yaml
 suite: Quiz — take it as a learner
 tier: regression
@@ -168,4 +171,4 @@ pull requests against `develop`.
 ## License
 
 Copyright 2026 miroslaws8. Licensed under the [Apache License, Version 2.0](LICENSE); see
-also [NOTICE](NOTICE).
+also [NOTICE](NOTICE). Originally developed at [Edplay](https://edplay.ai).
