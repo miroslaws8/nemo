@@ -1,5 +1,6 @@
 # myqa
 
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 [![Validate](https://github.com/miroslaws8/nemo/actions/workflows/validate.yml/badge.svg)](https://github.com/miroslaws8/nemo/actions/workflows/validate.yml)
 
 End-to-end QA for web apps that runs against your deployed environments: tests written in
@@ -166,4 +167,5 @@ pull requests against `develop`.
 
 ## License
 
-No license has been chosen yet: until a `LICENSE` file is added, all rights are reserved.
+Copyright 2026 miroslaws8. Licensed under the [Apache License, Version 2.0](LICENSE); see
+also [NOTICE](NOTICE).

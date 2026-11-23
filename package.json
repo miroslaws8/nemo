@@ -2,6 +2,7 @@
   "name": "myqa",
   "private": true,
   "description": "Automated QA for web apps: end-to-end tests written in YAML, executed by Playwright Test, with a QA console and AI agent checks.",
+  "license": "Apache-2.0",
   "scripts": {
     "test": "playwright test",
     "test:list": "playwright test --list",
