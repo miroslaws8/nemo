@@ -71,7 +71,10 @@ function describeError(error: unknown): string {
 async function attempt(
   client: IModelClient,
   request: IModelRequest
-): Promise<{ attempt: IJudgeAttempt; unavailable: boolean }> {
+): Promise<{
+  attempt: IJudgeAttempt;
+  unavailable: AiUnavailableError["reason"] | null;
+}> {
   try {
     for (let ask = 0; ask < 2; ask += 1) {
       const reply = await client.complete(request);
@@ -81,7 +84,7 @@ async function attempt(
       if (answer !== null) {
         return {
           attempt: { model: client.model, answer, error: null },
-          unavailable: false,
+          unavailable: null,
         };
       }
     }
@@ -91,7 +94,7 @@ async function attempt(
         answer: null,
         error: "no valid answer (twice)",
       },
-      unavailable: false,
+      unavailable: null,
     };
   } catch (error) {
     return {
@@ -100,7 +103,7 @@ async function attempt(
         answer: null,
         error: describeError(error),
       },
-      unavailable: error instanceof AiUnavailableError,
+      unavailable: error instanceof AiUnavailableError ? error.reason : null,
     };
   }
 }
@@ -127,11 +130,16 @@ export async function judge(
     ...(clients.escalation === null ? [] : [clients.escalation]),
   ];
   const attempts: IJudgeAttempt[] = [];
+  // A model without its key is not asked again; once the budget is spent, nobody is.
+  const keyless = new Set<IModelClient>();
   let lastAnswer: IJudgeAnswer | null = null;
   let everyAttemptUnavailable = true;
 
-  for (const [index, client] of plan.entries()) {
-    if (index > 0) {
+  for (const client of plan) {
+    if (keyless.has(client)) {
+      continue;
+    }
+    if (attempts.length > 0) {
       await evidence.settle();
     }
     const result = await attempt(
@@ -139,8 +147,14 @@ export async function judge(
       requestFor(input, await evidence.capture())
     );
     attempts.push(result.attempt);
-    everyAttemptUnavailable &&= result.unavailable;
+    everyAttemptUnavailable &&= result.unavailable !== null;
     lastAnswer = result.attempt.answer ?? lastAnswer;
+    if (result.unavailable === "budget") {
+      break;
+    }
+    if (result.unavailable === "no_key") {
+      keyless.add(client);
+    }
     if (isConfident(result.attempt.answer, settings)) {
       return {
         outcome: result.attempt.answer.verdict,

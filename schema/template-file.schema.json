@@ -1301,8 +1301,28 @@
           "type": "object",
           "properties": {
             "ai_check": {
-              "type": "string",
-              "minLength": 5
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 5
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "question": {
+                      "type": "string",
+                      "minLength": 5
+                    },
+                    "blocking": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "question"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
             },
             "name": {
               "type": "string",

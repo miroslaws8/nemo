@@ -519,6 +519,47 @@ Each tier is its own Playwright project: `ai` needs `smoke`, so AI credits are n
 deploy whose smoke tests fail. A read-only tier may not create data: no creating setup, no
 `track` step (also not inside a template).
 
+## AI
+
+The `ai` section of `e2e.config.yaml` names the models AI features use, by role, and works with
+any model: `protocol: openai` speaks the OpenAI-compatible API (OpenAI, and through `base_url`
+OpenRouter, Gemini's OpenAI endpoint, vLLM, LM Studio, Ollama at `http://localhost:11434/v1` with
+`key: null`), `protocol: anthropic` Anthropic's. A model must have `vision: true` to judge (it gets
+screenshots); `key` names the `QA_*` variable holding its API key (`.env`, CI secrets);
+`usd_per_million` is its list price, for the budget.
+
+```yaml
+ai:
+  models:
+    fast:   { protocol: openai, model: gpt-6-luna, key: QA_AI_OPENAI_KEY, vision: true,
+              usd_per_million: { input: 0.1, output: 0.5 } }
+    local:  { protocol: openai, base_url: http://localhost:11434/v1, model: qwen2.5vl, key: null,
+              vision: true, usd_per_million: { input: 0, output: 0 } }
+  judge: { model: fast, escalate_to: strong, min_confidence: 0.7, retries: 2, blocking: true }
+  budget_usd_per_run: 1
+```
+
+**The judge** (`ai_check`) shows its model the page — a screenshot from the top (up to 3000 CSS
+pixels) and the ARIA snapshot — with the test's title, its steps so far and the question, and gets
+a verdict (`pass`, `fail`, `unsure`), a confidence and a reason. An answer below `min_confidence`,
+or `unsure`, is not trusted: the page is left to settle (network quiet, animations done), looked at
+again (`retries`), then shown to `escalate_to`. Only a confident answer decides:
+
+| Outcome | The step | The report |
+|---|---|---|
+| pass | passes | annotation `ai_check` with every attempt |
+| fail, blocking | fails: `AI check failed (<confidence>): <reason>` | and `ai-check-<n>-marked`: the screenshot with the regions the model pointed at |
+| fail, `blocking: false` | passes | annotation `ai finding` |
+| still unsure | passes | annotation `ai review`: "AI was not sure: …" |
+| not judged (no key, budget spent) | passes | annotation `ai review`: "AI did not judge: …", and one warning in the output |
+
+AI never turns a failed step green. Its calls cost what `usd_per_million` says; all workers of a
+run share `budget_usd_per_run` (`<run folder or reports>/ai-spend/<run id>.ndjson`), and past it
+nothing more is asked. In CI (`CI` set) a run whose judge has no key stops at start, so a forgotten
+secret is not mistaken for passing checks. `ai: false` on an environment or a profile turns AI off
+there (prod here); with AI off, `ai_check` only attaches the screenshot and the question. The QA
+console's runs get no AI keys yet: their `ai_check` steps are not judged.
+
 ## A test file
 
 ```yaml
@@ -561,7 +602,7 @@ convention; the `tier` field is what counts.
 | `expect_fits_width` | `true` — the page is no wider than the window: nothing scrolls sideways (the phone check; names the element that sticks out) |
 | `repeat` | `until` (a target), `max` rounds (default 25), `steps` — runs the steps until the target shows |
 | `track` | `kind` + `title` — registers data made through the UI for cleanup |
-| `ai_check` | a question; a screenshot of the whole page and the question are attached to the test for a person or a vision model to judge afterwards (the test does not fail on it) |
+| `ai_check` | a question for the [AI judge](#ai), or `{ question, blocking: false }`: a confident "fail" fails the step (unless not blocking), an unsure or missing answer marks the test for review |
 
 Every step also takes `name` (report title), `when` and `unless` (a variable path). In the report
 each step is numbered (`03`, and `03.1`, `03.2` inside a template or a `repeat` round) and points

@@ -194,6 +194,7 @@ async function runAction(
     return resolved;
   });
   await definition.run(args, context);
+  context.stepLog.push(definition.describe(args));
   await attachScreenshot(context, `step-${number}`);
 }
 

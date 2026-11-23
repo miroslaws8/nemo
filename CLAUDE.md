@@ -92,6 +92,17 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
 - After changing a step, setup, template or the tiers: `pnpm schema` (validate fails while the
   schemas are stale).
 
+## AI (`engine/ai/`)
+
+- Model-agnostic: models are roles in `e2e.config.yaml` → `ai`, spoken to through protocols
+  (`engine/ai/protocols/`: OpenAI-compatible and Anthropic, a strategy map), never an `if` on a
+  provider. Keys are `QA_*` variables, never `QA_CONSOLE_*`; console runs get none (the console
+  proxy is still to come, docs/superpowers/specs/2026-11-23-ai-judge-and-explorer-design.md).
+- Every model answer is validated with zod (`parseJsonAnswer`); every call counts against the
+  run's budget (`engine/ai/spend.ts`). AI never turns a failed deterministic step green; an
+  answer it is unsure of, or none, is an `ai review` annotation, never a silent pass.
+- Unit tests are `engine/**/*.unit.ts` (`node:test`, `pnpm unit`); they call no real model.
+
 ## Engine code (TypeScript)
 
 - `strict`; never `any`; no `as` type assertions except narrowing `unknown` after a runtime

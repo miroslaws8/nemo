@@ -45,6 +45,9 @@ tests:
 - **A console for the team.** Start runs, watch each step live with its screenshot, stop, retry
   the failed tests, clean up, follow CI runs. Locally with no sign-in, or as a server with OAuth
   sign-in, roles (viewer, runner, operator), guarded environments and an audit log.
+- **An AI judge in the tests, with any model.** `ai_check: <question>` asks a vision model about
+  the page; unsure, it looks again and asks a stronger one. OpenAI-compatible servers (OpenAI,
+  OpenRouter, Gemini, Ollama, vLLM) and Anthropic, with a budget per run.
 - **Agent checks.** [Hermes Agent](https://github.com/NousResearch/hermes-agent) follows a
   written skill in a real browser with an OpenAI or Anthropic model, marks what is wrong on its
   screenshots, and reports what it spent, within a daily budget.

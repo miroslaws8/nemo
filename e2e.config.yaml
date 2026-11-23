@@ -33,6 +33,7 @@ environments:
     # Stored skills run here as promoted to prod (the skill's page → Promote to prod).
     skill_channel: prod
     guarded: true # pnpm ui / the console ask for an explicit confirmation before running here
+    ai: false # no AI judge on prod
     branch: main # the QA console's server runs prod's tests from main (the others: develop)
   # The demo: the public landing of Edplay on a phone. No account (no credentials), so it signs in
   # nowhere and creates nothing; its tests are tests/demo, and only it runs them. `pnpm demo`.
@@ -93,3 +94,26 @@ error_monitor:
 sweeper:
   older_than: 1d
   max_deletes: 50 # more candidates than this means something is off: stop and say so
+
+# The models AI features use, by role (docs/guide.md → AI). Any OpenAI-compatible server works
+# (base_url: OpenRouter, Gemini, Ollama at http://localhost:11434/v1 with key: null, vLLM, …), and
+# Anthropic's API. `key` names the QA_* variable holding the API key (.env, CI secrets); a model
+# whose key is not set judges nothing: CI stops at start, elsewhere ai_check is marked for review.
+ai:
+  models:
+    fast:
+      protocol: openai
+      model: gpt-6-luna
+      key: QA_AI_OPENAI_KEY
+      vision: true
+      usd_per_million: { input: 0.1, output: 0.5 }
+    strong:
+      protocol: anthropic
+      model: claude-sonnet-5-5
+      key: QA_AI_ANTHROPIC_KEY
+      vision: true
+      usd_per_million: { input: 2, output: 10 }
+  # ai_check: the model that judges, the one asked when it stays unsure, how sure an answer must
+  # be, how many more looks before escalating, and whether a confident "fail" fails the step.
+  judge: { model: fast, escalate_to: strong, min_confidence: 0.7, retries: 2, blocking: true }
+  budget_usd_per_run: 1 # past it, AI answers nothing more in this run

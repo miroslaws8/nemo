@@ -567,6 +567,17 @@ export interface IRunContext {
   testInfo: TestInfo;
   variables: IVariables;
   aiCheckCount: number;
+  // What the test did so far, one line per step (the AI judge reads it).
+  stepLog: string[];
+  // The run's AI (engine/ai/); null where AI is off.
+  ai: IAiRunContext | null;
+}
+
+/** The AI of one worker: the settings and the judge's models. */
+export interface IAiRunContext {
+  settings: IAiSettings;
+  primary: IModelClient;
+  escalation: IModelClient | null;
 }
 
 export interface IE2eTestFixtures {

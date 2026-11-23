@@ -190,6 +190,41 @@ describe("judge", () => {
     assert.equal(result.outcome, "not_judged");
   });
 
+  test("a model that cannot be asked is not asked again", async () => {
+    const noKey = (): Error =>
+      new AiUnavailableError("no_key", "QA_AI_KEY is not set");
+    const primary = stubClient("fast-1", [noKey(), noKey(), noKey()]);
+    const escalation = stubClient("strong-1", [answer("pass", 0.9)]);
+    const evidence = stubEvidence();
+    const result = await judge(
+      INPUT,
+      evidence,
+      { primary, escalation },
+      SETTINGS
+    );
+    assert.equal(result.outcome, "pass");
+    assert.equal(primary.calls, 1);
+    assert.equal(result.attempts.length, 2);
+    assert.equal(evidence.counts.capture, 2);
+  });
+
+  test("a spent budget stops the loop", async () => {
+    const budget = (): Error =>
+      new AiUnavailableError("budget", "the run's AI budget is spent");
+    const primary = stubClient("fast-1", [budget(), budget(), budget()]);
+    const escalation = stubClient("strong-1", [budget()]);
+    const evidence = stubEvidence();
+    const result = await judge(
+      INPUT,
+      evidence,
+      { primary, escalation },
+      SETTINGS
+    );
+    assert.equal(result.outcome, "not_judged");
+    assert.equal(result.attempts.length, 1);
+    assert.equal(evidence.counts.settle, 0);
+  });
+
   test("the budget runs out mid-loop: unsure, never pass", async () => {
     const budget = (): Error =>
       new AiUnavailableError("budget", "the run's AI budget is spent");

@@ -21,6 +21,8 @@ tests:
       - expect_url: { matches: "/pricing/?([?#]|$)" }
       - expect_visible: { css: h1 }
       - expect_fits_width: true
+      # The AI judge (docs/guide.md → AI): no key set, it is marked for review and passes.
+      - ai_check: Is the pricing page laid out for a phone, with no text cut off or overlapping and every price readable?
 
   - name: a question of the FAQ opens its answer
     steps:
