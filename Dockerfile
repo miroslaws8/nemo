@@ -1,4 +1,4 @@
-# The QA Console as the team's server (README → QA Console → Docker): the console's code, the
+# The QA Console as the team's server (docs/guide.md → QA Console → Docker): the console's code, the
 # browsers of Playwright, git for the commits it tests and Hermes Agent for the agent checks. The tag must equal @playwright/test in
 # package.json (pnpm validate checks it); a branch with another version gets its own Chromium
 # in /data/browsers.
@@ -20,7 +20,7 @@ COPY console/runner-sudoers /etc/sudoers.d/qa-console
 RUN chmod 0440 /etc/sudoers.d/qa-console \
  && visudo --check --file=/etc/sudoers.d/qa-console
 
-# Hermes Agent (Nous Research): the LLM agent of the agent checks (hermes/, README → QA Console),
+# Hermes Agent (Nous Research): the LLM agent of the agent checks (hermes/, docs/guide.md → QA Console),
 # pinned to a release commit and installed once into /opt/hermes, owned by root. Its dependency
 # environment gets the anthropic package (the agent's provider); the runner users run that
 # environment's own hermes (/usr/local/bin/qa-hermes) with a Hermes home of their own, so nothing

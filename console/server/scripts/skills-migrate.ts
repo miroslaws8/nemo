@@ -26,7 +26,7 @@ import { ConsoleSkills } from "../skills/skill-stores";
 // prod keeps running them; and, run on a server console, the skills of its own store
 // (<data dir>/skills) with all their versions, prod on the newest (they ran everywhere). A skill
 // the store has already is left alone, so it may run again. Run it before the commit that deletes
-// those folders from git reaches develop and main (README → Skills).
+// those folders from git reaches develop and main (docs/guide.md → Skills).
 
 interface ICandidate {
   name: string;
@@ -136,7 +136,7 @@ async function main(): Promise<void> {
   const registry = settings.skillRegistry;
   if (registry === null) {
     throw new Error(
-      "No skill store here: set QA_CONSOLE_SKILLS_BUCKET and its key (README → Skills)"
+      "No skill store here: set QA_CONSOLE_SKILLS_BUCKET and its key (docs/guide.md → Skills)"
     );
   }
   const bucket = new SkillBucket(registry);

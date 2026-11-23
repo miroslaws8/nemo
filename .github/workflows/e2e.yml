@@ -1,6 +1,6 @@
 # The YAML e2e tests against a deployed environment (Bitbucket: custom e2e-staging / e2e-prod,
 # e2e-prod-monitor). Started by
-#   - the app's deploy pipeline, through the API (README → CI):
+#   - the app's deploy pipeline, through the API (docs/guide.md → CI):
 #       gh workflow run e2e.yml -R <owner>/<repo> -f environment=staging -f expect_frontend_build=<tag>
 #   - by hand: Actions → E2E → Run workflow (a pull request's branch: set `ref`)
 #   - the schedule below: smoke tests on prod (the prod monitor), once the repository variable

@@ -13,7 +13,7 @@ import { Actor, SearchParams } from "../common/request-params";
 import { SIGN_IN } from "../core/tokens";
 import type { IActor, IRedirect, ISignIn } from "../types";
 
-// Signing in with the app's IdP (a server console only; README → Sign-in and roles).
+// Signing in with the app's IdP (a server console only; docs/guide.md → Sign-in and roles).
 
 function redirect(response: Response, to: IRedirect): void {
   response.writeHead(302, {

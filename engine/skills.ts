@@ -26,7 +26,7 @@ import { readYamlSource } from "./yaml-document";
 // `pnpm validate` checks they are up to date.
 
 export const SKILLS_DIRECTORY = path.join(E2E_ROOT, "hermes", "skills");
-// Skill templates: what the QA console offers to start a skill from (README → Skills).
+// Skill templates: what the QA console offers to start a skill from (docs/guide.md → Skills).
 export const SKILL_TEMPLATES_FOLDER = "hermes/skill-templates";
 const SKILL_TEMPLATE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 // The name a template's skill is filled in under, to check that it makes a SKILL.md.

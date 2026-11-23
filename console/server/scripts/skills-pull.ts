@@ -44,7 +44,7 @@ async function main(): Promise<void> {
   const registry = consoleSettings().skillRegistry;
   if (registry === null) {
     throw new Error(
-      "No skill store here: set QA_CONSOLE_SKILLS_BUCKET and its key (README → Skills)"
+      "No skill store here: set QA_CONSOLE_SKILLS_BUCKET and its key (docs/guide.md → Skills)"
     );
   }
   const bucket = new SkillBucket(registry);

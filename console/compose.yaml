@@ -1,5 +1,5 @@
 # The server console on this machine, built and run the way the team's server runs it
-# (README → QA Console → Docker): pnpm console:docker → http://127.0.0.1:7359
+# (docs/guide.md → QA Console → Docker): pnpm console:docker → http://127.0.0.1:7359
 # myqa's .env (and ~/.hermes/.env) give the settings (QA_CONSOLE_IDP_*, _OAUTH_CLIENT_ID,
 # _GIT_URL/_GIT_TOKEN, QA_* for the QA accounts); console/users.yaml (a copy of
 # users.example.yaml) the people.

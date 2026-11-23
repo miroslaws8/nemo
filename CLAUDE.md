@@ -11,7 +11,7 @@ setups, resources, cleanup gateways and `auth.setup.ts`.
 
 End-to-end tests are written in YAML (`tests/**/*.test.yaml`) and run by Playwright Test through
 a TypeScript engine (`engine/`). `e2e.config.yaml` holds environments, tiers, run profiles, safety
-and cleanup settings. `README.md` documents the test format.
+and cleanup settings. `docs/guide.md` documents the test format.
 
 `.github/workflows/` (GitHub Actions) and `bitbucket-pipelines.yml` both run the scripts in `ci/`: `ci/run.sh` (install → wait for the deploy →
 playwright), `ci/validate.sh` (every push/PR), `ci/sweep.sh` (scheduled cleanup),
@@ -20,7 +20,7 @@ playwright), `ci/validate.sh` (every push/PR), `ci/sweep.sh` (scheduled cleanup)
 The Playwright image tag (in both CIs and in the console's `Dockerfile`) must equal
 `@playwright/test` in package.json: `pnpm validate` checks them all.
 
-`console/` is the QA Console (README → QA Console): a web app that starts runs, shows them live,
+`console/` is the QA Console (docs/guide.md → QA Console): a web app that starts runs, shows them live,
 stops, retries and cleans up after them — on a developer's machine (`local` mode) or for the team
 on a server (`server` mode). `console/server` (NestJS on Express, its own package.json),
 `console/shared` (the HTTP contract and the run reducer), `console/web` (Vue 3 + Vite + Tailwind +
@@ -32,7 +32,7 @@ A skill is written as `hermes/skills/<name>/skill.yaml` (what it does: steps, sc
 report, PASS/FAIL; schema `engine/skill-schema.ts`) and filled into the Markdown base every skill
 shares, `hermes/skill-template.md`: `pnpm skills` writes its `SKILL.md`, the file Hermes reads.
 Never edit a `SKILL.md` by hand; `pnpm validate` fails while one is out of date. The templates the
-QA console starts a skill from are `hermes/skill-templates/<id>.yaml` (README → Skills).
+QA console starts a skill from are `hermes/skill-templates/<id>.yaml` (docs/guide.md → Skills).
 Keep them free of personal data and machine paths: use `~/.hermes/…` and `~/myqa-output/…`.
 `hermes/qa-mark.js` is the helper an agent loads into the page to mark what is wrong before a
 screenshot (`qaMark`; the shared contract → Marking what is wrong): one JavaScript expression,
@@ -83,7 +83,7 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
   an `ignore` regex; never switch `auto_check` off to get a test green.
 - Reach a page by its route (`goto: /dashboard/quizzes`), not by sidebar labels: the sidebar is
   regrouped often. Click through the UI only when the click is what the test checks.
-- Never add waits or retries for the API rate limit (429): the engine waits it out (README →
+- Never add waits or retries for the API rate limit (429): the engine waits it out (docs/guide.md →
   API rate limit).
 - After changing a step, setup, template or the tiers: `pnpm schema` (validate fails while the
   schemas are stale).
@@ -128,7 +128,7 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
   tsx: Nest's dependency injection needs the decorator metadata tsx does not emit. Its code is
   CommonJS (the engine it imports uses `__dirname`); Nest itself is ESM, loaded with Node's
   `require(esm)`. Do not move the server to a `dist/` build: `E2E_ROOT` comes from `__dirname`.
-- A server console signs people in (`console/server/auth/`, README → Sign-in and roles). Every
+- A server console signs people in (`console/server/auth/`, docs/guide.md → Sign-in and roles). Every
   route declares its access with `@Access("open" | <role>)` (AccessGuard refuses one that does
   not); a route acting on an environment or reading its files also calls `requireOnEnvironment`
   (prod takes an operator). The rule lives once in `console/shared/access.ts`: the server
@@ -142,7 +142,7 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
   (`console/server/runners.ts`, `QA_CONSOLE_RUNNERS`): start it with `IPreparedRun.playwright()` or
   `IRunners.node()`, never `process.execPath` directly, and give every folder it writes in to its
   runner with `share()`. The console's own code (cleanups and their login) runs as the console.
-- An agent check (README → Agent checks, `console/server/agents/`) is a run whose process is
+- An agent check (docs/guide.md → Agent checks, `console/server/agents/`) is a run whose process is
   `agents/agent-run.mts` instead of Playwright: Hermes runs a skill of the run's commit and the
   file turns its stream into the same live events. What differs per kind of run is an `IRunKind`
   (`kinds` in `run-manager.ts`: tests | agent), never an `if`. It runs as the environment's runner
@@ -156,7 +156,7 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
   (`agent_checks` in `e2e.config.yaml`) through `POST /api/ingest/agent-checks`
   (`RunManager.queueAgentChecks`); every check counts towards the day's spend limit
   (`agents/spend-ledger.ts`).
-- Skills (README → Skills, Skill store; `console/server/skills/`) come from the run's commit (repo)
+- Skills (docs/guide.md → Skills, Skill store; `console/server/skills/`) come from the run's commit (repo)
   and the console's store (`createSkillStore`): given `QA_CONSOLE_SKILLS_*`, the skill store, an
   S3 bucket every console shares (`skill-registry.ts`: mirrored in `<data dir>/skills-registry`
   and read from there, synced every minute and after a write; a version's file before the

@@ -43,7 +43,7 @@ data:
   QA_CONSOLE_MAX_ACTIVE_RUNS: "1"
   # What agent checks may spend in a day (UTC), in dollars at list prices (default 5).
   # QA_CONSOLE_AGENT_DAILY_USD: "5"
-  # The skill store (README → Skill store; README here → Skill store): the S3 bucket every
+  # The skill store (docs/guide.md → Skill store; README here → Skill store): the S3 bucket every
   # console reads skills from (and QA_CONSOLE_SKILLS_ENDPOINT for a store other than AWS S3). Set it together with its key in the Secret
   # (QA_CONSOLE_SKILLS_ACCESS_KEY_ID, QA_CONSOLE_SKILLS_SECRET_ACCESS_KEY): one without the other
   # and the console does not start.

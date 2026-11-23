@@ -47,4 +47,4 @@ fi
 
 echo "Done. Credentials stay in the Hermes vault and $HERMES_DIR/.env (QA_* keys), never here."
 # Most skills live in the QA console's skill store, not in git: pnpm skills:pull writes them in.
-echo "Skills from the skill store: pnpm skills:pull (QA_CONSOLE_SKILLS_* in myqa's .env; README → Skills)."
+echo "Skills from the skill store: pnpm skills:pull (QA_CONSOLE_SKILLS_* in myqa's .env; docs/guide.md → Skills)."

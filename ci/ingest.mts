@@ -9,7 +9,7 @@ import type {
 } from "../console/shared/types.ts";
 
 // Sends a CI run to the server QA console as it goes, so people watch it there as they watch the
-// console's own runs (README → QA Console → CI runs live). Node runs this file directly (no npm
+// console's own runs (docs/guide.md → QA Console → CI runs live). Node runs this file directly (no npm
 // packages).
 //   node ci/ingest.mts wait     before the run: waits while a run of the console's own uses the
 //                               environment (it then holds it for this step); at most 20 minutes,

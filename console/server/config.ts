@@ -249,7 +249,9 @@ function serverSetup(values: ISettingValues): IModeSetup {
   ) {
     const missing = SERVER_KEYS.filter((key) => values[key] === undefined);
     return failed([
-      `server mode needs ${missing.join(", ")} (README → Console settings)`,
+      `server mode needs ${missing.join(
+        ", "
+      )} (docs/guide.md → Console settings)`,
     ]);
   }
   const problems = [

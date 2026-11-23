@@ -36,7 +36,7 @@ import type { IActor } from "../types";
 import { SkillCatalog } from "./skill-catalog";
 import { SkillChecks } from "./skill-check";
 
-// The Skills page (README → QA Console → Skills): every skill agent checks may follow, and adding
+// The Skills page (docs/guide.md → QA Console → Skills): every skill agent checks may follow, and adding
 // one or giving one a new version from a skill.yaml — checked, then written (a local console: the
 // working tree; a server: its own store) without anything left to run by hand. Reading takes a
 // viewer, changing takes SKILL_EDITOR (console/shared/access.ts).

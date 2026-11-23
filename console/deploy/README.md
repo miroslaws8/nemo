@@ -13,7 +13,7 @@ the image), as users of their own through sudo (`qa-runner`, `qa-runner-guarded`
 environments such as prod). The image also holds Hermes Agent, the LLM agent of the agent checks
 (about 6 GB in all). Run files (reports, traces, screenshots) are served at a second host name
 (`qa-files.example.com` below). All state is on one volume at `/data`; optionally the skills live
-in an S3 bucket every console shares (README → QA Console → Skill store).
+in an S3 bucket every console shares (docs/guide.md → QA Console → Skill store).
 
 ## The minimum to start
 

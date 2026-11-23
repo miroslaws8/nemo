@@ -39,7 +39,7 @@ import {
 // and drops what went, at start, every REGISTRY_SYNC_MS and after the console writes. Writing a
 // version puts its file first and then meta.json naming it, so a reader never meets a meta.json
 // whose version is not there yet. Every console given a key that may write writes it, the team's
-// and each Mac's (README → Skill store). A skill here wins over the repo's of the same name.
+// and each Mac's (docs/guide.md → Skill store). A skill here wins over the repo's of the same name.
 
 // What the mirror takes from the bucket: a skill's meta.json and its versions' skill.yaml.
 const MIRRORED = /^[a-z0-9][a-z0-9-]*\/(meta\.json|v[1-9][0-9]*\/skill\.yaml)$/;
