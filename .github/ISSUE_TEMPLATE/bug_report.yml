@@ -1,0 +1,67 @@
+name: Bug report
+description: Something in nemo does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Leave out passwords, tokens, session cookies and real user data:
+        reports, traces and `.env` files contain them. A security problem goes through
+        **Security → Report a vulnerability**, not here.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Engine (YAML tests, steps, setups, cleanup)
+        - QA Console
+        - Agent checks (Hermes skills)
+        - CI (GitHub Actions, Bitbucket Pipelines)
+        - Documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, and what nemo did instead of what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce it
+      description: The command you ran, and the smallest test file, config or skill that shows it.
+      placeholder: |
+        E2E_ENV=staging pnpm exec playwright test tests/smoke/dashboard.test.yaml
+
+        ```yaml
+        suite: …
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: The error, the failing step from the report, or the console's message. Redact anything secret.
+      render: text
+  - type: input
+    id: commit
+    attributes:
+      label: nemo commit
+      description: "`git rev-parse --short HEAD`"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Node, pnpm, OS
+      placeholder: Node 24.2, pnpm 10.20, macOS 26 / Ubuntu 24.04 / the Docker image

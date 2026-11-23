@@ -147,17 +147,8 @@ Steps, setups and cleanup gateways are registries: a new one is a file plus one 
 
 ## Contributing
 
-Issues and pull requests are welcome. Before you open a pull request:
-
-```bash
-pnpm typecheck && pnpm format:check && pnpm validate   # the engine, tests and schemas
-pnpm console:check                                     # if you changed console/
-```
-
-The `Validate` workflow runs the same checks on every pull request. Code conventions (strict
-TypeScript, no `any`, registries instead of conditionals, zod for anything external) are in
-[CLAUDE.md](CLAUDE.md). `main` holds the tests for prod and `develop` those for staging; open
-pull requests against `develop`.
+Issues and pull requests are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) for the setup, the
+conventions and the checks to run. Open pull requests against `develop`.
 
 ## Security
 

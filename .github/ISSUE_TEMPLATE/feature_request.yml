@@ -1,0 +1,46 @@
+name: Feature request
+description: An idea for nemo — a step, a setup, a console feature, a CI integration
+labels: [enhancement]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Engine (YAML tests, steps, setups, cleanup)
+        - QA Console
+        - Agent checks (Hermes skills)
+        - CI (GitHub Actions, Bitbucket Pipelines)
+        - Documentation
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to test or do, and what gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: How it could work. For a step or a setup, the YAML you would like to write.
+      placeholder: |
+        ```yaml
+        - my_step: { … }
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Workarounds you use now, or other ways you considered.
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to open a pull request for this.
