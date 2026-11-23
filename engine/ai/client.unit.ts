@@ -58,9 +58,16 @@ const REPLY: IModelReply = {
   text: "{}",
   usage: { inputTokens: 1_000_000, outputTokens: 0 },
   refused: false,
+  toolCalls: [],
 };
 
-const REQUEST = { system: "s", parts: [], maxTokens: 100, timeoutMs: 1000 };
+const REQUEST = {
+  system: "s",
+  messages: [],
+  tools: [],
+  maxTokens: 100,
+  timeoutMs: 1000,
+};
 
 function tempSpend(): ReturnType<typeof runSpend> {
   const folder = fs.mkdtempSync(path.join(os.tmpdir(), "ai-client-"));

@@ -8,12 +8,42 @@ const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 const REQUEST: IModelRequest = {
   system: "You judge web pages.",
-  parts: [
-    { type: "image", png: PNG },
-    { type: "text", text: "Is the menu open?" },
+  messages: [
+    {
+      role: "user",
+      parts: [
+        { type: "image", png: PNG },
+        { type: "text", text: "Is the menu open?" },
+      ],
+    },
   ],
+  tools: [],
   maxTokens: 1024,
   timeoutMs: 60_000,
+};
+
+const CLICK_TOOL = {
+  name: "click",
+  description: "Click a target.",
+  schema: { type: "object", properties: { button: { type: "string" } } },
+};
+
+// A tool round trip: the model asked to click, the engine answered, then shows the page again.
+const TOOL_REQUEST: IModelRequest = {
+  ...REQUEST,
+  tools: [CLICK_TOOL],
+  messages: [
+    { role: "user", parts: [{ type: "text", text: "Open the menu." }] },
+    {
+      role: "assistant",
+      text: "",
+      toolCalls: [
+        { id: "call_1", name: "click", input: { button: "Open menu" } },
+      ],
+    },
+    { role: "tool", results: [{ callId: "call_1", text: "ok" }] },
+    { role: "user", parts: [{ type: "image", png: PNG }] },
+  ],
 };
 
 interface ISeenRequest {
@@ -117,6 +147,116 @@ describe("openai protocol", () => {
     await assert.rejects(
       MODEL_PROTOCOLS.openai.complete(settings({}), "key", REQUEST, fetchImpl)
     );
+  });
+});
+
+describe("tool calling", () => {
+  test("openai sends tools and a tool round trip", async () => {
+    const { fetchImpl, seen } = fakeFetch(200, OPENAI_REPLY);
+    await MODEL_PROTOCOLS.openai.complete(
+      settings({}),
+      "key",
+      TOOL_REQUEST,
+      fetchImpl
+    );
+    const body = seen[0].body;
+    const text = JSON.stringify(body);
+    assert.match(text, /"type":"function","function":\{"name":"click"/);
+    assert.match(text, /"arguments":"\{\\"button\\":\\"Open menu\\"\}"/);
+    assert.match(text, /"role":"tool","tool_call_id":"call_1","content":"ok"/);
+  });
+
+  test("openai maps the reply's tool calls", async () => {
+    const { fetchImpl } = fakeFetch(200, {
+      ...OPENAI_REPLY,
+      choices: [
+        {
+          index: 0,
+          finish_reason: "tool_calls",
+          message: {
+            role: "assistant",
+            content: null,
+            tool_calls: [
+              {
+                id: "call_9",
+                type: "function",
+                function: {
+                  name: "click",
+                  arguments: '{"button":"Open menu"}',
+                },
+              },
+              {
+                id: "call_10",
+                type: "function",
+                function: { name: "click", arguments: "{not json" },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const reply = await MODEL_PROTOCOLS.openai.complete(
+      settings({}),
+      "key",
+      TOOL_REQUEST,
+      fetchImpl
+    );
+    assert.deepEqual(reply.toolCalls[0], {
+      id: "call_9",
+      name: "click",
+      input: { button: "Open menu" },
+    });
+    assert.equal(reply.toolCalls[1].input, "{not json");
+    assert.equal(reply.text, "");
+  });
+
+  test("anthropic sends tools and a tool round trip", async () => {
+    const { fetchImpl, seen } = fakeFetch(200, ANTHROPIC_REPLY);
+    await MODEL_PROTOCOLS.anthropic.complete(
+      settings({ protocol: "anthropic" }),
+      "key",
+      TOOL_REQUEST,
+      fetchImpl
+    );
+    const text = JSON.stringify(seen[0].body);
+    assert.match(
+      text,
+      /"name":"click","description":"Click a target.","input_schema"/
+    );
+    assert.match(
+      text,
+      /"type":"tool_use","id":"call_1","name":"click","input":\{"button":"Open menu"\}/
+    );
+    assert.match(
+      text,
+      /"type":"tool_result","tool_use_id":"call_1","content":"ok"/
+    );
+  });
+
+  test("anthropic maps the reply's tool calls", async () => {
+    const { fetchImpl } = fakeFetch(200, {
+      ...ANTHROPIC_REPLY,
+      content: [
+        { type: "text", text: "Opening it." },
+        {
+          type: "tool_use",
+          id: "toolu_1",
+          name: "click",
+          input: { button: "Open menu" },
+        },
+      ],
+      stop_reason: "tool_use",
+    });
+    const reply = await MODEL_PROTOCOLS.anthropic.complete(
+      settings({ protocol: "anthropic" }),
+      "key",
+      TOOL_REQUEST,
+      fetchImpl
+    );
+    assert.deepEqual(reply.toolCalls, [
+      { id: "toolu_1", name: "click", input: { button: "Open menu" } },
+    ]);
+    assert.equal(reply.text, "Opening it.");
   });
 });
 

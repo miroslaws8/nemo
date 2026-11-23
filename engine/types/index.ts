@@ -346,9 +346,31 @@ export type IModelPart =
   | { type: "text"; text: string }
   | { type: "image"; png: Buffer };
 
+/** A tool the model may call: its JSON Schema comes from a zod schema (z.toJSONSchema). */
+export interface IModelTool {
+  name: string;
+  description: string;
+  schema: Record<string, unknown>;
+}
+
+/** A tool call of a reply; `input` is the parsed JSON, or the raw text when it does not parse. */
+export interface IModelToolCall {
+  id: string;
+  name: string;
+  input: unknown;
+}
+
+/** One message of a conversation with a model. */
+export type IModelMessage =
+  | { role: "user"; parts: IModelPart[] }
+  | { role: "assistant"; text: string; toolCalls: IModelToolCall[] }
+  | { role: "tool"; results: { callId: string; text: string }[] };
+
 export interface IModelRequest {
   system: string;
-  parts: IModelPart[];
+  messages: IModelMessage[];
+  // None: a plain answer (the judge).
+  tools: IModelTool[];
   maxTokens: number;
   // A call that takes longer is given up (and counts as an error of its attempt).
   timeoutMs: number;
@@ -361,6 +383,7 @@ export interface IModelUsage {
 
 export interface IModelReply {
   text: string;
+  toolCalls: IModelToolCall[];
   usage: IModelUsage;
   // The model declined to answer (a safety refusal): no answer to read.
   refused: boolean;

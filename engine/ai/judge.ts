@@ -51,18 +51,24 @@ function requestFor(input: IJudgeInput, evidence: IEvidence): IModelRequest {
     system: SYSTEM,
     maxTokens: MAX_ANSWER_TOKENS,
     timeoutMs: CALL_TIMEOUT_MS,
-    parts: [
-      { type: "image", png: evidence.png },
+    tools: [],
+    messages: [
       {
-        type: "text",
-        text: [
-          `Test: ${input.testTitle}`,
-          `Page: ${evidence.url}`,
-          `Screenshot: ${describeCapture(evidence)}`,
-          `Steps so far:\n${steps || "- (none)"}`,
-          `ARIA snapshot:\n${evidence.aria}`,
-          `Question: ${input.question}`,
-        ].join("\n\n"),
+        role: "user",
+        parts: [
+          { type: "image", png: evidence.png },
+          {
+            type: "text",
+            text: [
+              `Test: ${input.testTitle}`,
+              `Page: ${evidence.url}`,
+              `Screenshot: ${describeCapture(evidence)}`,
+              `Steps so far:\n${steps || "- (none)"}`,
+              `ARIA snapshot:\n${evidence.aria}`,
+              `Question: ${input.question}`,
+            ].join("\n\n"),
+          },
+        ],
       },
     ],
   };

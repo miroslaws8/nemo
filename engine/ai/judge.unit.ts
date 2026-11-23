@@ -33,6 +33,7 @@ function stubClient(
         text: next,
         usage: { inputTokens: 1, outputTokens: 1 },
         refused: false,
+        toolCalls: [],
       };
     },
   };
@@ -249,6 +250,7 @@ describe("judge", () => {
           text: answer("unsure", 0.4),
           usage: { inputTokens: 1, outputTokens: 1 },
           refused: false,
+          toolCalls: [],
         };
       },
     };
