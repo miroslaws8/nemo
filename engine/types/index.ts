@@ -340,6 +340,39 @@ export interface IAiModelSettings {
   usdPerMillion: { input: number; output: number };
 }
 
+/** What a model is sent: text and screenshots. */
+export type IModelPart =
+  | { type: "text"; text: string }
+  | { type: "image"; png: Buffer };
+
+export interface IModelRequest {
+  system: string;
+  parts: IModelPart[];
+  maxTokens: number;
+}
+
+export interface IModelUsage {
+  inputTokens: number;
+  outputTokens: number;
+}
+
+export interface IModelReply {
+  text: string;
+  usage: IModelUsage;
+  // The model declined to answer (a safety refusal): no answer to read.
+  refused: boolean;
+}
+
+/** One way of talking to models (engine/ai/protocols/): OpenAI-compatible, Anthropic, …. */
+export interface IModelProtocol {
+  complete(
+    settings: IAiModelSettings,
+    apiKey: string | null,
+    request: IModelRequest,
+    fetchImpl?: typeof fetch
+  ): Promise<IModelReply>;
+}
+
 export interface IJudgeSettings {
   model: string;
   escalateTo: string | null;
