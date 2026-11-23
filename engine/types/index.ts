@@ -373,6 +373,19 @@ export interface IModelProtocol {
   ): Promise<IModelReply>;
 }
 
+/** A role's model, ready to call (engine/ai/client.ts). */
+export interface IModelClient {
+  readonly role: string;
+  readonly model: string;
+  complete(request: IModelRequest): Promise<IModelReply>;
+}
+
+/** What a run's AI calls cost so far, shared by its workers (engine/ai/spend.ts). */
+export interface IRunSpend {
+  total(): number;
+  add(usd: number, model: string): void;
+}
+
 export interface IJudgeSettings {
   model: string;
   escalateTo: string | null;

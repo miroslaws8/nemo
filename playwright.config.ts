@@ -4,6 +4,8 @@ import {
   type PlaywrightTestProject,
   type ReporterDescription,
 } from "@playwright/test";
+import { missingKeys } from "./engine/ai/client";
+import { resolveAiSettings } from "./engine/ai/settings";
 import { runPaths } from "./engine/run-dir";
 import { ensureRunId } from "./engine/run-info";
 import { selectRun } from "./engine/run-selection";
@@ -14,6 +16,16 @@ const run = selectRun();
 
 // Set before workers start, so ${run.id} and test data titles agree across all of them.
 ensureRunId();
+
+// In CI, an `ai` section whose judge has no key stops the run here: an ai_check left unjudged
+// would otherwise pass unseen. Elsewhere it is "not judged" and marked for review.
+const aiSettings = resolveAiSettings(run.environment.name, run.profileName);
+if (aiSettings !== null && process.env.CI) {
+  const missing = missingKeys(aiSettings);
+  if (missing.length > 0) {
+    throw new Error(`${missing.join("; ")} (CI)`);
+  }
+}
 const environmentName = run.environment.name;
 const loginProject = `${environmentName}:login`;
 
