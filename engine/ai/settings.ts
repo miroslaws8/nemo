@@ -39,6 +39,14 @@ export function resolveAiSettingsFrom(
       blocking: section.judge.blocking,
     },
     budgetUsdPerRun: section.budget_usd_per_run,
+    author:
+      section.author === undefined
+        ? null
+        : {
+            model: section.author.model,
+            maxActions: section.author.max_actions,
+            avoid: [...section.author.avoid],
+          },
   };
 }
 

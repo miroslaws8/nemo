@@ -37,6 +37,7 @@ function settings(
       blocking: true,
     },
     budgetUsdPerRun: 2,
+    author: null,
   };
 }
 

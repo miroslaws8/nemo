@@ -396,6 +396,44 @@
           ],
           "additionalProperties": false
         },
+        "author": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_-]*$"
+            },
+            "max_actions": {
+              "default": 30,
+              "type": "integer",
+              "minimum": 5,
+              "maximum": 100
+            },
+            "avoid": {
+              "default": [
+                "pay",
+                "buy",
+                "checkout",
+                "purchase",
+                "publish",
+                "delete",
+                "remove",
+                "sign out",
+                "log out",
+                "unsubscribe"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          },
+          "required": [
+            "model"
+          ],
+          "additionalProperties": false
+        },
         "budget_usd_per_run": {
           "default": 2,
           "type": "number",

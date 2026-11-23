@@ -114,6 +114,40 @@ describe("ai settings", () => {
     assert.match(issueAt(text, "ai.judge.model") ?? "", /vision: true/);
   });
 
+  test("author defaults", () => {
+    const result = parseConfig(
+      configText(`${MINIMAL_AI}  author: { model: fast }\n`)
+    );
+    assert.ok(result.success, String(result.error));
+    const author = resolveAiSettingsFrom(result.data, "demo", "smoke")?.author;
+    assert.ok(author !== null && author !== undefined);
+    assert.equal(author.model, "fast");
+    assert.equal(author.maxActions, 30);
+    assert.ok(author.avoid.includes("delete"));
+  });
+
+  test("no author section", () => {
+    const result = parseConfig(configText(MINIMAL_AI));
+    assert.ok(result.success, String(result.error));
+    assert.equal(
+      resolveAiSettingsFrom(result.data, "demo", "smoke")?.author,
+      null
+    );
+  });
+
+  test("author model without vision", () => {
+    const text = configText(
+      `${MINIMAL_AI.replace(
+        "judge: { model: fast }",
+        "judge: { model: fast }\n  author: { model: blind }"
+      )}`.replace(
+        "  judge:",
+        "    blind: { protocol: openai, model: m-2, key: null, vision: false, usd_per_million: { input: 0, output: 0 } }\n  judge:"
+      )
+    );
+    assert.match(issueAt(text, "ai.author.model") ?? "", /vision: true/);
+  });
+
   test("a base_url with credentials in it", () => {
     const text = configText(
       MINIMAL_AI.replace(

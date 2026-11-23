@@ -51,9 +51,32 @@ const judgeSchema = z.strictObject({
   blocking: z.boolean().default(true),
 });
 
+/** Words whose button or link the test author never clicks (docs/guide.md → Writing a test with AI). */
+export const DEFAULT_AUTHOR_AVOID = [
+  "pay",
+  "buy",
+  "checkout",
+  "purchase",
+  "publish",
+  "delete",
+  "remove",
+  "sign out",
+  "log out",
+  "unsubscribe",
+];
+
+const authorSchema = z.strictObject({
+  // A role with tool calling and vision.
+  model: roleNameSchema,
+  max_actions: z.number().int().min(5).max(100).default(30),
+  avoid: z.array(z.string().min(1)).default(DEFAULT_AUTHOR_AVOID),
+});
+
 export const aiSettingsSchema = z.strictObject({
   models: z.record(roleNameSchema, modelSchema),
   judge: judgeSchema,
+  // pnpm author: the model that walks a described case and writes its test.
+  author: authorSchema.optional(),
   budget_usd_per_run: z.number().positive().default(2),
 });
 
@@ -68,9 +91,10 @@ export function checkAiReferences(
   report: (issuePath: PropertyKey[], message: string) => void
 ): void {
   const roles = Object.keys(ai.models);
-  const used: [string, string | undefined][] = [
-    ["model", ai.judge.model],
-    ["escalate_to", ai.judge.escalate_to],
+  const used: [string[], string | undefined][] = [
+    [["judge", "model"], ai.judge.model],
+    [["judge", "escalate_to"], ai.judge.escalate_to],
+    [["author", "model"], ai.author?.model],
   ];
   for (const [field, role] of used) {
     if (role === undefined) {
@@ -79,13 +103,13 @@ export function checkAiReferences(
     const model = ai.models[role];
     if (model === undefined) {
       report(
-        ["ai", "judge", field],
+        ["ai", ...field],
         `no model "${role}" in ai.models — models: ${roles.join(", ")}`
       );
     } else if (!model.vision) {
       report(
-        ["ai", "judge", field],
-        `"${role}" is not marked vision: true; the judge sends screenshots`
+        ["ai", ...field],
+        `"${role}" is not marked vision: true; it is sent screenshots`
       );
     }
   }

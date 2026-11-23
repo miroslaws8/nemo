@@ -459,6 +459,14 @@ export interface IAiSettings {
   models: Record<string, IAiModelSettings>;
   judge: IJudgeSettings;
   budgetUsdPerRun: number;
+  // pnpm author's settings; null: no `ai.author` section.
+  author: IAuthorSettings | null;
+}
+
+export interface IAuthorSettings {
+  model: string;
+  maxActions: number;
+  avoid: string[];
 }
 
 /** How far a page reaches past the window's right edge (expect_fits_width). */

@@ -24,6 +24,7 @@ const SETTINGS: IAiSettings = {
     blocking: true,
   },
   budgetUsdPerRun: 1,
+  author: null,
 };
 
 const LOCATION = { file: "t.yaml", line: 1, label: "t.yaml:1" };
