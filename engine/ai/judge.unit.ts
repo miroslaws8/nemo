@@ -44,16 +44,26 @@ function answer(verdict: string, confidence: number, reason = "seen"): string {
 }
 
 function stubEvidence(): {
-  capture: () => Promise<IEvidence>;
+  capture: (focus: string | null) => Promise<IEvidence>;
   settle: () => Promise<void>;
   counts: { capture: number; settle: number };
+  focuses: (string | null)[];
 } {
   const counts = { capture: 0, settle: 0 };
+  const focuses: (string | null)[] = [];
   return {
     counts,
-    capture: async () => {
+    focuses,
+    capture: async (focus) => {
       counts.capture += 1;
-      return { png: Buffer.from([1]), aria: "- heading", url: "https://x/" };
+      focuses.push(focus);
+      return {
+        png: Buffer.from([1]),
+        aria: "- heading",
+        url: "https://x/",
+        top: 0,
+        focus: focus === null ? null : { text: focus, found: true },
+      };
     },
     settle: async () => {
       counts.settle += 1;
@@ -188,6 +198,29 @@ describe("judge", () => {
       SETTINGS
     );
     assert.equal(result.outcome, "not_judged");
+  });
+
+  test("an unsure answer with look_at moves the next look there", async () => {
+    const primary = stubClient("fast-1", [
+      JSON.stringify({
+        verdict: "unsure",
+        confidence: 0.9,
+        reason: "the prices are below the screenshot",
+        look_at: "Starter $50",
+      }),
+      answer("pass", 0.9),
+    ]);
+    const evidence = stubEvidence();
+    const result = await judge(
+      INPUT,
+      evidence,
+      { primary, escalation: null },
+      SETTINGS
+    );
+    assert.equal(result.outcome, "pass");
+    assert.deepEqual(evidence.focuses, [null, "Starter $50"]);
+    assert.equal(result.attempts[0].lookedAt, null);
+    assert.equal(result.attempts[1].lookedAt, "Starter $50");
   });
 
   test("a model that cannot be asked is not asked again", async () => {

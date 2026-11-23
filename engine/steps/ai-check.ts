@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { captureEvidence, markRegions, settlePage } from "../ai/evidence";
 import { judge } from "../ai/judge";
-import type { IJudgement, IRunContext } from "../types";
+import type { IEvidence, IJudgement, IRunContext } from "../types";
 import { defineStep } from "./define-step";
 
 // A question about the page for an AI judge (engine/ai/judge.ts, docs/guide.md → AI): it looks at
@@ -51,6 +51,7 @@ function record(
       reason: judgement.final?.reason ?? null,
       attempts: judgement.attempts.map((attempt) => ({
         model: attempt.model,
+        lookedAt: attempt.lookedAt,
         verdict: attempt.answer?.verdict ?? null,
         confidence: attempt.answer?.confidence ?? null,
         error: attempt.error,
@@ -88,7 +89,8 @@ export const aiCheckStep = defineStep({
       return;
     }
 
-    let lastPng: Buffer | null = null;
+    // The last look, kept for the report (TypeScript does not follow assignments in closures).
+    const seen: { evidence: IEvidence | null } = { evidence: null };
     const judgement = await judge(
       {
         question,
@@ -96,9 +98,9 @@ export const aiCheckStep = defineStep({
         stepsSoFar: context.stepLog,
       },
       {
-        capture: async () => {
-          const evidence = await captureEvidence(context.page);
-          lastPng = evidence.png;
+        capture: async (focus) => {
+          const evidence = await captureEvidence(context.page, focus);
+          seen.evidence = evidence;
           return evidence;
         },
         settle: () => settlePage(context.page),
@@ -106,8 +108,9 @@ export const aiCheckStep = defineStep({
       { primary: ai.primary, escalation: ai.escalation },
       ai.settings.judge
     );
-    if (lastPng !== null) {
-      await attachPng(context, attachment, lastPng);
+    const shown = seen.evidence;
+    if (shown !== null) {
+      await attachPng(context, attachment, shown.png);
     }
     record(context, question, attachment, judgement);
 
@@ -121,11 +124,11 @@ export const aiCheckStep = defineStep({
       pass: async () => undefined,
       fail: async () => {
         const regions = judgement.final?.regions ?? [];
-        if (regions.length > 0) {
+        if (regions.length > 0 && shown !== null) {
           await attachPng(
             context,
             `${attachment}-marked`,
-            await markRegions(context.page, regions)
+            await markRegions(context.page, shown, regions)
           );
         }
         if (blocking) {

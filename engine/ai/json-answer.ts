@@ -18,6 +18,9 @@ export const judgeAnswerSchema = z.object({
   confidence: z.number().min(0).max(1),
   reason: z.string().min(1),
   regions: z.array(regionSchema).default([]),
+  // Unsure because what decides it is not in the screenshot: a short text of the page (from the
+  // ARIA snapshot) to look at next.
+  look_at: z.string().min(1).max(200).optional(),
 });
 
 const FENCE = /```(?:json)?\s*([\s\S]*?)```/i;

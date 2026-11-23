@@ -384,11 +384,17 @@ export interface IEvidence {
   png: Buffer;
   aria: string;
   url: string;
+  // Where the screenshot starts on the page, in CSS pixels (0: the top).
+  top: number;
+  // The text the capture was centred on (the model's look_at), and whether the page has it.
+  focus: { text: string; found: boolean } | null;
 }
 
 /** One look by one model; `error` when it gave no answer (provider error, no key, budget). */
 export interface IJudgeAttempt {
   model: string;
+  // The text this look was centred on (an earlier answer's look_at); null: the page's top.
+  lookedAt: string | null;
   answer: IJudgeAnswer | null;
   error: string | null;
 }

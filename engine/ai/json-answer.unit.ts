@@ -33,6 +33,18 @@ describe("parseJsonAnswer", () => {
     );
   });
 
+  test("look_at is kept", () => {
+    const text = JSON.stringify({
+      ...VALID,
+      verdict: "unsure",
+      look_at: "Starter $50",
+    });
+    assert.equal(
+      parseJsonAnswer(text, judgeAnswerSchema)?.look_at,
+      "Starter $50"
+    );
+  });
+
   test("regions are kept", () => {
     const text = JSON.stringify({
       ...VALID,

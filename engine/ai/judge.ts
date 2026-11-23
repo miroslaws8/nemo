@@ -24,6 +24,7 @@ const SYSTEM = [
   'Reply with JSON only: {"verdict": "pass" | "fail" | "unsure", "confidence": <0..1>, "reason": "<one or two sentences>", "regions": [{"x", "y", "width", "height", "note"}]}.',
   '"pass": the answer to the question is clearly yes. "fail": clearly no. "unsure": the evidence does not settle it (say why).',
   "confidence is how sure you are of the verdict (0.9 = very sure). regions are optional boxes, in screenshot pixels, around what made you decide (most useful for a fail).",
+  'The screenshot shows only part of a long page; the ARIA snapshot covers all of it. When what decides the answer is not in the screenshot, answer "unsure" and add "look_at": a short text copied exactly from the ARIA snapshot, at the place you need to see. The next screenshot is taken around it.',
 ].join("\n");
 
 interface IJudgeInput {
@@ -33,7 +34,8 @@ interface IJudgeInput {
 }
 
 interface IJudgeEvidence {
-  capture: () => Promise<IEvidence>;
+  // The page's top, or around a text an earlier answer asked to look at (look_at).
+  capture: (focus: string | null) => Promise<IEvidence>;
   settle: () => Promise<void>;
 }
 
@@ -54,6 +56,7 @@ function requestFor(input: IJudgeInput, evidence: IEvidence): IModelRequest {
         text: [
           `Test: ${input.testTitle}`,
           `Page: ${evidence.url}`,
+          `Screenshot: ${describeCapture(evidence)}`,
           `Steps so far:\n${steps || "- (none)"}`,
           `ARIA snapshot:\n${evidence.aria}`,
           `Question: ${input.question}`,
@@ -63,6 +66,16 @@ function requestFor(input: IJudgeInput, evidence: IEvidence): IModelRequest {
   };
 }
 
+function describeCapture(evidence: IEvidence): string {
+  const from = `from ${evidence.top} CSS px down the page`;
+  if (evidence.focus === null) {
+    return from;
+  }
+  return evidence.focus.found
+    ? `${from}, around "${evidence.focus.text}" (asked for)`
+    : `${from}: "${evidence.focus.text}" (asked for) is not visible on the page, so this is the top`;
+}
+
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -70,7 +83,8 @@ function describeError(error: unknown): string {
 /** One look by one model: a malformed reply is asked once more on the same evidence. */
 async function attempt(
   client: IModelClient,
-  request: IModelRequest
+  request: IModelRequest,
+  lookedAt: string | null
 ): Promise<{
   attempt: IJudgeAttempt;
   unavailable: AiUnavailableError["reason"] | null;
@@ -83,7 +97,7 @@ async function attempt(
         : parseJsonAnswer(reply.text, judgeAnswerSchema);
       if (answer !== null) {
         return {
-          attempt: { model: client.model, answer, error: null },
+          attempt: { model: client.model, lookedAt, answer, error: null },
           unavailable: null,
         };
       }
@@ -91,6 +105,7 @@ async function attempt(
     return {
       attempt: {
         model: client.model,
+        lookedAt,
         answer: null,
         error: "no valid answer (twice)",
       },
@@ -100,6 +115,7 @@ async function attempt(
     return {
       attempt: {
         model: client.model,
+        lookedAt,
         answer: null,
         error: describeError(error),
       },
@@ -134,6 +150,8 @@ export async function judge(
   const keyless = new Set<IModelClient>();
   let lastAnswer: IJudgeAnswer | null = null;
   let everyAttemptUnavailable = true;
+  // Where to look: the top, until an answer asks for a place (it stays there for later looks).
+  let focus: string | null = null;
 
   for (const client of plan) {
     if (keyless.has(client)) {
@@ -144,11 +162,13 @@ export async function judge(
     }
     const result = await attempt(
       client,
-      requestFor(input, await evidence.capture())
+      requestFor(input, await evidence.capture(focus)),
+      focus
     );
     attempts.push(result.attempt);
     everyAttemptUnavailable &&= result.unavailable !== null;
     lastAnswer = result.attempt.answer ?? lastAnswer;
+    focus = result.attempt.answer?.look_at ?? focus;
     if (result.unavailable === "budget") {
       break;
     }
