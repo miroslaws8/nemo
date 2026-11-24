@@ -153,17 +153,13 @@ export interface IPermission {
 /** The words that change with where tests run: this Mac, or the console's server. */
 export interface IModeWords {
   runsTab: string;
-  runsNav: string;
   newRun: string;
-  home: string;
   // Who started a run is a column of the runs list (a local console has no people).
   showsPerson: boolean;
 }
 
 /** What a console's skill store means for its Skills pages (by where it keeps skills). */
 export interface IStoreWords {
-  // Where the Skills page's skills come from.
-  skills: string;
   // What adding a skill, and giving one a new version, does ({name}, {version} filled in).
   addSkill: string;
   replaceSkill: string;

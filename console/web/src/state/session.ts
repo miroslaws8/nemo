@@ -22,17 +22,13 @@ const NOTICES: readonly ISignInNotice[] = [
 const MODE_WORDS: Record<IMe["mode"], IModeWords> = {
   local: {
     runsTab: "This Mac",
-    runsNav: "Runs on this Mac",
     newRun: "Runs on this Mac, logged in as the environment's QA account.",
-    home: "Tests run on this Mac against each environment",
     showsPerson: false,
   },
   server: {
     runsTab: "Console",
-    runsNav: "Runs on the console",
     newRun:
       "Runs on the console's server, logged in as the environment's QA account.",
-    home: "Tests run on the console's server against each environment",
     showsPerson: true,
   },
 };

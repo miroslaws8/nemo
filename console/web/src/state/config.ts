@@ -31,23 +31,18 @@ export function loadConfig(): Promise<void> {
 
 const STORE_WORDS: Record<ISkillStoreKind, IStoreWords> = {
   "working-tree": {
-    skills: "The skills of this working copy (hermes/skills).",
     addSkill:
       "Adding writes hermes/skills/{name}/ (its skill.yaml and SKILL.md) in this working copy: commit it to share it.",
     replaceSkill:
       "Saving rewrites hermes/skills/{name}/skill.yaml and its SKILL.md in this working copy.",
   },
   console: {
-    skills:
-      "The repo's skills (hermes/skills of a branch) and the ones added in this console.",
     addSkill:
       "Adding saves it in this console: it runs at once on every environment and stays out of the repo (download its skill.yaml to add it there).",
     replaceSkill:
       "Saving makes it version {version} in this console; a check that ran an earlier version keeps it when run again.",
   },
   registry: {
-    skills:
-      "The repo's skills (hermes/skills of a branch) and the skill store's, which every console shares: of two with one name, the store's runs.",
     addSkill:
       "Adding saves it in the skill store, which every console shares: it runs at once on local and staging, and on prod once a version is promoted.",
     replaceSkill:

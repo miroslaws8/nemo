@@ -42,7 +42,7 @@ Playwright image (`pnpm validate` checks its version in every workflow too).
   run workflows).
 - Results: the job's Slack message on failure (on success too after a prod deploy), and the HTML
   report, traces and results in the run's artifact `e2e-<env>-<run>` (14 days).
-- Not on GitHub Actions yet: the QA console's CI tab, CI runs live (`ci/ingest.mts`) and the
+- Not on GitHub Actions yet: the QA console's CI pages, CI runs live (`ci/ingest.mts`) and the
   scheduled agent checks. The console reads Bitbucket Pipelines only.
 
 ## CI (Bitbucket Pipelines)
@@ -124,13 +124,27 @@ through SWC; the web app (`console/web`) is Vue 3. Both read the same HTTP contr
 (`console/shared/api.ts`). The console keeps everything in files (`reports/runs/`, or the data
 folder of a server console), no database.
 
+- **The frame:** a sidebar on the left, no header: **New run** (key `C`), **Runs**, **CI** (once
+  Bitbucket is set up) and **Skills**, then each environment with what goes on it now. At the foot
+  are the user menu (a server console), the connection notice and the theme: System, Light or
+  Dark. Below the `md` width the sidebar is a sheet the page bar opens.
+- **Runs** is the home page: the runs list under a strip with one cell per environment (what goes
+  there now, with `done / total` while tests run, or its last run, and the latest CI pipeline).
+  A cell filters the list (`/?env=<name>`); **All** / **Failed** narrows it. There is no
+  Environments page.
+
 - **A run** is `pnpm exec playwright test` with a folder of its own, `reports/runs/<run id>/`
   (`QA_CONSOLE_DATA_DIR`; see `E2E_RUN_DIR` above): its events, log, HTML report, traces and the
   latest screenshot of each test. The console keeps the newest 30 runs (`QA_CONSOLE_KEEP_RUNS`)
   and deletes the older folders.
-- **While it goes:** the counts, what each worker runs now (the test, its YAML step with
-  `file:line`, the last screenshot), every test with its steps, errors next to the YAML they point
-  at, and the log.
+- **While it goes:** a run's page has its actions in the title bar (a **⋯** menu on a narrow
+  screen), its properties beside the tabs, and the tabs **Summary**, **Tests** and **Log** (an
+  agent check has **Check** instead of Summary). Tests: the counts, what each worker runs now (the
+  test, its YAML step with `file:line`, the last screenshot), every test with its steps and errors
+  next to the YAML they point at. Log: the output.
+- **Summary** (a run of tests; it opens first once the run is over): what failed, grouped by
+  cause, the slowest tests and steps, and a timeline of what each worker ran. Playwright's HTML
+  report stays for traces (**Open report**).
 - **One run or cleanup per environment at a time:** every one there uses the same QA account.
   Another run on that environment waits in a queue, a cleanup is refused until the environment is
   free; at most two runs go at once (`QA_CONSOLE_MAX_ACTIVE_RUNS`).
@@ -151,11 +165,12 @@ folder of a server console), no database.
   a second Ctrl+C or SIGTERM kills them at once. Queued runs wait for the next start.
 - The console answers only at its own address (the Host) and takes changes only from its own
   pages (the Origin).
-- **CI** (the CI tab): the Bitbucket pipelines `e2e-staging`, `e2e-prod`, `e2e-prod-monitor` and
-  `e2e-sweep` — their status and steps, the log while they go, and once a step is over its test
-  report with the failed tests and their errors. **Stop**, **Run again** (the same pipeline and
+- **CI** (**CI** in the sidebar, `/ci`): the Bitbucket pipelines `e2e-staging`, `e2e-prod`,
+  `e2e-prod-monitor` and `e2e-sweep`. A pipeline's page (`/ci/<build number>`) shows its steps as
+  a track, the log while they go, and once a step is over its test report (**Tests** / **Log**)
+  with the failed tests and their errors. **Stop**, **Run again** (the same pipeline and
   profile, testing what is deployed now instead of waiting for a deploy) and **Clean up**
-  (`pnpm sweep --run <build number>`). The header and the New run dialog say when CI is
+  (`pnpm sweep --run <build number>`). The sidebar's environments, the strip and New run say when CI is
   running on an environment: both use the same QA account and its API limit.
 - CI needs the repository and a repository access token: in Bitbucket, the repository's **…** →
   **Settings** → **Security** → **Access tokens** → **Create access token**, with the permissions
@@ -186,7 +201,7 @@ folder of a server console), no database.
 
 ### Agent checks
 
-New run opens on **Agent check** (where the console runs them; **Scripted tests** beside it runs the
+**New run** (the sidebar, key `C`; ⌘↵ starts) opens a window with the kinds on top — **Agent check** (where the console runs them; **Scripted tests** beside it runs the
 YAML tests): [Hermes Agent](#hermes-agent-skills) opens the app in a browser and
 follows one of the skills — the skill store's ([Skill store](#skill-store)), or one in
 `hermes/skills` of the branch the run tests (or of this working copy) — the way a tester would, with one of the console's models (OpenAI's GPT-6 Luna by default where the console has the
@@ -255,7 +270,7 @@ it runs as a runner user that reads nothing of the console's or of other environ
 
 ### Skills
 
-**Skills** (in the header) lists every skill an agent check may follow, with what it changes
+**Skills** (in the sidebar) lists every skill an agent check may follow, in a dense list grouped by where it comes from, with what it changes
 (read-only, records the test account's activity, creates data, spends AI credits), where it comes
 from, whether CI runs it after deploys (`agent_checks`), why the console would not run it, and its
 last check. A console lists the repo's skills of the default environment's branch (runners and
@@ -264,7 +279,7 @@ skill's page shows its `skill.yaml` in words, the `SKILL.md` Hermes reads, the f
 checks and (a stored skill) its versions and the one prod runs; **Run…** opens New run as an
 agent check of it, on that branch.
 
-**Add skill → Describe it:** say in plain words what the agent should check; the model of
+**New skill → Describe it:** say in plain words what the agent should check; the model of
 `ai.author` writes the `skill.yaml` (`POST /api/skills/write`; the shared contract's rules and an
 example skill go with the request), the console checks it like any skill and asks the model once
 more when it has errors, and the skill's form opens on it, to read, adjust and add as usual.
@@ -272,7 +287,8 @@ Nothing is added before that. Its cost counts against the day's limit of the age
 needs `ai.author` and its model's key in this console's environment (`QA_AI_*`); otherwise the
 page says why.
 
-An operator adds one with **Add skill**, which starts it one of three ways:
+An operator adds one with **New skill**, which opens a composer (**Describe it**, ⌘↵ to write it) and
+beside it the other ways to start:
 
 - **From a template** (`hermes/skill-templates`): a page checked read-only, a flow that leaves the
   test account's progress or an attempt, something created and checked. It opens as a form with
@@ -332,7 +348,7 @@ their own.
   synced at start, every minute and right after it writes — so a Mac sees the team's change within
   a minute, and a console whose bucket does not answer still lists and runs what it has.
 - **Who writes:** every console with a key that may write: the team's (an operator there) and
-  each Mac's. They add a skill or a version (**Add skill**, **New version…**), promote one, and
+  each Mac's. They add a skill or a version (**New skill**, **New version…**), promote one, and
   delete a skill: a skill's page → **Delete…** asks first (and says when CI runs it after
   deploys: those checks then fail), then takes its every version out of the store for every
   console. A Mac sees another console's change within a minute.
@@ -792,7 +808,7 @@ rules, screenshots, marking what is wrong.
 The repo ships one: `qa-landing-mobile`, the edplay.ai landing on a phone (environment `demo`,
 no login) — the same page the YAML tests in `tests/demo/` check, looked at the way a tester
 would. Start your own from a skill template (`hermes/skill-templates/`, or the console's Skills →
-Add skill).
+New skill).
 
 ```bash
 bash hermes/install.sh                       # links the skills into ~/.hermes (backs up what was there)
@@ -844,7 +860,7 @@ pnpm validate      # fails while a SKILL.md is out of date or a skill.yaml is wr
 Long texts: `>-` joins their lines into one, `|-` keeps them (a list, a table or a code block in a
 step). The editor completes and checks the fields (the `# yaml-language-server: $schema=…` line on
 top). A new skill goes into the [skill store](#skill-store): the team's console → [Skills](#skills)
-→ **Add skill** starts one from a template or a copy in a form (or takes the file) and checks it;
+→ **New skill** starts one from a template or a copy in a form (or takes the file) and checks it;
 local and staging run it at once, prod once promoted, and `agent_checks` in `e2e.config.yaml` has
 CI run it. Only a skill that runs Playwright scripts goes into git: copy a folder, name it
 `qa-…` (the folder name is the skill's), change its `skill.yaml`, run `pnpm skills` and

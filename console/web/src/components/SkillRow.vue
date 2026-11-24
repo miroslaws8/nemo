@@ -89,7 +89,7 @@ const lastRun = computed(() => {
       <span
         class="flex h-5 min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-4 overflow-hidden max-sm:hidden"
       >
-        <SkillChips :skill="skill" compact />
+        <SkillChips :skill="skill" />
         <span
           v-for="environment in skill.afterDeploys"
           :key="environment"

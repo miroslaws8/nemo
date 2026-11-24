@@ -1,18 +1,15 @@
 <script setup lang="ts">
 import type { ISkillSummary } from "@shared/types";
 import { computed } from "vue";
-import { SAFETY_WORDS, STORE_WORDS } from "@/lib/skills";
+import { STORE_WORDS } from "@/lib/skills";
 import { consoleConfig } from "@/state/config";
 import SkillChip from "./SkillChip.vue";
 
-// What a skill changes, where it comes from (and which of two of a name runs), what prod runs of a
-// stored one, where CI runs it and why the console would not. Compact (a row of the skills list):
-// only where it comes from, what prod runs and the AI credits, as items of the row's own flex box
-// (which drops a chip that does not fit); the row shows the rest its own way.
+// Where a skill comes from (and which of two of a name runs), what prod runs of a stored one and
+// the AI credits, as items of a skills-list row's own flex box (which drops a chip that does not
+// fit); the row shows the rest its own way.
 
-withDefaults(defineProps<{ skill: ISkillSummary; compact?: boolean }>(), {
-  compact: false,
-});
+defineProps<{ skill: ISkillSummary }>();
 
 const store = computed(
   () =>
@@ -25,9 +22,7 @@ const words = computed(() => STORE_WORDS[store.value.kind]);
 </script>
 
 <template>
-  <span
-    :class="compact ? 'contents' : 'inline-flex flex-wrap items-center gap-1.5'"
-  >
+  <span class="contents">
     <SkillChip
       v-if="skill.origin === 'console'"
       :tone="skill.shadowed ? 'idle' : 'run'"
@@ -67,36 +62,10 @@ const words = computed(() => STORE_WORDS[store.value.kind]);
       "
     />
     <SkillChip
-      v-if="!compact && skill.safety !== null"
-      :tone="SAFETY_WORDS[skill.safety].tone"
-      :label="SAFETY_WORDS[skill.safety].label"
-      :title="SAFETY_WORDS[skill.safety].hint"
-    />
-    <SkillChip
       v-if="skill.aiCredits"
       tone="flaky"
       label="AI credits"
       title="It spends AI credits on the environment"
     />
-    <SkillChip
-      v-if="!compact && skill.afterDeploys.length > 0"
-      tone="pass"
-      :label="`After deploys: ${skill.afterDeploys.join(', ')}`"
-      title="CI runs it after each deploy and on its schedule (agent_checks in e2e.config.yaml)"
-    />
-    <template v-if="!compact">
-      <SkillChip
-        v-if="skill.problem !== null"
-        tone="fail"
-        label="skill.yaml has a problem"
-        :title="skill.problem"
-      />
-      <SkillChip
-        v-else-if="skill.unavailable !== null"
-        tone="idle"
-        label="Not in the console"
-        :title="`The console does not run it: it ${skill.unavailable}`"
-      />
-    </template>
   </span>
 </template>
