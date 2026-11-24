@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { ISkillSummary } from "@shared/types";
-import { CopyIcon, FileUpIcon, SparklesIcon } from "@lucide/vue";
+import {
+  ChevronRightIcon,
+  CopyIcon,
+  FileUpIcon,
+  SparklesIcon,
+} from "@lucide/vue";
 import { skillWrittenSchema } from "@shared/api";
 import { useTitle } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, useId } from "vue";
@@ -82,6 +87,32 @@ async function write(): Promise<void> {
   }
 }
 const editing = computed(() => mayEditSkills());
+// The words beside the Write button: what AI does, or why it cannot here (a reason only when
+// the console gave one).
+const writerWords = computed(() => {
+  if (writer.value === null || writer.value.available) {
+    return "AI writes the skill and opens it in the form, checked.";
+  }
+  const reason = writer.value.reason;
+  return typeof reason === "string" && reason !== ""
+    ? `AI writing is off on this console: ${reason}`
+    : "AI writing is off on this console";
+});
+const composerOff = computed(
+  () => !editing.value.allowed || writer.value?.available !== true
+);
+// ⌘/Ctrl+Enter in the box writes, the same as the button.
+function writeFromKeys(): void {
+  if (canWrite.value) {
+    void write();
+  }
+}
+// The copy row opens in place to its picker.
+const copyOpen = ref(false);
+const ROW =
+  "flex h-11 w-full items-center gap-3 px-4 text-left text-sm outline-none transition-colors";
+const ROW_LIVE =
+  "hover:bg-muted focus-visible:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset";
 const whereItGoes = computed(() =>
   storeWords.value.addSkill.replace("{name}", "<name>")
 );
@@ -117,165 +148,207 @@ function copy(): void {
 
 <template>
   <PageBar>
-    <span>Add a skill</span>
+    <RouterLink
+      :to="skillsPath()"
+      class="rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+      >Skills</RouterLink
+    >
+    <span>New skill</span>
   </PageBar>
 
-  <div class="space-y-8 px-6 py-5">
-    <nav aria-label="Breadcrumb" class="text-sm">
-      <RouterLink
-        :to="skillsPath()"
-        class="rounded-sm text-muted-foreground underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-        >Skills</RouterLink
-      >
-    </nav>
+  <div class="mx-auto w-full max-w-2xl px-6 py-10">
+    <PermissionNote :permission="editing" class="mb-4" />
 
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Add a skill</h1>
-      <p class="mt-1 max-w-prose text-sm text-muted-foreground">
-        Start from a template or from a skill you have, and fill in its form; or
-        bring a skill.yaml. Either way the console checks it as you go.
-        {{ whereItGoes }}
-      </p>
-    </div>
-    <PermissionNote :permission="editing" />
-
-    <section aria-labelledby="new-from-description" class="space-y-3">
-      <h2 id="new-from-description" class="text-base font-semibold">
-        Describe it
-      </h2>
-      <p class="max-w-prose text-sm text-muted-foreground">
-        Say in plain words what the agent should check. AI writes the skill and
-        opens it in the form, already checked, for you to read, adjust and add.
-      </p>
-      <div class="grid max-w-2xl gap-2">
-        <Label :for="describeId" class="sr-only">What the skill checks</Label>
-        <Textarea
-          :id="describeId"
-          v-model="description"
-          rows="3"
-          maxlength="1000"
-          :disabled="!editing.allowed || writer?.available !== true"
-          placeholder="On a phone, open the pricing page, check every plan shows a price and a button, and look for text that is cut off"
-        />
-        <div class="flex flex-wrap items-center gap-3">
-          <Button :disabled="!canWrite" @click="write">
-            <SparklesIcon class="size-4" aria-hidden="true" />
-            {{ writing ? "Writing…" : "Write the skill" }}
-          </Button>
-          <p
-            v-if="writer !== null && !writer.available"
-            class="text-xs text-muted-foreground"
+    <div
+      class="overflow-hidden rounded-lg bg-background ring-1 ring-border transition-shadow focus-within:ring-ring/50"
+      :class="{ 'opacity-60': composerOff }"
+    >
+      <Label :for="describeId" class="sr-only">What the skill checks</Label>
+      <Textarea
+        :id="describeId"
+        v-model="description"
+        maxlength="1000"
+        :disabled="composerOff"
+        class="min-h-28 resize-none rounded-none border-0 bg-transparent px-3 py-3 shadow-none focus-visible:border-0 focus-visible:ring-0"
+        placeholder="On a phone, open the pricing page, check every plan shows a price and a button, and look for text that is cut off"
+        @keydown.meta.enter.prevent="writeFromKeys"
+        @keydown.ctrl.enter.prevent="writeFromKeys"
+      />
+      <div class="flex items-center gap-3 border-t px-3 py-2">
+        <p class="min-w-0 flex-1 text-xs text-muted-foreground">
+          {{ writerWords }}
+        </p>
+        <Button size="sm" class="shrink-0" :disabled="!canWrite" @click="write">
+          <SparklesIcon aria-hidden="true" />
+          {{ writing ? "Writing…" : "Write the skill" }}
+          <kbd
+            class="ml-1 font-sans text-xs opacity-70 max-sm:hidden"
+            aria-hidden="true"
+            >⌘↵</kbd
           >
-            Not here: {{ writer.reason }}.
-          </p>
-        </div>
+        </Button>
       </div>
-    </section>
+    </div>
 
-    <section aria-labelledby="new-from-template" class="space-y-3">
-      <h2 id="new-from-template" class="text-base font-semibold">
-        Start from a template
-      </h2>
-      <p
-        v-if="templatesError !== null"
-        class="rounded-md border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail"
-      >
+    <h2 class="mt-10 mb-2 text-xs font-medium text-faint">Or start from</h2>
+    <div
+      class="divide-y divide-border/60 overflow-hidden rounded-lg ring-1 ring-border"
+    >
+      <p v-if="templatesError !== null" class="px-4 py-3 text-sm text-fail">
         {{ templatesError }}
       </p>
-      <ul v-else-if="templates !== null" class="grid gap-3 sm:grid-cols-3">
-        <li
-          v-for="template in templates.templates"
-          :key="template.id"
-          class="relative flex flex-col gap-2 rounded-lg border bg-card p-4 transition-colors focus-within:bg-accent/40 hover:bg-accent/40"
-        >
-          <SkillChip
-            class="self-start"
-            :tone="SAFETY_WORDS[template.fields.safety].tone"
-            :label="SAFETY_WORDS[template.fields.safety].label"
-          />
+      <template v-else-if="templates !== null">
+        <template v-for="template in templates.templates" :key="template.id">
           <RouterLink
             v-if="editing.allowed"
             :to="composeSkillPath({ template: template.id })"
-            class="rounded-sm font-medium outline-none after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50"
-            >{{ template.label }}</RouterLink
+            :class="[ROW, ROW_LIVE]"
           >
-          <p v-else class="font-medium">{{ template.label }}</p>
-          <p class="text-sm text-muted-foreground">{{ template.about }}</p>
-        </li>
-      </ul>
-      <div
-        v-else
-        class="grid gap-3 sm:grid-cols-3"
-        aria-label="Reading the templates"
-      >
-        <Skeleton class="h-36" />
-        <Skeleton class="h-36" />
-        <Skeleton class="h-36" />
-      </div>
-    </section>
+            <span
+              class="max-w-[60%] shrink-0 truncate font-medium max-sm:max-w-none max-sm:min-w-0 max-sm:flex-1 max-sm:shrink"
+              >{{ template.label }}</span
+            >
+            <span
+              class="min-w-0 flex-1 truncate text-muted-foreground max-sm:hidden"
+              >{{ template.about }}</span
+            >
+            <SkillChip
+              class="shrink-0"
+              :tone="SAFETY_WORDS[template.fields.safety].tone"
+              :label="SAFETY_WORDS[template.fields.safety].label"
+            />
+            <ChevronRightIcon
+              class="size-4 shrink-0 text-faint"
+              aria-hidden="true"
+            />
+          </RouterLink>
+          <div v-else :class="[ROW, 'text-muted-foreground']">
+            <span
+              class="max-w-[60%] shrink-0 truncate font-medium max-sm:max-w-none max-sm:min-w-0 max-sm:flex-1 max-sm:shrink"
+              >{{ template.label }}</span
+            >
+            <span class="min-w-0 flex-1 truncate max-sm:hidden">{{
+              template.about
+            }}</span>
+            <SkillChip
+              class="shrink-0"
+              :tone="SAFETY_WORDS[template.fields.safety].tone"
+              :label="SAFETY_WORDS[template.fields.safety].label"
+            />
+          </div>
+        </template>
+      </template>
+      <template v-else>
+        <div
+          v-for="placeholder in 3"
+          :key="placeholder"
+          class="flex h-11 items-center px-4"
+          aria-label="Reading the templates"
+        >
+          <Skeleton class="h-4 w-2/3" />
+        </div>
+      </template>
 
-    <section aria-labelledby="new-from-copy" class="space-y-3">
-      <h2 id="new-from-copy" class="text-base font-semibold">Copy a skill</h2>
-      <div class="flex flex-wrap items-end gap-3">
-        <div class="grid min-w-64 flex-1 grid-cols-1 gap-1.5 sm:max-w-md">
-          <Label :for="copyId">The skill to start from</Label>
-          <Select v-model="copied" :disabled="!editing.allowed">
-            <SelectTrigger :id="copyId" class="w-full">
-              <!-- Its own markup: the select would show the option's text run together, uncut. -->
-              <SelectValue placeholder="Pick a skill">
-                <template v-if="chosen !== null">
-                  <span class="truncate">{{
-                    chosen.title ?? chosen.name
-                  }}</span>
+      <div>
+        <button
+          type="button"
+          :class="[ROW, editing.allowed ? ROW_LIVE : 'text-muted-foreground']"
+          :disabled="!editing.allowed"
+          :aria-expanded="copyOpen"
+          @click="copyOpen = !copyOpen"
+        >
+          <CopyIcon class="size-4 shrink-0" aria-hidden="true" />
+          <span
+            class="max-w-[60%] shrink-0 truncate font-medium max-sm:max-w-none max-sm:min-w-0 max-sm:flex-1 max-sm:shrink"
+            >Copy an existing skill</span
+          >
+          <span
+            class="min-w-0 flex-1 truncate text-muted-foreground max-sm:hidden"
+            >Start from one you have and change it</span
+          >
+          <ChevronRightIcon
+            class="size-4 shrink-0 text-faint transition-transform"
+            :class="{ 'rotate-90': copyOpen }"
+            aria-hidden="true"
+          />
+        </button>
+        <div
+          v-if="copyOpen && editing.allowed"
+          class="flex flex-wrap items-end gap-3 border-t border-border/60 bg-muted/40 px-4 py-3"
+        >
+          <div class="grid min-w-0 flex-1 grid-cols-1 gap-1.5 sm:min-w-56">
+            <Label :for="copyId" class="text-xs text-muted-foreground"
+              >The skill to start from</Label
+            >
+            <Select v-model="copied">
+              <SelectTrigger :id="copyId" class="w-full">
+                <!-- Its own markup: the select would show the option's text run together, uncut. -->
+                <SelectValue placeholder="Pick a skill">
+                  <template v-if="chosen !== null">
+                    <span class="truncate">{{
+                      chosen.title ?? chosen.name
+                    }}</span>
+                    <span
+                      class="shrink-0 font-mono text-xs text-muted-foreground"
+                      >{{ chosen.name }}</span
+                    >
+                  </template>
+                  <template v-else>Pick a skill</template>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="skill in copyable"
+                  :key="skillKey(skill)"
+                  :value="skillKey(skill)"
+                >
+                  <span>{{ skill.title ?? skill.name }}</span>
                   <span
                     class="shrink-0 font-mono text-xs text-muted-foreground"
-                    >{{ chosen.name }}</span
+                    >{{ skill.name }}</span
                   >
-                </template>
-                <template v-else>Pick a skill</template>
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="skill in copyable"
-                :key="skillKey(skill)"
-                :value="skillKey(skill)"
-              >
-                <span>{{ skill.title ?? skill.name }}</span>
-                <span
-                  class="shrink-0 font-mono text-xs text-muted-foreground"
-                  >{{ skill.name }}</span
-                >
-              </SelectItem>
-            </SelectContent>
-          </Select>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button variant="outline" :disabled="copied === ''" @click="copy()">
+            <CopyIcon aria-hidden="true" />
+            Copy it
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          :disabled="!editing.allowed || copied === ''"
-          @click="copy()"
-        >
-          <CopyIcon aria-hidden="true" />
-          Copy it
-        </Button>
       </div>
-    </section>
 
-    <section aria-labelledby="new-from-file" class="space-y-3">
-      <h2 id="new-from-file" class="text-base font-semibold">
-        Bring a skill.yaml
-      </h2>
-      <p class="text-sm text-muted-foreground">A file you have, or its text.</p>
-      <Button v-if="editing.allowed" variant="outline" as-child>
-        <RouterLink :to="uploadSkillPath()">
-          <FileUpIcon aria-hidden="true" />
-          Upload or paste
-        </RouterLink>
-      </Button>
-      <Button v-else variant="outline" disabled>
-        <FileUpIcon aria-hidden="true" />
-        Upload or paste
-      </Button>
-    </section>
+      <RouterLink
+        v-if="editing.allowed"
+        :to="uploadSkillPath()"
+        :class="[ROW, ROW_LIVE]"
+      >
+        <FileUpIcon class="size-4 shrink-0" aria-hidden="true" />
+        <span
+          class="max-w-[60%] shrink-0 truncate font-medium max-sm:max-w-none max-sm:min-w-0 max-sm:flex-1 max-sm:shrink"
+          >Upload or paste a skill.yaml</span
+        >
+        <span
+          class="min-w-0 flex-1 truncate text-muted-foreground max-sm:hidden"
+          >A file you have, or its text</span
+        >
+        <ChevronRightIcon
+          class="size-4 shrink-0 text-faint"
+          aria-hidden="true"
+        />
+      </RouterLink>
+      <div v-else :class="[ROW, 'text-muted-foreground']">
+        <FileUpIcon class="size-4 shrink-0" aria-hidden="true" />
+        <span
+          class="max-w-[60%] shrink-0 truncate font-medium max-sm:max-w-none max-sm:min-w-0 max-sm:flex-1 max-sm:shrink"
+          >Upload or paste a skill.yaml</span
+        >
+        <span class="min-w-0 flex-1 truncate"
+          >A file you have, or its text</span
+        >
+      </div>
+    </div>
+
+    <p class="mt-6 text-xs text-faint">{{ whereItGoes }}</p>
   </div>
 </template>
