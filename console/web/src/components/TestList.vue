@@ -117,8 +117,8 @@ function toggle(testId: string): void {
 </script>
 
 <template>
-  <section class="overflow-hidden rounded-lg border bg-card">
-    <header class="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+  <section class="min-w-0">
+    <header class="flex flex-wrap items-center gap-2 border-b pb-2">
       <ToggleGroup
         type="single"
         size="sm"

@@ -31,34 +31,36 @@ const duration = computed(() => {
 </script>
 
 <template>
-  <li class="border-b last:border-b-0">
+  <li class="border-b border-border/60">
     <button
       type="button"
-      class="flex w-full items-center gap-3 px-4 py-2.5 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:bg-accent/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+      class="flex h-9 w-full items-center gap-3 px-2 text-left text-sm outline-none transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
       :aria-expanded="expanded"
       @click="emit('toggle')"
     >
       <StatusIcon :look="TEST_STATUS_LOOKS[test.status]" />
-      <span class="min-w-0 flex-1">
-        <span class="block truncate text-sm font-medium">{{ test.title }}</span>
-        <span class="block truncate text-xs text-muted-foreground">{{
+      <span class="flex min-w-0 flex-1 items-baseline gap-2">
+        <span class="truncate font-medium" :title="test.title">{{
+          test.title
+        }}</span>
+        <span class="min-w-0 shrink-[100] truncate text-faint max-sm:hidden">{{
           test.suite || test.spec
         }}</span>
       </span>
       <span
         v-if="test.retry > 0"
-        class="shrink-0 rounded-full bg-flaky/10 px-2 py-0.5 text-xs font-medium text-flaky"
+        class="shrink-0 text-xs font-medium whitespace-nowrap text-flaky"
         >attempt {{ test.retry + 1 }}</span
       >
-      <span class="hidden shrink-0 text-xs text-muted-foreground sm:inline">{{
+      <span class="shrink-0 text-muted-foreground max-sm:hidden">{{
         tierOf(test.project)
       }}</span>
       <span
-        class="w-16 shrink-0 text-right text-xs tabular-nums text-muted-foreground"
+        class="w-16 shrink-0 text-right whitespace-nowrap text-muted-foreground tabular-nums"
         >{{ duration }}</span
       >
       <ChevronRightIcon
-        class="size-4 shrink-0 text-muted-foreground transition-transform duration-150 ease-out"
+        class="size-4 shrink-0 text-faint transition-transform duration-150 ease-out"
         :class="expanded ? 'rotate-90' : ''"
         aria-hidden="true"
       />

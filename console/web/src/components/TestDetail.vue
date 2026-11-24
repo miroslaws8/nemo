@@ -103,7 +103,9 @@ const hasAside = computed(
 </script>
 
 <template>
-  <div class="space-y-5 border-t bg-paper/70 px-4 py-4 sm:pl-11">
+  <div
+    class="space-y-5 border-t border-border/60 bg-paper/70 px-2 py-4 sm:pl-[34px]"
+  >
     <section
       v-if="test.errors.length > 0"
       class="space-y-3"

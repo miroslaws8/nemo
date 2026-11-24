@@ -3,7 +3,8 @@ import type { IRunState, ITestState } from "@shared/types";
 import { computed } from "vue";
 import LaneMonitor from "./LaneMonitor.vue";
 
-// The workers of a running run, side by side, each on the test it runs now.
+// The workers of a running run, side by side once the column has room (its own width, not the
+// window's: the run page's right column takes some), each on the test it runs now.
 
 const props = defineProps<{ runId: string; state: IRunState; now: number }>();
 
@@ -18,11 +19,11 @@ const lanes = computed(() =>
 </script>
 
 <template>
-  <section aria-label="Workers">
+  <section aria-label="Workers" class="@container">
     <div
       v-if="lanes.length > 0"
-      class="grid gap-4"
-      :class="lanes.length > 1 ? 'md:grid-cols-2' : 'max-w-xl'"
+      class="grid gap-3"
+      :class="lanes.length > 1 ? '@xl:grid-cols-2' : 'max-w-xl'"
     >
       <LaneMonitor
         v-for="entry in lanes"

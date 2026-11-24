@@ -5,13 +5,14 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import PageBar from "@/components/PageBar.vue";
 import CiSilence from "@/components/CiSilence.vue";
 import RetryDialog from "@/components/RetryDialog.vue";
-import RunHeader from "@/components/RunHeader.vue";
+import RunActions from "@/components/RunActions.vue";
 import RunLog from "@/components/RunLog.vue";
 import RunNotices from "@/components/RunNotices.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import AuthorDraftPanel from "@/components/AuthorDraftPanel.vue";
 import AgentCheckView from "@/components/AgentCheckView.vue";
 import RunProgress from "@/components/RunProgress.vue";
+import RunProperties from "@/components/RunProperties.vue";
 import TestList from "@/components/TestList.vue";
 import WorkerLanes from "@/components/WorkerLanes.vue";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ import {
   failedTests,
   hasReport,
   neededTiers,
+  originOf,
   runKindOf,
   selectableTests,
   touchesData,
@@ -95,6 +97,12 @@ const filesAllowed = computed(() => reading.value?.allowed === true);
 const acting = computed(
   () => run.value !== undefined && mayActOn(run.value.env).allowed
 );
+// Why the title bar's buttons are greyed out (a CI run's are its pipeline's page's).
+const actPermission = computed(() =>
+  run.value === undefined || originOf(run.value) === "ci"
+    ? null
+    : mayActOn(run.value.env)
+);
 const reportMade = computed(
   () => run.value !== undefined && hasReport(run.value, liveRun)
 );
@@ -136,6 +144,12 @@ const blocker = computed(() =>
 // A CI step about to test the environment goes first (it asked for it: ci/ingest.mts wait).
 const ciBlocker = computed(() =>
   run.value === undefined ? undefined : activeCiOn(run.value.env)
+);
+// What a stopping run waits for before it is over.
+const stoppingWords = computed(() =>
+  leftData.value
+    ? "Stopping: the tests delete their data first. This can take up to 3 minutes."
+    : "Stopping: waiting for the browsers to close."
 );
 const tab = ref("tests");
 
@@ -236,146 +250,171 @@ async function confirmRetry(options: {
 
 <template>
   <PageBar>
-    <span>{{
-      run === undefined ? "Run" : formatLabel(run.selection.label)
-    }}</span>
+    <RouterLink
+      to="/"
+      class="shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+      >Runs</RouterLink
+    >
+    <span
+      :title="run === undefined ? undefined : formatLabel(run.selection.label)"
+      >{{ run === undefined ? "Run" : formatLabel(run.selection.label) }}</span
+    >
+    <template v-if="run !== undefined" #actions>
+      <RunActions
+        :run="run"
+        :failed-count="failed.length"
+        :failed-label="failedLabel"
+        :has-report="report"
+        :cleanable="mayClean"
+        @retry="requestRetry($event, null)"
+      />
+    </template>
   </PageBar>
 
-  <div v-if="run !== undefined" class="space-y-6 px-6 py-5">
-    <RunHeader
-      :run="run"
-      :now="nowMs"
-      :failed-count="failed.length"
-      :failed-label="failedLabel"
-      :has-report="report"
-      :touches-data="leftData"
-      :cleanable="mayClean"
-      @retry="requestRetry($event, null)"
-    />
-    <PermissionNote
-      v-if="reportMade && reading !== null"
-      :permission="reading"
-    />
-
-    <div
-      v-if="run.status === 'queued'"
-      class="rounded-lg border border-dashed px-5 py-4 text-sm text-muted-foreground"
-    >
-      <template v-if="blocker !== undefined">
-        Waits for
-        <RouterLink
-          :to="runPath(blocker.id)"
-          class="text-run underline-offset-2 hover:underline"
-          >{{ formatLabel(blocker.selection.label) }}</RouterLink
-        >
-        to finish: {{ run.env }} takes one run at a time, since every run there
-        uses the same QA account.
-      </template>
-      <template v-else-if="ciBlocker !== undefined">
-        Waits for
-        <RouterLink
-          :to="ciPath(ciBlocker.number)"
-          class="text-run underline-offset-2 hover:underline"
-          >CI pipeline #{{ ciBlocker.number }}</RouterLink
-        >: it tests {{ run.env }} first, with the same QA account.
-      </template>
-      <template v-else>
-        Starts as soon as one of the console's run slots is free.
-      </template>
-    </div>
-
-    <template v-else-if="!liveReady">
-      <Skeleton class="h-2 w-full rounded-full" />
-      <div class="space-y-2">
-        <Skeleton class="h-11 w-full" />
-        <Skeleton class="h-11 w-full" />
-        <Skeleton class="h-11 w-2/3" />
-      </div>
-    </template>
-
-    <template v-else>
+  <div v-if="run !== undefined" class="flex min-h-0 flex-1">
+    <div class="min-w-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
       <p
-        v-if="liveRun.counts.total === 0"
+        v-if="run.status === 'stopping' && originOf(run) === 'console'"
         class="text-sm text-muted-foreground"
       >
-        {{ waitingWords }}
+        {{ stoppingWords }}
       </p>
-      <RunProgress
-        v-else-if="kind === 'tests'"
-        :counts="liveRun.counts"
-        :finished="finished"
+      <PermissionNote
+        v-if="actPermission !== null"
+        :permission="actPermission"
+      />
+      <PermissionNote
+        v-if="reportMade && reading !== null"
+        :permission="reading"
       />
 
-      <RunNotices :state="liveRun" :going="going" />
-      <CiSilence :run="run" :state="liveRun" :going="going" :now="nowMs" />
-
-      <ul v-if="liveRun.runErrors.length > 0" class="space-y-2">
-        <li
-          v-for="(message, index) in liveRun.runErrors"
-          :key="index"
-          class="rounded-md border border-fail/30 bg-fail/5 px-4 py-3 font-mono text-xs whitespace-pre-wrap text-fail"
-        >
-          {{ message }}
-        </li>
-      </ul>
-
-      <WorkerLanes
-        v-if="kind === 'tests' && going && liveRun.phase === 'running'"
-        :run-id="run.id"
-        :state="liveRun"
-        :now="nowMs"
-      />
-    </template>
-
-    <Tabs v-if="run.status !== 'queued'" v-model="tab">
-      <TabsList>
-        <TabsTrigger value="tests">
-          {{ TAB_LABELS[kind] }}
-          <span
-            v-if="kind === 'tests'"
-            class="tabular-nums text-muted-foreground"
-            >{{ liveRun.counts.total }}</span
+      <p v-if="run.status === 'queued'" class="text-sm text-muted-foreground">
+        <template v-if="blocker !== undefined">
+          Waits for
+          <RouterLink
+            :to="runPath(blocker.id)"
+            class="text-run underline-offset-2 hover:underline"
+            >{{ formatLabel(blocker.selection.label) }}</RouterLink
           >
-        </TabsTrigger>
-        <TabsTrigger value="log">Log</TabsTrigger>
-      </TabsList>
-      <TabsContent value="tests" class="mt-3 grid gap-4">
-        <AuthorDraftPanel
-          v-if="kind === 'author'"
-          :key="`author-${run.id}`"
-          :run="run"
+          to finish: {{ run.env }} takes one run at a time, since every run
+          there uses the same QA account.
+        </template>
+        <template v-else-if="ciBlocker !== undefined">
+          Waits for
+          <RouterLink
+            :to="ciPath(ciBlocker.number)"
+            class="text-run underline-offset-2 hover:underline"
+            >CI pipeline #{{ ciBlocker.number }}</RouterLink
+          >: it tests {{ run.env }} first, with the same QA account.
+        </template>
+        <template v-else>
+          Starts as soon as one of the console's run slots is free.
+        </template>
+      </p>
+
+      <template v-else-if="!liveReady">
+        <Skeleton class="h-1 w-full rounded-full" />
+        <div class="space-y-2">
+          <Skeleton class="h-8 w-full" />
+          <Skeleton class="h-8 w-full" />
+          <Skeleton class="h-8 w-2/3" />
+        </div>
+      </template>
+
+      <template v-else>
+        <p
+          v-if="liveRun.counts.total === 0"
+          class="text-sm text-muted-foreground"
+        >
+          {{ waitingWords }}
+        </p>
+        <RunProgress
+          v-else-if="kind === 'tests'"
+          :counts="liveRun.counts"
           :finished="finished"
         />
-        <AgentCheckView
-          v-if="liveReady && kind === 'agent'"
-          :key="run.id"
-          :run="run"
-          :state="liveRun"
-          :now="nowMs"
-          :finished="finished"
-          :files-allowed="filesAllowed"
-        />
-        <TestList
-          v-else-if="liveReady"
-          :key="run.id"
+
+        <RunNotices :state="liveRun" :going="going" />
+        <CiSilence :run="run" :state="liveRun" :going="going" :now="nowMs" />
+
+        <ul v-if="liveRun.runErrors.length > 0" class="space-y-2">
+          <li
+            v-for="(message, index) in liveRun.runErrors"
+            :key="index"
+            class="rounded-md border border-fail/30 bg-fail/5 px-4 py-3 font-mono text-xs whitespace-pre-wrap text-fail"
+          >
+            {{ message }}
+          </li>
+        </ul>
+
+        <WorkerLanes
+          v-if="kind === 'tests' && going && liveRun.phase === 'running'"
           :run-id="run.id"
           :state="liveRun"
           :now="nowMs"
-          :finished="finished"
-          :can-retry="finished && acting"
-          :has-report="report"
-          :files-allowed="filesAllowed"
-          @retry-test="requestRetry('test', [$event])"
         />
-      </TabsContent>
-      <TabsContent value="log" class="mt-3">
-        <RunLog
-          :url="runLogUrl(run.id)"
-          :going="going"
-          :visible="tab === 'log'"
-        />
-      </TabsContent>
-    </Tabs>
+      </template>
+
+      <!-- Below `lg` the properties have no column of their own: they come before the tabs. -->
+      <RunProperties :run="run" :now="nowMs" class="border-b pb-5 lg:hidden" />
+
+      <Tabs v-if="run.status !== 'queued'" v-model="tab">
+        <TabsList>
+          <TabsTrigger value="tests">
+            {{ TAB_LABELS[kind] }}
+            <span
+              v-if="kind === 'tests'"
+              class="tabular-nums text-muted-foreground"
+              >{{ liveRun.counts.total }}</span
+            >
+          </TabsTrigger>
+          <TabsTrigger value="log">Log</TabsTrigger>
+        </TabsList>
+        <TabsContent value="tests" class="mt-3 grid gap-4">
+          <AuthorDraftPanel
+            v-if="kind === 'author'"
+            :key="`author-${run.id}`"
+            :run="run"
+            :finished="finished"
+          />
+          <AgentCheckView
+            v-if="liveReady && kind === 'agent'"
+            :key="run.id"
+            :run="run"
+            :state="liveRun"
+            :now="nowMs"
+            :finished="finished"
+            :files-allowed="filesAllowed"
+          />
+          <TestList
+            v-else-if="liveReady"
+            :key="run.id"
+            :run-id="run.id"
+            :state="liveRun"
+            :now="nowMs"
+            :finished="finished"
+            :can-retry="finished && acting"
+            :has-report="report"
+            :files-allowed="filesAllowed"
+            @retry-test="requestRetry('test', [$event])"
+          />
+        </TabsContent>
+        <TabsContent value="log" class="mt-3">
+          <RunLog
+            :url="runLogUrl(run.id)"
+            :going="going"
+            :visible="tab === 'log'"
+          />
+        </TabsContent>
+      </Tabs>
+    </div>
+
+    <aside
+      aria-label="Properties"
+      class="hidden w-[260px] shrink-0 overflow-y-auto border-l px-5 py-5 lg:block"
+    >
+      <RunProperties :run="run" :now="nowMs" />
+    </aside>
 
     <RetryDialog
       v-model:open="retryOpen"
@@ -399,8 +438,8 @@ async function confirmRetry(options: {
   </div>
 
   <div v-else class="space-y-4 px-6 py-5">
-    <Skeleton class="h-7 w-24 rounded-full" />
-    <Skeleton class="h-8 w-80" />
-    <Skeleton class="h-2 w-full rounded-full" />
+    <Skeleton class="h-5 w-80" />
+    <Skeleton class="h-1 w-full rounded-full" />
+    <Skeleton class="h-8 w-full" />
   </div>
 </template>

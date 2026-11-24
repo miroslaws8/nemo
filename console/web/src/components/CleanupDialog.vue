@@ -30,6 +30,8 @@ const props = defineProps<{
   owner: string;
   // The person may not clean up there (their role): the button is greyed out.
   disabled?: boolean;
+  // In a title bar: a small button, its word only for screen readers below `sm`.
+  compact?: boolean;
   perform: (
     apply: boolean,
     confirm: string | undefined
@@ -91,9 +93,13 @@ watch(open, (isOpen) => {
 <template>
   <Dialog v-model:open="open">
     <DialogTrigger as-child>
-      <Button variant="outline" :disabled="disabled">
+      <Button
+        variant="outline"
+        :size="compact ? 'sm' : 'default'"
+        :disabled="disabled"
+      >
         <Trash2Icon aria-hidden="true" />
-        Clean up
+        <span :class="compact ? 'max-sm:sr-only' : ''">Clean up</span>
       </Button>
     </DialogTrigger>
     <DialogContent class="sm:max-w-xl">

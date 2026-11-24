@@ -45,14 +45,14 @@ const stepTime = computed(() =>
 
 <template>
   <article
-    class="flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card"
+    class="flex min-w-0 flex-col overflow-hidden rounded-md border bg-background"
   >
     <a
       v-if="shotUrl !== null"
       :href="shotUrl"
       target="_blank"
       rel="noopener"
-      class="relative block aspect-[16/10] bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
+      class="relative block aspect-[16/10] overflow-hidden border-b bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:ring-inset"
     >
       <img
         :src="shotUrl"
@@ -64,7 +64,7 @@ const stepTime = computed(() =>
     </a>
     <div
       v-else
-      class="grid aspect-[16/10] place-items-center bg-muted text-sm text-muted-foreground"
+      class="grid aspect-[16/10] place-items-center border-b bg-muted text-sm text-muted-foreground"
     >
       The first screenshot comes with the first step
     </div>
@@ -77,10 +77,10 @@ const stepTime = computed(() =>
         <span class="ml-auto tabular-nums">{{ testTime }}</span>
       </div>
       <div class="min-w-0">
-        <p class="truncate text-sm font-medium" :title="test.title">
+        <p class="truncate font-mono text-xs" :title="test.title">
           {{ test.title }}
         </p>
-        <p class="truncate text-xs text-muted-foreground" :title="test.suite">
+        <p class="truncate text-xs text-faint" :title="test.suite">
           {{ test.suite || test.spec }}
         </p>
       </div>
