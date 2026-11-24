@@ -32,17 +32,16 @@ defineExpose({ showLine });
 </script>
 
 <template>
-  <figure class="overflow-hidden rounded-lg border bg-card text-xs">
+  <figure
+    class="overflow-hidden rounded-md bg-muted font-mono text-xs ring-1 ring-border"
+  >
     <figcaption
-      class="flex items-center gap-2 border-b px-3 py-1.5 font-mono text-muted-foreground"
+      class="flex h-8 items-center gap-2 border-b pr-1.5 pl-3 text-muted-foreground"
     >
       <span class="truncate">{{ label }}</span>
       <CopyButton class="ml-auto" :text="text" :label="`Copy ${label}`" />
     </figcaption>
-    <div
-      ref="scroller"
-      class="max-h-[36rem] overflow-auto py-1.5 font-mono leading-5"
-    >
+    <div ref="scroller" class="max-h-[36rem] overflow-auto py-1.5 leading-5">
       <div
         v-for="(line, index) in lines"
         :id="lineId(index + 1)"
@@ -55,7 +54,7 @@ defineExpose({ showLine });
         "
       >
         <span
-          class="w-12 shrink-0 pr-3 text-right tabular-nums text-muted-foreground opacity-70 select-none"
+          class="w-12 shrink-0 pr-3 text-right tabular-nums text-faint select-none"
           >{{ index + 1 }}</span
         >
         <span class="pr-4 whitespace-pre">{{ line || " " }}</span>

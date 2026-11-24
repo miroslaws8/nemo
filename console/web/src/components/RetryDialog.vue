@@ -61,7 +61,7 @@ function submit(): void {
     <DialogContent class="sm:max-w-md">
       <form
         v-if="draft !== null"
-        class="grid min-w-0 gap-5"
+        class="grid min-w-0 gap-4"
         @submit.prevent="submit"
       >
         <DialogHeader>
@@ -71,19 +71,18 @@ function submit(): void {
 
         <div
           v-if="draft.needTiers.length > 0"
-          class="flex items-start justify-between gap-4 rounded-md border p-3"
+          class="flex items-center justify-between gap-4 rounded-md px-3 py-2.5 ring-1 ring-border"
         >
-          <div class="grid gap-1">
+          <div class="grid min-w-0 gap-1">
             <Label :for="switchId">Skip {{ tiers }} first</Label>
-            <p class="text-sm text-muted-foreground">
-              These tests normally wait for the whole {{ tiers }} tier to pass.
-              Skip it to run only them.
+            <p class="text-xs text-muted-foreground">
+              They normally wait for the whole {{ tiers }} tier to pass.
             </p>
           </div>
           <Switch :id="switchId" v-model="skipNeeds" />
         </div>
 
-        <div v-if="draft.guarded" class="grid gap-2">
+        <div v-if="draft.guarded" class="grid gap-1.5">
           <Label :for="inputId"
             >Type <span class="font-mono">{{ environment }}</span> to go
             on</Label
@@ -103,9 +102,9 @@ function submit(): void {
 
         <DialogFooter>
           <DialogClose as-child>
-            <Button type="button" variant="ghost">Cancel</Button>
+            <Button type="button" variant="ghost" size="sm">Cancel</Button>
           </DialogClose>
-          <Button type="submit" :disabled="!ready">
+          <Button type="submit" size="sm" :disabled="!ready">
             <RotateCcwIcon aria-hidden="true" />
             Retry
           </Button>

@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { GaugeIcon, KeyRoundIcon } from "@lucide/vue";
+import { ChevronRightIcon, GaugeIcon, KeyRoundIcon } from "@lucide/vue";
 import type { INoticeKind, IRunState } from "@shared/types";
 import { computed } from "vue";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatClock, plural } from "@/lib/format";
+import { TONE_CLASSES } from "@/lib/status";
 import type { INoticeBanner } from "@/types";
 
 // Banners for what slows a run down or breaks it from outside the tests: the API's rate limit
 // (429) and the QA account's session ending. The tests report them as they happen
-// (engine/notices.ts).
+// (engine/notices.ts). Each is one line (its title and what it means for the run); its details
+// open below it: how it happened, what to do, and the last message the API gave.
 
 const props = defineProps<{ state: IRunState; going: boolean }>();
 
@@ -16,33 +17,33 @@ const BANNERS: Record<INoticeKind, INoticeBanner> = {
   "session-lost": {
     title: "The QA account's session has ended",
     icon: KeyRoundIcon,
-    variant: "destructive",
-    classes: "border-fail/40 bg-fail/5",
-    lines: (notice, going) => [
+    tone: "fail",
+    line: (_notice, going) =>
+      going
+        ? "the tests from here on fail: stop the run and start a new one, which logs in again."
+        : "tests after that point failed for this reason; a new run logs in again.",
+    details: (notice) => [
       `At ${formatClock(
         notice.lastAt
       )} the API stopped accepting the run's session. That happens when someone logs out of the QA account: logging out ends every session of the account, this run's too.`,
-      going
-        ? "The tests from here on fail. Stop the run and start a new one: it logs in again."
-        : "Tests after that point failed for this reason. A new run logs in again.",
       "Keep the QA account logged in while tests run.",
     ],
   },
   "rate-limit": {
     title: "The API is rate-limiting the QA account",
     icon: GaugeIcon,
-    variant: "default",
-    classes: "border-flaky/40 bg-flaky/5 [&>svg]:text-flaky",
-    lines: (notice, going) => [
+    tone: "flaky",
+    line: (notice, going) =>
       `${plural(
         notice.count,
         "wait",
         "waits"
-      )} on a 429 so far, the last at ${formatClock(notice.lastAt)}. ${
+      )} on a 429, the last at ${formatClock(notice.lastAt)}: ${
         going
-          ? "The run waits each one out and goes on: it is only slower."
-          : "The run waited each one out, so it took longer."
+          ? "the run waits each one out and goes on, only slower."
+          : "the run waited each one out, so it took longer."
       }`,
+    details: () => [
       "Everything that uses the QA account shares its limit: other runs, CI and people logged in as it.",
     ],
   },
@@ -60,27 +61,56 @@ const banners = computed(() =>
 </script>
 
 <template>
-  <div v-if="banners.length > 0" class="space-y-3">
-    <Alert
+  <div v-if="banners.length > 0" role="status" class="space-y-2">
+    <details
       v-for="entry in banners"
       :key="entry.kind"
-      :variant="entry.banner.variant"
-      :class="entry.banner.classes"
+      :class="[
+        'group rounded-md text-sm',
+        TONE_CLASSES[entry.banner.tone].soft,
+      ]"
     >
-      <component :is="entry.banner.icon" aria-hidden="true" />
-      <AlertTitle>{{ entry.banner.title }}</AlertTitle>
-      <AlertDescription class="max-w-3xl space-y-1.5">
-        <p
-          v-for="line in entry.banner.lines(entry.notice, going)"
-          :key="line"
-          class="text-foreground/80"
+      <summary
+        class="flex cursor-pointer list-none items-start gap-2 rounded-md px-3 py-2 outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden"
+      >
+        <component
+          :is="entry.banner.icon"
+          :class="[
+            'mt-0.5 size-4 shrink-0',
+            TONE_CLASSES[entry.banner.tone].text,
+          ]"
+          aria-hidden="true"
+        />
+        <span class="min-w-0 flex-1">
+          <span
+            :class="['font-medium', TONE_CLASSES[entry.banner.tone].text]"
+            >{{ entry.banner.title }}</span
+          >
+          <span class="text-foreground/80">
+            — {{ entry.banner.line(entry.notice, going) }}</span
+          >
+        </span>
+        <span
+          class="mt-px flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground"
         >
-          {{ line }}
+          <span class="max-sm:sr-only">Details</span>
+          <ChevronRightIcon
+            class="size-3.5 transition-transform group-open:rotate-90"
+            aria-hidden="true"
+          />
+        </span>
+      </summary>
+      <div class="space-y-1.5 px-3 pb-2.5 pl-9 text-foreground/80">
+        <p
+          v-for="detail in entry.banner.details(entry.notice, going)"
+          :key="detail"
+        >
+          {{ detail }}
         </p>
         <p class="font-mono text-xs break-words text-muted-foreground">
           {{ entry.notice.lastMessage }}
         </p>
-      </AlertDescription>
-    </Alert>
+      </div>
+    </details>
   </div>
 </template>

@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatClock, plural } from "@/lib/format";
 import { isGuarded } from "@/state/config";
 import type { ICleanupPhase } from "@/types";
+import NoteBanner from "./NoteBanner.vue";
 
 // Finds the records a run (local or CI) left behind — named "<data prefix><run id> …", owned by
 // the test user — and deletes them on request: the guarded sweep of `pnpm sweep --run <id>`.
@@ -115,9 +116,8 @@ watch(open, (isOpen) => {
       <DialogHeader>
         <DialogTitle>Clean up after {{ owner }}</DialogTitle>
         <DialogDescription>
-          Looks on {{ env }} for records {{ owner }} created and left behind:
-          named after its id and owned by the test user. Nothing else is
-          touched.
+          Records on {{ env }} named after {{ owner }}'s id and owned by the
+          test user. Nothing else is touched.
         </DialogDescription>
       </DialogHeader>
 
@@ -133,7 +133,7 @@ watch(open, (isOpen) => {
         </p>
 
         <template v-else-if="result !== null">
-          <p v-if="phase === 'done'" class="mb-2 text-pass">
+          <p v-if="phase === 'done'" class="mb-2 font-medium text-pass">
             Deleted {{ plural(deleted, "record", "records") }}.
           </p>
           <p v-else-if="count === 0" class="text-muted-foreground">
@@ -142,22 +142,23 @@ watch(open, (isOpen) => {
 
           <ul
             v-if="phase !== 'done' && count > 0"
-            class="max-h-64 divide-y overflow-auto rounded-md border"
+            class="max-h-64 divide-y divide-border/60 overflow-auto rounded-md ring-1 ring-border"
           >
             <li
               v-for="candidate in result.candidates"
               :key="`${candidate.kind}-${candidate.id}`"
-              class="flex items-baseline gap-3 px-3 py-2"
+              class="flex min-h-8 items-center gap-3 px-3 py-1.5"
             >
-              <span class="w-24 shrink-0 text-muted-foreground">{{
-                candidate.kind
-              }}</span>
+              <span
+                class="w-24 shrink-0 truncate text-xs text-muted-foreground max-sm:w-16"
+                >{{ candidate.kind }}</span
+              >
               <span class="min-w-0 flex-1 truncate" :title="candidate.title">{{
                 candidate.title
               }}</span>
               <span
                 v-if="candidate.createdAt !== null"
-                class="shrink-0 tabular-nums text-muted-foreground"
+                class="shrink-0 text-xs tabular-nums text-faint"
                 >{{ formatClock(candidate.createdAt) }}</span
               >
             </li>
@@ -165,23 +166,20 @@ watch(open, (isOpen) => {
 
           <ul
             v-if="phase === 'done' && result.outcomes.length > 0"
-            class="max-h-64 space-y-1 overflow-auto font-mono text-xs"
+            class="max-h-64 space-y-1 overflow-auto rounded-md bg-muted px-3 py-2 font-mono text-xs ring-1 ring-border"
           >
             <li v-for="outcome in result.outcomes" :key="outcome">
               {{ outcome }}
             </li>
           </ul>
 
-          <p
-            v-if="result.refusal !== null"
-            class="mt-3 rounded-md bg-flaky/10 px-3 py-2 text-flaky"
-          >
+          <NoteBanner v-if="result.refusal !== null" tone="flaky" class="mt-3">
             {{ result.refusal }}
-          </p>
+          </NoteBanner>
 
           <div
             v-if="guarded && phase === 'found' && count > 0"
-            class="mt-4 grid gap-2"
+            class="mt-4 grid gap-1.5"
           >
             <Label :for="inputId"
               >Type <span class="font-mono">{{ env }}</span> to delete
@@ -200,11 +198,12 @@ watch(open, (isOpen) => {
 
       <DialogFooter>
         <DialogClose as-child>
-          <Button variant="ghost">Close</Button>
+          <Button variant="ghost" size="sm">Close</Button>
         </DialogClose>
         <Button
           v-if="(phase === 'found' || phase === 'deleting') && count > 0"
           variant="destructive"
+          size="sm"
           :disabled="!canDelete"
           @click="remove"
         >

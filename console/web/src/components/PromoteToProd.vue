@@ -66,14 +66,15 @@ async function promote(): Promise<void> {
           <span class="max-sm:sr-only">Promote to prod</span>
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent class="sm:max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>Run v{{ version }} on prod?</AlertDialogTitle>
           <AlertDialogDescription>
-            Prod's checks of {{ name }} run v{{ version }} from the next one on,
-            CI's after a deploy among them<template v-if="prodVersion !== null">
-              (now they run v{{ prodVersion }}: promote it again to go
-              back)</template
+            Prod's checks of {{ name }}, CI's after a deploy among them, run v{{
+              version
+            }}
+            from the next one on<template v-if="prodVersion !== null">
+              (now v{{ prodVersion }}: promote it again to go back)</template
             >. Staging and local keep running the newest version.
           </AlertDialogDescription>
         </AlertDialogHeader>

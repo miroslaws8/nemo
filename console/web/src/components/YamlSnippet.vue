@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { sourceSnippetSchema } from "@shared/api";
 import type { ISourceSnippet, IYamlLocation } from "@shared/types";
-import { computed, ref, watch } from "vue";
+import { cn } from "cn";
+import { computed, ref, watch, type HTMLAttributes } from "vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getJson, messageOf } from "@/lib/api";
 import CopyButton from "./CopyButton.vue";
 
-// The YAML around a test's step or failure, with that line marked.
+// The YAML around a test's step or failure, with that line marked. It brings its own surface (a
+// muted, ringed box); a class given to it wins, so a box it sits in can take the ring away.
 
 const props = defineProps<{
   // The run whose commit the file comes from (a server console tests commits).
@@ -14,6 +16,7 @@ const props = defineProps<{
   location: IYamlLocation;
   // "fail" marks the line of a failure, "step" the line of a step.
   mark: "fail" | "step";
+  class?: HTMLAttributes["class"];
 }>();
 
 const MARKS: Record<"fail" | "step", string> = {
@@ -43,20 +46,24 @@ watch(where, load, { immediate: true });
 </script>
 
 <template>
-  <figure class="min-w-0 overflow-hidden text-xs">
+  <figure
+    :class="
+      cn(
+        'min-w-0 overflow-hidden rounded-md bg-muted font-mono text-xs ring-1 ring-border',
+        props.class
+      )
+    "
+  >
     <figcaption
-      class="flex items-center gap-2 border-b bg-muted/60 py-1 pr-1.5 pl-3 font-mono text-muted-foreground"
+      class="flex items-center gap-2 border-b py-1 pr-1.5 pl-3 text-muted-foreground"
     >
       <span class="truncate">{{ where }}</span>
       <CopyButton class="ml-auto" :text="where" label="Copy file:line" />
     </figcaption>
-    <p v-if="error !== null" class="px-3 py-2 text-muted-foreground">
+    <p v-if="error !== null" class="px-3 py-2 font-sans text-muted-foreground">
       {{ error }}
     </p>
-    <div
-      v-else-if="snippet !== null"
-      class="overflow-x-auto py-1.5 font-mono leading-5"
-    >
+    <div v-else-if="snippet !== null" class="overflow-x-auto py-1.5 leading-5">
       <div
         v-for="row in snippet.lines"
         :key="row.number"
@@ -66,7 +73,7 @@ watch(where, load, { immediate: true });
         "
       >
         <span
-          class="w-12 shrink-0 pr-3 text-right tabular-nums opacity-60 select-none"
+          class="w-12 shrink-0 pr-3 text-right tabular-nums text-faint select-none"
           >{{ row.number }}</span
         >
         <span class="pr-4 whitespace-pre">{{ row.text || " " }}</span>

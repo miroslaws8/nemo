@@ -103,10 +103,10 @@ async function remove(): Promise<void> {
       </TooltipTrigger>
       <TooltipContent>{{ permission.reason ?? "Delete…" }}</TooltipContent>
     </Tooltip>
-    <AlertDialogContent>
+    <AlertDialogContent class="sm:max-w-md">
       <AlertDialogHeader>
         <AlertDialogTitle>Delete {{ name }}?</AlertDialogTitle>
-        <AlertDialogDescription class="space-y-2">
+        <AlertDialogDescription class="space-y-1.5">
           <span class="block">
             {{ whatGoes }}. Runs that used it keep their reports; Run again of
             them fails.

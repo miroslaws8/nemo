@@ -83,7 +83,7 @@ function firstLine(text: string): string {
         :run-id="runId"
         :location="step.yaml"
         mark="step"
-        class="mt-1.5 mb-2 ml-5 rounded-md border bg-background"
+        class="mt-1.5 mb-2 ml-5"
       />
     </li>
   </ol>

@@ -125,7 +125,7 @@ const hasAside = computed(
           :run-id="runId"
           :location="error.yaml"
           mark="fail"
-          class="border-t"
+          class="rounded-none border-t ring-0"
         />
       </article>
     </section>

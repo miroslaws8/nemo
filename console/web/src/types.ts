@@ -96,11 +96,11 @@ export type ICleanupPhase =
 export interface INoticeBanner {
   title: string;
   icon: Component;
-  variant: "default" | "destructive";
-  // Literal Tailwind classes of its tone.
-  classes: string;
-  // What happened and what to do, for a run still going or one that is over.
-  lines: (notice: INoticeSummary, going: boolean) => string[];
+  tone: ITone;
+  // Its one line beside the title: what it means for the run, for a run still going or over.
+  line: (notice: INoticeSummary, going: boolean) => string;
+  // What its details add: how it happened, and what to do about it.
+  details: (notice: INoticeSummary, going: boolean) => string[];
 }
 
 /** A link to one file a test attached (trace, screenshot, error context…). */
@@ -140,6 +140,8 @@ export type ISignInNotice = ISignInProblem | "signed-out" | "stuck";
 export interface ISignInMessage {
   title: string;
   text: string;
+  // Its banner's tone: idle for news (signed out), flaky for a step to take, fail for a refusal.
+  tone: ITone;
 }
 
 /** Whether the signed-in person may do something, and if not, why (shown by the button). */
