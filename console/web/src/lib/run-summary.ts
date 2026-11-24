@@ -39,7 +39,8 @@ const GOING_PHASES: ReadonlySet<IRunPhase> = new Set(["starting", "running"]);
 // first (it holds digits and quotes), then quoted text, then ids, then any other number.
 const NORMALISERS: { pattern: RegExp; replacement: string }[] = [
   { pattern: /(https?:\/\/[^\s?#"'`]+)[?#][^\s"'`]*/g, replacement: "$1" },
-  { pattern: /"[^"]*"|'[^']*'|`[^`]*`|“[^”]*”/g, replacement: '"…"' },
+  // A ' after a letter is an apostrophe (couldn't), not a quote.
+  { pattern: /"[^"]*"|(?<!\w)'[^']*'|`[^`]*`|“[^”]*”/g, replacement: '"…"' },
   {
     pattern:
       /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
@@ -158,15 +159,30 @@ export function notRunBecauseOfSetup(state: IRunState): ISetupMiss {
   return { count, setupTitles };
 }
 
+/** Every step above a YAML step, however deep (a repeat's rounds sit between it and its steps). */
+function yamlAncestors(test: ITestState): Set<string> {
+  const parentOf = new Map(
+    test.steps.map((step) => [step.stepId, step.parentId])
+  );
+  const ancestors = new Set<string>();
+  for (const step of test.steps) {
+    if (step.kind !== "yaml") {
+      continue;
+    }
+    let parentId = step.parentId;
+    while (parentId !== null && !ancestors.has(parentId)) {
+      ancestors.add(parentId);
+      parentId = parentOf.get(parentId) ?? null;
+    }
+  }
+  return ancestors;
+}
+
 /** YAML steps that hold no other YAML step: a template call's steps, not the call itself. */
 function leafYamlSteps(test: ITestState): (IStepState & { ms: number })[] {
-  const parents = new Set(
-    test.steps.flatMap((step) =>
-      step.kind === "yaml" && step.parentId !== null ? [step.parentId] : []
-    )
-  );
+  const ancestors = yamlAncestors(test);
   return test.steps.flatMap((step) =>
-    step.kind === "yaml" && step.ms !== null && !parents.has(step.stepId)
+    step.kind === "yaml" && step.ms !== null && !ancestors.has(step.stepId)
       ? [{ ...step, ms: step.ms }]
       : []
   );

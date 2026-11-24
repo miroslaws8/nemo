@@ -92,6 +92,27 @@ watch(
   { immediate: true }
 );
 
+const SCROLLING = /(auto|scroll)/;
+const ROW_MARGIN = 12;
+
+/** Brings a row to the top of the column that scrolls it (scrollIntoView would also move the
+ * page's frame, whose overflow is hidden). */
+function scrollToRow(row: Element): void {
+  let container = row.parentElement;
+  while (
+    container !== null &&
+    !SCROLLING.test(getComputedStyle(container).overflowY)
+  ) {
+    container = container.parentElement;
+  }
+  if (container === null) {
+    return;
+  }
+  const offset =
+    row.getBoundingClientRect().top - container.getBoundingClientRect().top;
+  container.scrollTo({ top: container.scrollTop + offset - ROW_MARGIN });
+}
+
 // A test asked for from the Summary: in a filter that shows it, unfolded, scrolled to. It wins
 // over the first failure above (this watch runs after that one).
 const list = ref<HTMLElement | null>(null);
@@ -113,9 +134,12 @@ watch(
     }
     expanded.value = new Set([test.testId]);
     void nextTick(() => {
-      list.value
-        ?.querySelector(`[data-test-id="${CSS.escape(test.testId)}"]`)
-        ?.scrollIntoView({ block: "start" });
+      const row = list.value?.querySelector(
+        `[data-test-id="${CSS.escape(test.testId)}"]`
+      );
+      if (row !== null && row !== undefined) {
+        scrollToRow(row);
+      }
     });
   },
   { immediate: true }
