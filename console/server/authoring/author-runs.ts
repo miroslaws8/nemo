@@ -17,6 +17,15 @@ function authorFolder(id: string): string {
   return path.join(runDirectory(id), "author");
 }
 
+/** A regular file of the folder, never a link: the folder is written by the run's code. */
+function readRegular(file: string): string | null {
+  try {
+    return fs.lstatSync(file).isFile() ? fs.readFileSync(file, "utf8") : null;
+  } catch {
+    return null;
+  }
+}
+
 export class AuthorRuns implements IRunKind {
   launch: IRunKind["launch"] = (record, prepared) => ({
     command: prepared.playwright(["test"]),
@@ -48,27 +57,30 @@ export class AuthorRuns implements IRunKind {
   /** What the run wrote: its result (null while it runs, or when it wrote none) and its draft. */
   answer(id: string): IAuthorAnswer {
     const folder = authorFolder(id);
-    const resultFile = path.join(folder, "result.json");
-    if (!fs.existsSync(resultFile)) {
+    const text = readRegular(path.join(folder, "result.json"));
+    if (text === null) {
       return { result: null, draft: null };
     }
-    const parsed = authorResultSchema.safeParse(
-      JSON.parse(fs.readFileSync(resultFile, "utf8"))
-    );
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      json = null;
+    }
+    const parsed = authorResultSchema.safeParse(json);
     if (!parsed.success) {
       throw new HttpError(502, "the run's author/result.json is not readable");
     }
     const draftFile = parsed.data.draft?.file ?? null;
-    const draft =
-      draftFile !== null &&
-      DRAFT_NAME.test(draftFile) &&
-      fs.existsSync(path.join(folder, draftFile))
-        ? {
-            file: draftFile,
-            yaml: fs.readFileSync(path.join(folder, draftFile), "utf8"),
-          }
+    const yaml =
+      draftFile !== null && DRAFT_NAME.test(draftFile)
+        ? readRegular(path.join(folder, draftFile))
         : null;
-    return { result: parsed.data, draft };
+    return {
+      result: parsed.data,
+      draft:
+        draftFile === null || yaml === null ? null : { file: draftFile, yaml },
+    };
   }
 }
 

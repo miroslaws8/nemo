@@ -47,7 +47,7 @@ export class AuthoringController {
   @Get("runs/:id/author")
   @Access("viewer")
   answer(@Param("id") id: string, @Actor() actor: IActor): IAuthorAnswer {
-    const runId = runIdFrom({ id });
+    const runId = this.authorRun(id);
     const env = this.manager.environmentOf(runId);
     requireOnEnvironment(
       actor,
@@ -61,7 +61,7 @@ export class AuthoringController {
   @Post("runs/:id/author/save")
   @Access("runner")
   save(@Param("id") id: string, @Actor() actor: IActor): { file: string } {
-    const runId = runIdFrom({ id });
+    const runId = this.authorRun(id);
     const env = this.manager.environmentOf(runId);
     requireOnEnvironment(
       actor,
@@ -78,5 +78,15 @@ export class AuthoringController {
       throw new HttpError(409, "only a verified draft is added to the tests");
     }
     return { file: this.workspace.saveTest(env, draft.file, draft.yaml) };
+  }
+
+  // Only a run this console started as an author run: another run's folder is written by branch
+  // code, and its author/ files are not this route's to read.
+  private authorRun(id: string): string {
+    const runId = runIdFrom({ id });
+    if (this.manager.detail(runId).run.author === null) {
+      throw new HttpError(404, `${runId} is not a test written with AI`);
+    }
+    return runId;
   }
 }

@@ -57,7 +57,7 @@ function messageOf(error: unknown): string {
 // What a server console says of writing tests with AI: its runs get no model keys, and its tests
 // come from git (docs/superpowers/specs/2026-11-24-test-author-design.md, part 3).
 const SERVER_AUTHORING =
-  "Writing tests with AI comes to the team's console later (it needs the model proxy and pull requests); use pnpm author or a local console.";
+  "it comes to the team's console later (it needs the model proxy and pull requests); use pnpm author or a local console";
 
 const TEST_NAME = /^[a-z0-9][a-z0-9-]*\.test\.yaml$/;
 

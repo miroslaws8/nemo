@@ -322,6 +322,9 @@ test(`author: ${goal}`, async ({
   await testInfo.attach("result.json", {
     path: path.join(folder, "result.json"),
   });
+  if (verification !== null && !verification.verified) {
+    throw new Error(`The draft was not verified: ${verification.why}`);
+  }
   if (result.outcome !== "done") {
     throw new Error(
       `The author did not finish (${result.outcome}): ${result.summary}`

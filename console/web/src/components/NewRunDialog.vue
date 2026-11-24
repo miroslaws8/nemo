@@ -534,14 +534,17 @@ async function submit(): Promise<void> {
             the test once on its own; then you add it to the tests.
           </p>
           <p v-else class="text-xs text-muted-foreground">
-            <template v-if="!authoringAvailable && authoring?.reason">
-              Writing tests with AI: {{ authoring.reason }}
-            </template>
             Playwright runs the YAML tests of a profile, the same steps every
             time: all of them, some picked by hand, or the ones with a tag.
             <template v-if="!agentsAvailable && agents?.reason">
               No agent checks here: {{ agents.reason }}.
             </template>
+          </p>
+          <p
+            v-if="!authoringAvailable && authoring?.reason"
+            class="text-xs text-muted-foreground"
+          >
+            Write a test: {{ authoring.reason }}.
           </p>
         </div>
 
