@@ -9,6 +9,7 @@ import type {
 import type {
   IFailedTest,
   IFailureGroup,
+  INormaliser,
   ISetupMiss,
   ISlowStep,
   ISlowTest,
@@ -34,11 +35,6 @@ const DONE_STATUSES: ReadonlySet<ITestStatus> = new Set([
   "interrupted",
 ]);
 const GOING_PHASES: ReadonlySet<IRunPhase> = new Set(["starting", "running"]);
-
-interface INormaliser {
-  pattern: RegExp;
-  replacement: string;
-}
 
 // A URL loses its query first (it holds digits and quotes).
 const URL_QUERY: INormaliser = {

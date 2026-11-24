@@ -266,6 +266,12 @@ export interface IFailedTest {
   yaml: IYamlLocation | null;
 }
 
+/** What a failure's text loses to become its group's key: a pattern and what replaces it. */
+export interface INormaliser {
+  pattern: RegExp;
+  replacement: string;
+}
+
 /** Failed tests of a run that failed the same way (lib/run-summary.ts). */
 export interface IFailureGroup {
   // The first line of the error with its numbers, quoted text, ids and queries taken out, and the
