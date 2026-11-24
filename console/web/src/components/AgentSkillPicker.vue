@@ -1,19 +1,12 @@
 <script setup lang="ts">
 import type { IAgentSkills } from "@shared/types";
-import { computed, useId } from "vue";
+import { computed } from "vue";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// The skill an agent check runs (hermes/skills of the branch it tests), with what it does. A skill
-// the console cannot run yet is listed greyed out, with why.
+// The skill an agent check runs (hermes/skills of the branch it tests), one dense row each with
+// what it does. A skill the console cannot run yet is listed greyed out, with why.
 
 const props = defineProps<{
   skills: IAgentSkills["skills"];
@@ -23,23 +16,9 @@ const props = defineProps<{
 const skill = defineModel<string>({ required: true });
 const emit = defineEmits<{ reload: [] }>();
 
-const id = useId();
 const chosen = computed(() =>
   props.skills.find((candidate) => candidate.name === skill.value)
 );
-// The skills it cannot run yet, by why.
-const unavailable = computed(() => {
-  const byReason = new Map<string, string[]>();
-  for (const candidate of props.skills) {
-    if (candidate.unavailable !== null) {
-      byReason.set(candidate.unavailable, [
-        ...(byReason.get(candidate.unavailable) ?? []),
-        candidate.name,
-      ]);
-    }
-  }
-  return [...byReason].map(([reason, names]) => ({ reason, names }));
-});
 
 function choose(value: unknown): void {
   const found = props.skills.find(
@@ -53,51 +32,70 @@ function choose(value: unknown): void {
 
 <template>
   <div class="grid min-w-0 gap-2">
-    <Label :for="id">Skill</Label>
-    <div v-if="loading" class="grid gap-2" aria-busy="true">
-      <Skeleton class="h-9 w-full" />
-      <p class="text-xs text-muted-foreground">Reading the skills…</p>
+    <div
+      v-if="loading"
+      class="grid gap-1 rounded-md p-2 ring-1 ring-border"
+      aria-busy="true"
+      aria-label="Reading the skills"
+    >
+      <Skeleton v-for="row in 3" :key="row" class="h-6 w-full" />
     </div>
     <div
       v-else-if="error !== null"
-      class="flex flex-wrap items-center gap-3 rounded-md border border-fail/30 px-3 py-2.5 text-sm"
+      class="flex flex-wrap items-center gap-3 rounded-md px-3 py-2 text-sm ring-1 ring-fail/30"
     >
       <p class="min-w-0 flex-1 text-fail">{{ error }}</p>
       <Button type="button" size="sm" variant="outline" @click="emit('reload')">
         Try again
       </Button>
     </div>
+    <p v-else-if="skills.length === 0" class="text-sm text-muted-foreground">
+      This branch has no skills to run.
+    </p>
     <template v-else>
-      <Select :model-value="skill" @update:model-value="choose">
-        <SelectTrigger :id="id" class="w-full">
-          <SelectValue placeholder="Pick a skill" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem
-            v-for="entry in skills"
-            :key="entry.name"
+      <RadioGroup
+        :model-value="skill"
+        aria-label="Skill"
+        class="max-h-72 grid-cols-[minmax(0,1fr)] gap-0 overflow-y-auto overscroll-contain rounded-md py-1 ring-1 ring-border"
+        @update:model-value="choose"
+      >
+        <label
+          v-for="entry in skills"
+          :key="entry.name"
+          class="flex h-8 min-w-0 cursor-pointer items-center gap-2.5 px-2.5 transition-colors hover:bg-muted has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:hover:bg-transparent"
+          :title="
+            entry.unavailable === null
+              ? entry.description
+              : `Not offered yet: it ${entry.unavailable}`
+          "
+        >
+          <RadioGroupItem
             :value="entry.name"
             :disabled="entry.unavailable !== null"
+            class="size-3.5"
+          />
+          <span
+            class="max-w-[60%] shrink-0 truncate text-sm font-medium"
+            :class="{ 'text-muted-foreground': entry.unavailable !== null }"
+            >{{ entry.name }}</span
           >
-            {{ entry.name }}
-            <span
-              v-if="entry.origin === 'console'"
-              class="rounded-sm bg-run/10 px-1 py-px text-xs font-medium text-run"
-              >console v{{ entry.version }}</span
-            >
-          </SelectItem>
-        </SelectContent>
-      </Select>
-      <p v-if="chosen !== undefined" class="text-xs text-muted-foreground">
-        {{ chosen.description }}
-      </p>
+          <span
+            v-if="entry.origin === 'console'"
+            class="shrink-0 rounded-sm bg-run/10 px-1 text-xs font-medium text-run"
+            >console v{{ entry.version }}</span
+          >
+          <span class="min-w-0 flex-1 truncate text-xs text-faint">{{
+            entry.unavailable === null
+              ? entry.description
+              : `Not offered yet: it ${entry.unavailable}`
+          }}</span>
+        </label>
+      </RadioGroup>
       <p
-        v-for="group in unavailable"
-        :key="group.reason"
+        v-if="chosen !== undefined && chosen.description !== ''"
         class="text-xs text-muted-foreground"
       >
-        Not offered yet: {{ group.names.join(", ") }} —
-        {{ group.names.length === 1 ? "it" : "each" }} {{ group.reason }}.
+        {{ chosen.description }}
       </p>
     </template>
   </div>

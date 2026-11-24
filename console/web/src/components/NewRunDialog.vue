@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import {
   BotIcon,
-  GitBranchIcon,
-  PencilLineIcon,
   ListChecksIcon,
-  LockIcon,
+  PencilLineIcon,
   PlayIcon,
+  XIcon,
 } from "@lucide/vue";
 import type {
   ICatalogTest,
@@ -19,29 +18,20 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAgentSkills } from "@/composables/useAgentSkills";
 import { useBranches } from "@/composables/useBranches";
 import { useCatalog } from "@/composables/useCatalog";
 import { useRunActions } from "@/composables/useRunActions";
-import { formatUsd, plural, tierOf } from "@/lib/format";
+import { plural, tierOf } from "@/lib/format";
 import { mayActOn, mayRunAlongsideCi } from "@/state/access";
 import { consoleConfig, environmentNamed, tierNamed } from "@/state/config";
 import { newRunEnvironment, newRunOpen, newRunPreset } from "@/state/dialogs";
@@ -49,11 +39,17 @@ import { ciTitle } from "@/lib/ci";
 import { activeCiOn } from "@/state/ci";
 import { activeRunOn, activeRunsOn } from "@/state/runs";
 import { modeWords } from "@/state/session";
-import type { IRunKindChoice, ISelectionMode, ITagCount } from "@/types";
-import AgentSkillPicker from "./AgentSkillPicker.vue";
+import type {
+  INewRunPill,
+  IRunKindChoice,
+  ISelectionMode,
+  ITagCount,
+} from "@/types";
+import NewRunAgent from "./NewRunAgent.vue";
+import NewRunAuthor from "./NewRunAuthor.vue";
+import NewRunProperties from "./NewRunProperties.vue";
+import NewRunTests from "./NewRunTests.vue";
 import PermissionNote from "./PermissionNote.vue";
-import TagPicker from "./TagPicker.vue";
-import TestPicker from "./TestPicker.vue";
 
 // Starts a run: an environment, a profile, and all of its tests, some picked by hand or the
 // ones with given tags — or an agent check: Hermes Agent runs one of the skills with a model. A
@@ -61,17 +57,31 @@ import TestPicker from "./TestPicker.vue";
 // asks for its name. A run waits while CI runs hold its environment; an operator may start it
 // alongside them.
 
-// What a run can be, the agent check first (the dialog opens on it where the console has agents);
-// each with its icon.
+// What a run can be, each with its icon (the dialog opens on the agent check where the console
+// has agents).
 const KINDS: {
   value: IRunKindChoice;
   label: string;
   icon: Component;
 }[] = [
+  { value: "tests", label: "Tests", icon: ListChecksIcon },
   { value: "agent", label: "Agent check", icon: BotIcon },
-  { value: "tests", label: "Scripted tests", icon: ListChecksIcon },
   { value: "author", label: "Write a test", icon: PencilLineIcon },
 ];
+
+// The properties each kind of run takes, shown as pills under its body (where they apply: a
+// branch on a server console, skipping needed tiers when the tests need some, starting alongside
+// CI while CI holds the environment).
+const PILLS: Record<IRunKindChoice, ReadonlySet<INewRunPill>> = {
+  tests: new Set<INewRunPill>([
+    "profile",
+    "branch",
+    "skipNeeds",
+    "alongsideCi",
+  ]),
+  agent: new Set<INewRunPill>(["model", "branch", "alongsideCi"]),
+  author: new Set<INewRunPill>(),
+};
 
 const START_WORDS: Record<IRunKindChoice, string> = {
   tests: "Start run",
@@ -82,12 +92,6 @@ const START_WORDS: Record<IRunKindChoice, string> = {
 // What a description of a test may be (startAuthorRunRequestSchema).
 const GOAL_MIN = 5;
 const GOAL_MAX = 500;
-
-const MODES: { value: ISelectionMode; label: string }[] = [
-  { value: "all", label: "All tests of the profile" },
-  { value: "pick", label: "Pick tests" },
-  { value: "tags", label: "By tag" },
-];
 
 const { start, startAgent, startAuthor } = useRunActions();
 
@@ -109,19 +113,7 @@ const typed = ref("");
 // The branch to test (a server console); "" until the environment gives its own.
 const branch = ref("");
 const submitting = ref(false);
-const ids = {
-  environment: useId(),
-  profile: useId(),
-  mode: useId(),
-  skip: useId(),
-  alongside: useId(),
-  confirm: useId(),
-  branch: useId(),
-  kind: useId(),
-  goal: useId(),
-  model: useId(),
-  arguments: useId(),
-};
+const ids = { confirm: useId(), guardedWords: useId() };
 
 const environments = computed(() => consoleConfig.value?.environments ?? []);
 // The environments this person may run on; the others are greyed out.
@@ -152,6 +144,20 @@ const AVAILABLE: Record<IRunKindChoice, () => boolean> = {
   agent: () => agentsAvailable.value,
   author: () => authoringAvailable.value,
 };
+// Why a kind cannot start here, for its tooltip: the console's reason may name a setting, so it
+// is never shown in the dialog itself.
+const UNAVAILABLE_WORDS: Record<IRunKindChoice, () => string> = {
+  tests: () => "",
+  agent: () =>
+    agents.value?.reason
+      ? `No agent checks here: ${agents.value.reason}.`
+      : "No agent checks on this console.",
+  author: () =>
+    authoring.value?.reason
+      ? `No tests written with AI here: ${authoring.value.reason}.`
+      : "No tests written with AI on this console.",
+};
+const pills = computed(() => PILLS[kind.value]);
 const modelInfo = computed(() =>
   agents.value?.models.find((candidate) => candidate.id === model.value)
 );
@@ -166,9 +172,6 @@ const {
   loading: branchesLoading,
   error: branchesError,
 } = useBranches(() => newRunOpen.value && fromGit.value);
-const chosenBranch = computed(() =>
-  branches.value.find((candidate) => candidate.name === branch.value)
-);
 // Another branch than the environment's own (prod tests main) deserves a word.
 const offBranch = computed(
   () =>
@@ -184,8 +187,11 @@ const heldByCi = computed(() => {
   return going.length > 0 && going.every((run) => run.ci !== null);
 });
 const mayGoAlongside = computed(() => mayRunAlongsideCi().allowed);
+const offersAlongside = computed(
+  () => heldByCi.value && mayGoAlongside.value && pills.value.has("alongsideCi")
+);
 const goesAlongside = computed(
-  () => heldByCi.value && mayGoAlongside.value && alongsideCi.value
+  () => offersAlongside.value && alongsideCi.value
 );
 const waits = computed(
   () => busyWith.value !== undefined && !goesAlongside.value
@@ -282,6 +288,7 @@ watch([environment, profile, branch], () => {
 
 watch(environment, () => {
   alongsideCi.value = false;
+  typed.value = "";
 });
 
 const tagCounts = computed((): ITagCount[] => {
@@ -403,42 +410,12 @@ const ready = computed(
     (!guarded.value || typed.value === environment.value)
 );
 
-function chooseEnvironment(value: unknown): void {
-  if (typeof value === "string" && value !== "") {
-    environment.value = value;
-    typed.value = "";
-  }
-}
-
-function chooseBranch(value: unknown): void {
-  if (typeof value === "string" && value !== "") {
-    branch.value = value;
-  }
-}
-
-function chooseProfile(value: unknown): void {
-  if (typeof value === "string") {
-    profile.value = value;
-  }
-}
-
 function chooseKind(value: unknown): void {
-  const found = KINDS.find((option) => option.value === value);
+  const found = KINDS.find(
+    (option) => option.value === value && AVAILABLE[option.value]()
+  );
   if (found !== undefined) {
     kind.value = found.value;
-  }
-}
-
-function chooseModel(value: unknown): void {
-  if (typeof value === "string" && value !== "") {
-    model.value = value;
-  }
-}
-
-function chooseMode(value: unknown): void {
-  const found = MODES.find((option) => option.value === value);
-  if (found !== undefined) {
-    mode.value = found.value;
   }
 }
 
@@ -477,6 +454,19 @@ const STARTS: Record<IRunKindChoice, () => Promise<boolean>> = {
     startAuthor({ env: environment.value, goal: goal.value.trim() }),
 };
 
+// ⌘/Ctrl+Enter anywhere in the dialog starts, the same as the button (not while an input
+// method is still composing the text).
+function startFromKeys(event: KeyboardEvent): void {
+  if (
+    (event.metaKey || event.ctrlKey) &&
+    event.key === "Enter" &&
+    !event.isComposing
+  ) {
+    event.preventDefault();
+    void submit();
+  }
+}
+
 async function submit(): Promise<void> {
   if (!ready.value) {
     return;
@@ -492,399 +482,199 @@ async function submit(): Promise<void> {
 
 <template>
   <Dialog v-model:open="newRunOpen">
-    <DialogContent class="sm:max-w-2xl">
-      <form class="grid min-w-0 gap-6" @submit.prevent="submit">
-        <DialogHeader>
-          <DialogTitle>New run</DialogTitle>
-          <DialogDescription>{{ modeWords.newRun }}</DialogDescription>
-        </DialogHeader>
-
-        <div class="grid min-w-0 gap-2">
-          <Label :id="ids.kind">Run</Label>
+    <DialogContent
+      :show-close-button="false"
+      class="flex max-h-[calc(100dvh-4rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[640px] max-sm:top-auto max-sm:bottom-0 max-sm:max-h-[90dvh] max-sm:max-w-none max-sm:translate-y-0 max-sm:rounded-b-none"
+    >
+      <DialogTitle class="sr-only">New run</DialogTitle>
+      <DialogDescription class="sr-only">{{
+        modeWords.newRun
+      }}</DialogDescription>
+      <form
+        class="flex min-h-0 min-w-0 flex-1 flex-col"
+        @submit.prevent="submit"
+        @keydown="startFromKeys"
+      >
+        <div class="flex shrink-0 items-center gap-2 px-4 pt-3">
           <ToggleGroup
             type="single"
-            variant="outline"
+            size="sm"
+            :spacing="0.5"
             :model-value="kind"
-            :aria-labelledby="ids.kind"
-            class="w-full sm:w-auto sm:justify-self-start"
+            aria-label="Run"
+            class="min-w-0"
             @update:model-value="chooseKind"
           >
-            <ToggleGroupItem
+            <Tooltip
               v-for="option in KINDS"
               :key="option.value"
-              :value="option.value"
-              :disabled="!AVAILABLE[option.value]()"
-              class="flex-1 gap-1.5 px-4"
+              :disabled="AVAILABLE[option.value]()"
             >
-              <component :is="option.icon" class="size-4" aria-hidden="true" />
-              {{ option.label }}
-            </ToggleGroupItem>
+              <TooltipTrigger as-child>
+                <span
+                  class="inline-flex min-w-0"
+                  :tabindex="AVAILABLE[option.value]() ? undefined : 0"
+                >
+                  <ToggleGroupItem
+                    :value="option.value"
+                    :disabled="!AVAILABLE[option.value]()"
+                    class="h-7 gap-1.5 px-2 text-xs data-[state=on]:bg-muted data-[state=on]:text-foreground data-[state=off]:text-muted-foreground"
+                  >
+                    <component
+                      :is="option.icon"
+                      class="size-3.5"
+                      aria-hidden="true"
+                    />
+                    {{ option.label }}
+                  </ToggleGroupItem>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{{
+                UNAVAILABLE_WORDS[option.value]()
+              }}</TooltipContent>
+            </Tooltip>
           </ToggleGroup>
-          <p v-if="kind === 'agent'" class="text-xs text-muted-foreground">
-            Hermes Agent opens the app in a browser and follows one of the
-            skills in hermes/skills, the way a tester would. Its report and
-            screenshots land in the run.
-          </p>
-          <p
-            v-else-if="kind === 'author'"
-            class="text-xs text-muted-foreground"
-          >
-            Describe what to check. AI walks it in the browser with nemo's own
-            steps, keeps what worked, adds the checks that prove it, and runs
-            the test once on its own; then you add it to the tests.
-          </p>
-          <p v-else class="text-xs text-muted-foreground">
-            Playwright runs the YAML tests of a profile, the same steps every
-            time: all of them, some picked by hand, or the ones with a tag.
-            <template v-if="!agentsAvailable && agents?.reason">
-              No agent checks here: {{ agents.reason }}.
-            </template>
-          </p>
-          <p
-            v-if="!authoringAvailable && authoring?.reason"
-            class="text-xs text-muted-foreground"
-          >
-            Write a test: {{ authoring.reason }}.
-          </p>
+          <DialogClose as-child>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="ml-auto text-muted-foreground"
+              aria-label="Close"
+            >
+              <XIcon aria-hidden="true" />
+            </Button>
+          </DialogClose>
         </div>
 
-        <div class="grid min-w-0 gap-5 sm:grid-cols-2">
-          <div class="grid min-w-0 content-start gap-2">
-            <Label :id="ids.environment">Environment</Label>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              :model-value="environment"
-              :aria-labelledby="ids.environment"
-              class="w-full"
-              @update:model-value="chooseEnvironment"
-            >
-              <ToggleGroupItem
-                v-for="entry in environments"
-                :key="entry.name"
-                :value="entry.name"
-                :disabled="
-                  !permitted.has(entry.name) ||
-                  (kind === 'author' && entry.guarded)
-                "
-                class="flex-1 gap-1.5"
-              >
-                {{ entry.name }}
-                <LockIcon
-                  v-if="entry.guarded"
-                  class="size-3.5"
-                  aria-label="guarded"
-                />
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <p class="truncate text-xs text-muted-foreground">
-              {{ environmentInfo?.baseUrl }}
-            </p>
-            <PermissionNote
-              v-if="refusal !== null"
-              :permission="refusal"
-              class="text-xs"
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          <div class="min-h-40 min-w-0 px-4 py-3">
+            <NewRunAgent
+              v-if="kind === 'agent'"
+              v-model:skill="skill"
+              v-model:arguments="skillArguments"
+              :environment="environment"
+              :skills="skills"
+              :loading="skillsLoading"
+              :error="skillsError"
+              :spend="spend"
+              :spent-out="spentOut"
+              @reload="reloadSkills"
+            />
+            <NewRunAuthor
+              v-else-if="kind === 'author'"
+              v-model="goal"
+              :environment="environment"
+              :guarded="guarded"
+              :max-length="GOAL_MAX"
+            />
+            <NewRunTests
+              v-else
+              v-model:mode="mode"
+              v-model:picked="picked"
+              v-model:tags="tags"
+              :environment="environment"
+              :profile="profile"
+              :profile-info="profileInfo"
+              :catalog="catalog"
+              :loading="catalogLoading"
+              :error="catalogError"
+              :tag-counts="tagCounts"
+              :matched="chosen?.length ?? 0"
+              @reload="reloadCatalog"
             />
           </div>
 
-          <div v-if="kind === 'agent'" class="grid min-w-0 content-start gap-2">
-            <Label :for="ids.model">Model</Label>
-            <Select :model-value="model" @update:model-value="chooseModel">
-              <SelectTrigger :id="ids.model" class="w-full">
-                <SelectValue placeholder="Pick a model" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="entry in agents?.models ?? []"
-                  :key="entry.id"
-                  :value="entry.id"
-                  :disabled="!entry.available"
-                >
-                  {{ entry.label }}
-                  <span
-                    v-if="entry.reason !== null"
-                    class="text-xs text-muted-foreground"
-                    >{{ entry.reason }}</span
-                  >
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p class="text-xs text-muted-foreground">
-              The model reads the pages and decides each step. Every check
-              spends tokens on the console's
-              {{ modelInfo?.provider || "model" }}
-              key.
+          <NewRunProperties
+            v-model:environment="environment"
+            v-model:profile="profile"
+            v-model:branch="branch"
+            v-model:model="model"
+            v-model:skip-needs="skipNeeds"
+            v-model:alongside-ci="alongsideCi"
+            :pills="pills"
+            :permitted="permitted"
+            :refusal="refusal"
+            :refuses-guarded="kind === 'author'"
+            :from-git="fromGit"
+            :branches="branches"
+            :branches-loading="branchesLoading"
+            :off-branch="offBranch"
+            :need-tiers="needTiers"
+            :offers-alongside="offersAlongside"
+          />
+
+          <div
+            v-if="guarded && kind !== 'author'"
+            class="grid gap-1.5 px-4 pb-3"
+          >
+            <p :id="ids.guardedWords" class="text-xs text-flaky">
+              {{ environment }} is the live product: its runs write real data
+              with the shared QA account.
             </p>
-            <p
-              v-if="spend !== null"
-              class="text-xs tabular-nums"
-              :class="spentOut ? 'text-fail' : 'text-muted-foreground'"
-            >
-              {{
-                spentOut
-                  ? `Today's limit is spent (${formatUsd(
-                      spend.todayUsd
-                    )} of ${formatUsd(
-                      spend.dailyUsd
-                    )}): checks start again tomorrow (UTC).`
-                  : `Spent today: ${formatUsd(spend.todayUsd)} of ${formatUsd(
-                      spend.dailyUsd
-                    )}.`
-              }}
-            </p>
+            <Input
+              :id="ids.confirm"
+              v-model="typed"
+              :placeholder="`Type ${environment} to run on it`"
+              :aria-label="`Type ${environment} to run on it`"
+              :aria-describedby="ids.guardedWords"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              class="h-8 font-mono"
+            />
           </div>
 
           <div
-            v-else-if="kind === 'tests'"
-            class="grid min-w-0 content-start gap-2"
+            v-if="
+              (refusal !== null && !permitted.has(environment)) ||
+              (fromGit &&
+                pills.has('branch') &&
+                (branchesError !== null || offBranch)) ||
+              (ciWarning && ciGoing !== undefined)
+            "
+            class="grid gap-1 px-4 pb-3 text-xs"
           >
-            <Label :for="ids.profile">Profile</Label>
-            <Select :model-value="profile" @update:model-value="chooseProfile">
-              <SelectTrigger :id="ids.profile" class="w-full">
-                <SelectValue placeholder="Pick a profile" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="entry in profiles"
-                  :key="entry.name"
-                  :value="entry.name"
-                >
-                  {{ entry.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <p
-              v-if="profileInfo !== undefined"
-              class="text-xs text-muted-foreground"
-            >
-              {{ profileInfo.description }}
-              Tiers: {{ profileInfo.tiers.join(", ") }}.
-            </p>
-          </div>
-        </div>
-
-        <div v-if="fromGit" class="grid min-w-0 gap-2">
-          <Label :for="ids.branch">Branch</Label>
-          <Select :model-value="branch" @update:model-value="chooseBranch">
-            <SelectTrigger :id="ids.branch" class="w-full">
-              <span class="flex min-w-0 items-center gap-2">
-                <GitBranchIcon
-                  class="size-4 shrink-0 text-muted-foreground"
-                  aria-hidden="true"
-                />
-                <SelectValue
-                  :placeholder="
-                    branchesLoading ? 'Getting the branches…' : 'Pick a branch'
-                  "
-                />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="entry in branches"
-                :key="entry.name"
-                :value="entry.name"
-              >
-                {{ entry.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          <p v-if="branchesError !== null" class="text-xs text-fail">
-            {{ branchesError }}
-          </p>
-          <p
-            v-else-if="chosenBranch !== undefined"
-            class="flex min-w-0 gap-2 text-xs text-muted-foreground"
-          >
-            <span class="shrink-0 font-mono">{{
-              chosenBranch.sha.slice(0, 7)
-            }}</span>
-            <span class="truncate">{{ chosenBranch.subject }}</span>
-          </p>
-          <p v-if="offBranch" class="text-xs text-flaky">
-            {{ environment }} normally tests
-            <span class="font-mono">{{ environmentInfo?.branch }}</span
-            >.
-          </p>
-        </div>
-
-        <template v-if="kind === 'agent'">
-          <AgentSkillPicker
-            v-model="skill"
-            :skills="skills"
-            :loading="skillsLoading"
-            :error="skillsError"
-            @reload="reloadSkills"
-          />
-          <div class="grid min-w-0 gap-2">
-            <Label :for="ids.arguments">Arguments (optional)</Label>
-            <Input
-              :id="ids.arguments"
-              v-model="skillArguments"
-              maxlength="200"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="e.g. hero"
+            <PermissionNote
+              v-if="refusal !== null && !permitted.has(environment)"
+              :permission="refusal"
+              class="text-xs"
             />
-            <p class="text-xs text-muted-foreground">
-              What the skill gets after the environment:
-              <span class="font-mono"
-                >/{{ skill || "skill" }} {{ environment }}
-                {{ skillArguments.trim() || "…" }}</span
-              >
-            </p>
-          </div>
-        </template>
-
-        <div v-else-if="kind === 'author'" class="grid min-w-0 gap-2">
-          <Label :for="ids.goal">What to check</Label>
-          <Textarea
-            :id="ids.goal"
-            v-model="goal"
-            :maxlength="GOAL_MAX"
-            rows="3"
-            placeholder="On a phone, the menu leads to the pricing page and its plans are shown"
-          />
-          <p class="text-xs text-muted-foreground">
-            In plain words, like you would tell a tester. Not on guarded
-            environments: write it on staging, it runs on prod too.
-          </p>
-        </div>
-
-        <div v-else class="grid min-w-0 gap-3">
-          <Label :id="ids.mode">Tests</Label>
-          <RadioGroup
-            :model-value="mode"
-            :aria-labelledby="ids.mode"
-            class="flex flex-wrap gap-x-6 gap-y-2"
-            @update:model-value="chooseMode"
-          >
-            <div
-              v-for="option in MODES"
-              :key="option.value"
-              class="flex items-center gap-2"
-            >
-              <RadioGroupItem
-                :id="`${ids.mode}-${option.value}`"
-                :value="option.value"
-              />
-              <Label :for="`${ids.mode}-${option.value}`" class="font-normal">{{
-                option.label
-              }}</Label>
-            </div>
-          </RadioGroup>
-
-          <template v-if="mode !== 'all'">
-            <div v-if="catalogLoading" class="grid gap-2" aria-busy="true">
-              <p class="text-sm text-muted-foreground">
-                Listing the {{ environment }} × {{ profile }} tests…
+            <template v-if="fromGit && pills.has('branch')">
+              <p v-if="branchesError !== null" class="text-fail">
+                {{ branchesError }}
               </p>
-              <Skeleton class="h-9 w-full" />
-              <Skeleton class="h-40 w-full" />
-            </div>
-            <div
-              v-else-if="catalogError !== null"
-              class="flex flex-wrap items-center gap-3 rounded-md border border-fail/30 px-3 py-2.5 text-sm"
-            >
-              <p class="min-w-0 flex-1 text-fail">{{ catalogError }}</p>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                @click="reloadCatalog"
-              >
-                Try again
-              </Button>
-            </div>
-            <TestPicker
-              v-else-if="mode === 'pick'"
-              v-model="picked"
-              :tests="catalog"
-            />
-            <TagPicker
-              v-else
-              v-model="tags"
-              :tags="tagCounts"
-              :matched="chosen?.length ?? 0"
-            />
-          </template>
-        </div>
-
-        <div
-          v-if="kind === 'tests' && needTiers.length > 0"
-          class="flex items-start justify-between gap-4 rounded-md border p-3"
-        >
-          <div class="grid gap-1">
-            <Label :for="ids.skip"
-              >Skip {{ needTiers.join(" and ") }} first</Label
-            >
-            <p class="text-sm text-muted-foreground">
-              Some of these tests wait for the whole
-              {{ needTiers.join(" and ") }} tier to pass. Skip it to run only
-              what you picked.
+              <p v-else-if="offBranch" class="text-flaky">
+                {{ environment }} normally tests
+                <span class="font-mono">{{ environmentInfo?.branch }}</span
+                >.
+              </p>
+            </template>
+            <p v-if="ciWarning && ciGoing !== undefined" class="text-flaky">
+              CI is running {{ ciTitle(ciGoing) }} on {{ environment }} now.
+              Both runs use the same QA account and its API limit, so they slow
+              each other down and may run into 429s.
             </p>
           </div>
-          <Switch :id="ids.skip" v-model="skipNeeds" />
         </div>
 
-        <div
-          v-if="guarded"
-          class="grid gap-2 rounded-md border border-flaky/40 bg-flaky/5 p-3"
-        >
-          <p class="text-sm">
-            {{ environment }} is the live product: its runs write real data with
-            the shared QA account.
-          </p>
-          <Label :for="ids.confirm"
-            >Type <span class="font-mono">{{ environment }}</span> to
-            start</Label
-          >
-          <Input
-            :id="ids.confirm"
-            v-model="typed"
-            autocomplete="off"
-            autocapitalize="off"
-            spellcheck="false"
-          />
-        </div>
-
-        <div
-          v-if="heldByCi && mayGoAlongside"
-          class="flex items-start justify-between gap-4 rounded-md border p-3"
-        >
-          <div class="grid gap-1">
-            <Label :for="ids.alongside">Start now, alongside CI</Label>
-            <p class="text-sm text-muted-foreground">
-              CI is testing {{ environment }}. Off, the run waits until CI is
-              done.
-            </p>
-          </div>
-          <Switch :id="ids.alongside" v-model="alongsideCi" />
-        </div>
-
-        <p
-          v-if="ciWarning && ciGoing !== undefined"
-          class="rounded-md border border-flaky/40 bg-flaky/5 px-3 py-2 text-sm"
-        >
-          CI is running {{ ciTitle(ciGoing) }} on {{ environment }} now. Both
-          runs use the same QA account and its API limit, so they slow each
-          other down and may run into 429s.
-        </p>
-
-        <DialogFooter class="items-center gap-3 sm:justify-between">
-          <p class="text-sm text-muted-foreground">
+        <div class="flex shrink-0 items-center gap-3 border-t px-4 py-3">
+          <p class="min-w-0 flex-1 text-sm text-muted-foreground">
             {{ footer }}
           </p>
-          <div class="flex gap-2">
-            <DialogClose as-child>
-              <Button type="button" variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button type="submit" :disabled="!ready">
-              <PlayIcon aria-hidden="true" />
-              {{ waits ? "Add to queue" : START_WORDS[kind] }}
-            </Button>
-          </div>
-        </DialogFooter>
+          <DialogClose as-child>
+            <Button type="button" variant="ghost" size="sm">Cancel</Button>
+          </DialogClose>
+          <Button type="submit" size="sm" :disabled="!ready">
+            <PlayIcon aria-hidden="true" />
+            {{ waits ? "Add to queue" : START_WORDS[kind] }}
+            <kbd
+              class="ml-0.5 font-sans text-xs opacity-70 max-sm:hidden"
+              aria-hidden="true"
+              >⌘↵</kbd
+            >
+          </Button>
+        </div>
       </form>
     </DialogContent>
   </Dialog>

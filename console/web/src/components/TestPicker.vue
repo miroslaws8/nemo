@@ -5,7 +5,6 @@ import { computed, ref } from "vue";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { tierOf } from "@/lib/format";
 
 // Picks tests one by one from the catalog, grouped by tier and suite, with a filter that
@@ -67,47 +66,40 @@ function pickShown(): void {
 </script>
 
 <template>
-  <div class="min-w-0 overflow-hidden rounded-md border">
-    <div class="flex items-center gap-2 border-b px-3">
-      <SearchIcon
-        class="size-4 shrink-0 text-muted-foreground"
-        aria-hidden="true"
-      />
+  <div class="min-w-0 overflow-hidden rounded-md ring-1 ring-border">
+    <div class="flex h-8 items-center gap-2 border-b px-2.5">
+      <SearchIcon class="size-3.5 shrink-0 text-faint" aria-hidden="true" />
       <Input
         v-model="query"
         placeholder="Filter by title, suite, file or tag"
         aria-label="Filter the tests"
-        class="h-9 border-0 px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
+        class="h-8 border-0 px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
       />
     </div>
-    <ScrollArea class="h-64">
+    <div class="max-h-72 overflow-y-auto overscroll-contain">
       <section v-for="group in groups" :key="group.key">
         <h4
-          class="sticky top-0 z-10 flex items-center gap-2 border-b bg-muted/90 px-3 py-1 text-xs backdrop-blur-sm"
+          class="sticky top-0 z-10 flex h-7 items-center gap-2 border-b bg-muted px-2.5 text-xs"
         >
-          <span class="rounded-sm bg-background px-1.5 py-px font-medium">{{
-            group.tier
-          }}</span>
+          <span class="font-medium">{{ group.tier }}</span>
           <span class="truncate text-muted-foreground">{{ group.suite }}</span>
         </h4>
         <label
           v-for="test in group.tests"
           :key="test.testId"
-          class="flex cursor-pointer items-start gap-2.5 px-3 py-2 transition-colors hover:bg-accent/50"
+          class="flex h-8 cursor-pointer items-center gap-2.5 px-2.5 transition-colors hover:bg-muted"
         >
           <Checkbox
             :model-value="pickedIds.has(test.testId)"
-            class="mt-0.5"
+            class="size-3.5 [&_svg]:size-3"
             @update:model-value="setPicked(test.testId, $event === true)"
           />
-          <span class="min-w-0">
-            <span class="block truncate text-sm">{{ test.title }}</span>
-            <span
-              v-if="test.file !== null"
-              class="block truncate font-mono text-xs text-muted-foreground"
-              >{{ test.file }}</span
-            >
-          </span>
+          <span class="min-w-0 flex-1 truncate text-sm">{{ test.title }}</span>
+          <span
+            v-if="test.file !== null"
+            class="max-w-[45%] shrink-0 truncate font-mono text-xs text-faint max-sm:hidden"
+            >{{ test.file }}</span
+          >
         </label>
       </section>
       <p
@@ -116,8 +108,8 @@ function pickShown(): void {
       >
         No test matches “{{ query }}”.
       </p>
-    </ScrollArea>
-    <div class="flex items-center gap-1 border-t px-3 py-1.5 text-sm">
+    </div>
+    <div class="flex h-8 items-center gap-1 border-t px-2.5 text-xs">
       <span class="tabular-nums text-muted-foreground"
         >{{ picked.length }} picked</span
       >

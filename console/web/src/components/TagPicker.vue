@@ -19,29 +19,31 @@ function update(value: unknown): void {
 
 <template>
   <div class="grid min-w-0 gap-2">
-    <ToggleGroup
+    <div
       v-if="tags.length > 0"
-      type="multiple"
-      variant="outline"
-      size="sm"
-      :spacing="2"
-      :model-value="chosen"
-      aria-label="Tags"
-      class="w-full flex-wrap justify-start"
-      @update:model-value="update"
+      class="max-h-72 overflow-y-auto rounded-md p-2 ring-1 ring-border"
     >
-      <ToggleGroupItem
-        v-for="entry in tags"
-        :key="entry.tag"
-        :value="entry.tag"
-        class="gap-1.5 rounded-full"
+      <ToggleGroup
+        type="multiple"
+        variant="outline"
+        size="sm"
+        :spacing="1.5"
+        :model-value="chosen"
+        aria-label="Tags"
+        class="w-full flex-wrap justify-start"
+        @update:model-value="update"
       >
-        {{ entry.tag }}
-        <span class="tabular-nums text-muted-foreground">{{
-          entry.count
-        }}</span>
-      </ToggleGroupItem>
-    </ToggleGroup>
+        <ToggleGroupItem
+          v-for="entry in tags"
+          :key="entry.tag"
+          :value="entry.tag"
+          class="h-7 min-w-0 gap-1.5 rounded-full px-2.5 text-xs shadow-none"
+        >
+          {{ entry.tag }}
+          <span class="tabular-nums text-faint">{{ entry.count }}</span>
+        </ToggleGroupItem>
+      </ToggleGroup>
+    </div>
     <p v-else class="text-sm text-muted-foreground">
       These tests carry no tags.
     </p>

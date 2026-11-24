@@ -114,6 +114,14 @@ export type ISelectionMode = "all" | "pick" | "tags";
 /** What a new run runs: the YAML tests, an agent check (Hermes with a skill), or writing a test. */
 export type IRunKindChoice = "tests" | "agent" | "author";
 
+/** A property of a new run shown as a pill under its body, where its kind of run takes it. */
+export type INewRunPill =
+  | "profile"
+  | "branch"
+  | "model"
+  | "skipNeeds"
+  | "alongsideCi";
+
 /** A tag of the catalog and how many tests carry it. */
 export interface ITagCount {
   tag: string;
