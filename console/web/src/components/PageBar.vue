@@ -5,10 +5,10 @@ import { navOpen } from "@/state/dialogs";
 import type { ICrumb } from "@/types";
 import ConnectionNotice from "./ConnectionNotice.vue";
 
-// A page's title bar at the top of the panel: the crumbs that lead back (links, a faint `›` after
-// each), then the page's own name as its heading (the default slot; `title` is its tooltip when
-// it is cut short), its actions on the right. Below `md` it also holds the button that opens the
-// sidebar, and the connection notice the sidebar shows from `md` up.
+// A page's title bar at the top of the panel: the crumbs that lead back (links, none wider than
+// 10rem, a faint `›` after each), then the page's own name as its heading (the default slot;
+// `title` is its tooltip when it is cut short), its actions on the right. Below `md` it also holds
+// the button that opens the sidebar, and the connection notice the sidebar shows from `md` up.
 
 withDefaults(defineProps<{ crumbs?: ICrumb[]; title?: string }>(), {
   crumbs: () => [],
@@ -16,7 +16,7 @@ withDefaults(defineProps<{ crumbs?: ICrumb[]; title?: string }>(), {
 });
 
 const CRUMB_LINK =
-  "min-w-0 shrink truncate rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
+  "max-w-40 truncate rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
 </script>
 
 <template>
@@ -36,7 +36,7 @@ const CRUMB_LINK =
       <nav
         v-if="crumbs.length > 0"
         aria-label="Breadcrumb"
-        class="flex min-w-0 shrink items-center gap-1.5"
+        class="flex shrink-0 items-center gap-1.5"
       >
         <template v-for="crumb in crumbs" :key="crumb.to">
           <RouterLink

@@ -101,8 +101,16 @@ const writerWords = computed(() => {
 const composerOff = computed(
   () => !editing.value.allowed || writer.value?.available !== true
 );
-// ⌘/Ctrl+Enter in the box writes, the same as the button.
-function writeFromKeys(): void {
+// ⌘/Ctrl+Enter in the box writes, the same as the button (not while an input method composes).
+function writeFromKeys(event: KeyboardEvent): void {
+  if (
+    !(event.metaKey || event.ctrlKey) ||
+    event.key !== "Enter" ||
+    event.isComposing
+  ) {
+    return;
+  }
+  event.preventDefault();
   if (canWrite.value) {
     void write();
   }
@@ -166,8 +174,7 @@ function copy(): void {
         :disabled="composerOff"
         class="min-h-28 resize-none rounded-none border-0 bg-transparent px-3 py-3 shadow-none focus-visible:border-0 focus-visible:ring-0"
         placeholder="On a phone, open the pricing page, check every plan shows a price and a button, and look for text that is cut off"
-        @keydown.meta.enter.prevent="writeFromKeys"
-        @keydown.ctrl.enter.prevent="writeFromKeys"
+        @keydown="writeFromKeys"
       />
       <div class="flex items-center gap-3 border-t px-3 py-2">
         <p class="min-w-0 flex-1 text-xs text-muted-foreground">

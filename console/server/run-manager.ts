@@ -2,7 +2,11 @@ import fs from "node:fs";
 import { buildEnvironment } from "../../engine/environment";
 import { newRunId } from "../../engine/run-info";
 import type { ILiveEvent } from "../../engine/types";
-import { ACTIVE_RUN_STATUSES, liveEventSchema } from "../shared/api";
+import {
+  ACTIVE_RUN_STATUSES,
+  liveEventSchema,
+  runCountsSchema,
+} from "../shared/api";
 import { emptyRunState, reduceRun, settleRun } from "../shared/reducer";
 import type {
   IAgentQueuedBy,
@@ -133,16 +137,9 @@ function countsDiffer(counts: IRunCounts, shown: IRunCounts | null): boolean {
   return shown === null || COUNT_KEYS.some((key) => counts[key] !== shown[key]);
 }
 
-const COUNT_KEYS: readonly (keyof IRunCounts)[] = [
-  "total",
-  "passed",
-  "failed",
-  "flaky",
-  "skipped",
-  "interrupted",
-  "running",
-  "queued",
-];
+// Every count a run's record holds, from its schema: a new one is compared too.
+const COUNT_KEYS: readonly (keyof IRunCounts)[] =
+  runCountsSchema.keyof().options;
 
 function finalStatus(live: ILiveRun, exitCode: number | null): IRunStatus {
   if (live.forced) {

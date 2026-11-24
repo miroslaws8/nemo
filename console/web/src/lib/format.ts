@@ -98,9 +98,12 @@ export function tierOf(project: string): string {
   return project.slice(project.indexOf(":") + 1);
 }
 
-/** A run's label as a title: capitalized, with typographic quotes around a test's name. */
+/**
+ * A run's label as a title: capitalized, with typographic quotes around a test's name, without
+ * the "✎ " that marks a written test wherever it is (a retry of one is "again: ✎ …").
+ */
 export function formatLabel(label: string): string {
-  const quoted = label.replace(/^✎ /, "").replace(/"([^"]*)"/g, "“$1”");
+  const quoted = label.replace(/✎ /g, "").replace(/"([^"]*)"/g, "“$1”");
   return quoted.charAt(0).toUpperCase() + quoted.slice(1);
 }
 

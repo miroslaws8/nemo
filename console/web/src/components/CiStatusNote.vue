@@ -7,7 +7,7 @@ import StatusGlyph from "@/components/StatusGlyph.vue";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatClock } from "@/lib/format";
 import { TONE_CLASSES } from "@/lib/status";
-import type { ITone } from "@/types";
+import type { ICiNoteState, ITone } from "@/types";
 
 // What the CI list says besides its rows: asking, not set up, an error or Bitbucket's rate limit
 // (a banner above the list), or that no pipeline has run yet.
@@ -19,9 +19,7 @@ const SETTINGS = [
   { name: "QA_CONSOLE_BITBUCKET_TOKEN", hint: "a repository access token" },
 ];
 
-type INoteState = "asking" | "setup" | "paused" | "error" | "empty" | "none";
-
-const state = computed<INoteState>(() => {
+const state = computed<ICiNoteState>(() => {
   const overview = props.overview;
   if (overview === null) {
     return "asking";
@@ -38,7 +36,7 @@ const state = computed<INoteState>(() => {
   return overview.pipelines.length === 0 ? "empty" : "none";
 });
 
-const BANNER_TONES: Partial<Record<INoteState, ITone>> = {
+const BANNER_TONES: Partial<Record<ICiNoteState, ITone>> = {
   paused: "flaky",
   error: "fail",
 };

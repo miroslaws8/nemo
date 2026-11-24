@@ -56,7 +56,7 @@ const progress = computed(() =>
 );
 
 const failures = computed(() => {
-  const counts = props.run.progress ?? props.run.summary;
+  const counts = props.run.summary ?? props.run.progress;
   return counts === null ? 0 : counts.failed;
 });
 
@@ -104,7 +104,7 @@ const person = computed(() =>
       </template>
       <span
         v-if="failures > 0"
-        class="font-medium"
+        class="font-medium tabular-nums"
         :class="TONE_CLASSES.fail.text"
         >{{ failures }} failed</span
       >

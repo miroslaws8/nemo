@@ -127,7 +127,7 @@ const single = computed(() => props.environments.length === 1);
         <span class="truncate">{{
           formatLabel(cell.last.selection.label)
         }}</span>
-        <span class="shrink-0"
+        <span class="shrink-0 tabular-nums"
           >·
           {{ formatWhen(cell.last.endedAt ?? cell.last.createdAt, now) }}</span
         >
@@ -141,12 +141,12 @@ const single = computed(() => props.environments.length === 1);
       >
         <StatusIcon :look="CI_STATUS_LOOKS[cell.ci.status]" class="size-3" />
         <span class="truncate">CI {{ ciTitle(cell.ci) }}</span>
-        <span class="shrink-0"
+        <span class="shrink-0 tabular-nums"
           >{{ CI_STATUS_LOOKS[cell.ci.status].label.toLowerCase() }}
           {{ formatWhen(cell.ci.endedAt ?? cell.ci.createdAt, now) }}</span
         >
       </RouterLink>
-      <p v-if="cell.waiting > 0" class="text-faint">
+      <p v-if="cell.waiting > 0" class="text-faint tabular-nums">
         {{ cell.waiting }} more waiting
       </p>
     </section>

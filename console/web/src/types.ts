@@ -211,6 +211,18 @@ export interface IShadowedWords {
   origin: ISkillOrigin | null;
 }
 
+/**
+ * What the CI list says besides its rows (CiStatusNote): asking, not set up, paused by
+ * Bitbucket's rate limit, an error, no pipeline yet, or nothing.
+ */
+export type ICiNoteState =
+  | "asking"
+  | "setup"
+  | "paused"
+  | "error"
+  | "empty"
+  | "none";
+
 /** A crumb of a page's title bar that leads back: its words and where it goes. */
 export interface ICrumb {
   label: string;
