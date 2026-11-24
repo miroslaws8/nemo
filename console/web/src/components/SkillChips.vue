@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ISkillSummary } from "@shared/types";
 import { computed } from "vue";
-import { STORE_WORDS } from "@/lib/skills";
+import { SHADOWED_WORDS, STORE_WORDS } from "@/lib/skills";
 import { consoleConfig } from "@/state/config";
 import SkillChip from "./SkillChip.vue";
 
@@ -9,7 +9,7 @@ import SkillChip from "./SkillChip.vue";
 // the AI credits, as items of a skills-list row's own flex box (which drops a chip that does not
 // fit); the row shows the rest its own way.
 
-defineProps<{ skill: ISkillSummary }>();
+const props = defineProps<{ skill: ISkillSummary }>();
 
 const store = computed(
   () =>
@@ -19,6 +19,11 @@ const store = computed(
     }
 );
 const words = computed(() => STORE_WORDS[store.value.kind]);
+const shadowed = computed(() =>
+  props.skill.shadowed
+    ? SHADOWED_WORDS[props.skill.origin](store.value.kind)
+    : null
+);
 </script>
 
 <template>
@@ -28,9 +33,9 @@ const words = computed(() => STORE_WORDS[store.value.kind]);
       :tone="skill.shadowed ? 'idle' : 'run'"
       :label="`${words.chip} v${skill.version ?? '?'}`"
       :title="
-        skill.shadowed
-          ? `${words.origin}; the repo has a skill of this name, and that one runs`
-          : `${words.origin}, not in the repo`
+        shadowed === null
+          ? `${words.origin}, not in the repo`
+          : `${words.origin}. ${shadowed.words}`
       "
     />
     <SkillChip
@@ -48,18 +53,10 @@ const words = computed(() => STORE_WORDS[store.value.kind]);
       "
     />
     <SkillChip
-      v-if="skill.shadowed"
+      v-if="shadowed !== null"
       tone="idle"
-      :label="
-        skill.origin === 'repo'
-          ? `Shadowed by ${words.place}`
-          : 'Shadowed by the repo'
-      "
-      :title="
-        skill.origin === 'repo'
-          ? `${words.place} has a skill of this name: that one runs`
-          : 'The repo has a skill of this name on this branch: that one runs'
-      "
+      :label="shadowed.label"
+      :title="shadowed.words"
     />
     <SkillChip
       v-if="skill.aiCredits"

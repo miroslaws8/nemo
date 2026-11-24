@@ -29,8 +29,10 @@ const props = defineProps<{
   now: number;
 }>();
 
+// From `sm` no track depends on a row's own content (the markers' least of all), so the name,
+// the description, the markers and the last check start at the same place in every row.
 const COLUMNS =
-  "grid-cols-[6px_minmax(0,1fr)_minmax(0,auto)_auto] sm:grid-cols-[6px_minmax(8rem,1fr)_minmax(0,auto)_9rem] md:grid-cols-[6px_minmax(8rem,2fr)_minmax(0,3fr)_minmax(0,auto)_9rem] lg:grid-cols-[6px_minmax(8rem,2fr)_10rem_minmax(0,3fr)_minmax(0,auto)_9rem]";
+  "grid-cols-[6px_minmax(0,1fr)_minmax(0,auto)_auto] sm:grid-cols-[6px_minmax(8rem,1fr)_minmax(0,12rem)_9rem] md:grid-cols-[6px_minmax(8rem,2fr)_minmax(0,3fr)_minmax(0,10rem)_9rem] lg:grid-cols-[6px_minmax(8rem,2fr)_10rem_minmax(0,3fr)_minmax(0,10rem)_9rem] xl:grid-cols-[6px_minmax(8rem,2fr)_10rem_minmax(0,3fr)_minmax(0,12rem)_9rem]";
 
 const safety = computed(() =>
   props.skill.safety === null ? null : SAFETY_WORDS[props.skill.safety]
@@ -129,7 +131,7 @@ const lastRun = computed(() => {
     <RouterLink
       v-if="lastRun !== null"
       :to="runPath(lastRun.id)"
-      class="relative z-1 flex min-w-0 items-center justify-end gap-1.5 justify-self-end rounded-sm text-xs whitespace-nowrap text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+      class="relative z-1 flex min-w-0 items-center gap-1.5 justify-self-start rounded-sm text-xs whitespace-nowrap text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
       :title="lastRun.title"
     >
       <StatusIcon :look="lastRun.look" />
@@ -138,7 +140,7 @@ const lastRun = computed(() => {
         >· {{ lastRun.usd }}</span
       >
     </RouterLink>
-    <span v-else class="text-right text-xs whitespace-nowrap text-faint"
+    <span v-else class="text-xs whitespace-nowrap text-faint"
       >No check yet</span
     >
   </div>

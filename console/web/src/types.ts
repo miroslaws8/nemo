@@ -1,5 +1,6 @@
 import type {
   ISkillDetail,
+  ISkillOrigin,
   ISkillSafety,
   INoticeSummary,
   IRetryScope,
@@ -197,6 +198,17 @@ export interface ISkillLinkAction {
 }
 
 /** A place the sidebar leads to: Runs, CI, Skills. */
+/** How a skill that another of its name shadows says so: the other one runs. */
+export interface IShadowedWords {
+  // Its chip and its Source line: "Shadowed by the repo".
+  label: string;
+  // The sentence, also the chip's title.
+  words: string;
+  // The link to the one that runs, and that one's origin (null: the repo's).
+  link: string;
+  origin: ISkillOrigin | null;
+}
+
 /** A crumb of a page's title bar that leads back: its words and where it goes. */
 export interface ICrumb {
   label: string;

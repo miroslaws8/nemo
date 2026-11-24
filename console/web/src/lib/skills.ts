@@ -6,7 +6,7 @@ import type {
   ISkillStoreKind,
   ISkillSummary,
 } from "@shared/types";
-import type { ITone } from "@/types";
+import type { IShadowedWords, ITone } from "@/types";
 
 // How the Skills pages word a skill: what it changes, where it comes from.
 
@@ -64,6 +64,34 @@ export const STORE_WORDS: Record<
     chip: "Store",
     place: "the skill store",
     heading: "Skill store",
+  },
+};
+
+/**
+ * Which of two skills of one name runs, said by the one that does not (the shadowed one): the
+ * repo's runs over a stored one on its branch, the store's over the repo's.
+ */
+export const SHADOWED_WORDS: Record<
+  ISkillOrigin,
+  (store: ISkillStoreKind) => IShadowedWords
+> = {
+  console: () => ({
+    label: "Shadowed by the repo",
+    words:
+      "The repo has a skill of this name on this branch, and that one runs.",
+    link: "Open the repo's",
+    origin: null,
+  }),
+  repo: (store) => {
+    const place = STORE_WORDS[store].place;
+    return {
+      label: `Shadowed by ${place}`,
+      words: `${place.charAt(0).toUpperCase()}${place.slice(
+        1
+      )} has a skill of this name, and that one runs.`,
+      link: `Open ${place}'s`,
+      origin: "console",
+    };
   },
 };
 

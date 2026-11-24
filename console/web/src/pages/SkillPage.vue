@@ -43,6 +43,7 @@ import { useClock } from "@/composables/useClock";
 import { useMenuFocusReturn } from "@/composables/useMenuFocusReturn";
 import { useSkillDetail } from "@/composables/useSkills";
 import { formatWhen } from "@/lib/format";
+import { groupByDay } from "@/lib/groups";
 import {
   composeSkillPath,
   replaceSkillPath,
@@ -50,7 +51,8 @@ import {
   skillsPath,
   skillYamlUrl,
 } from "@/lib/paths";
-import { STORE_WORDS } from "@/lib/skills";
+import { SHADOWED_WORDS } from "@/lib/skills";
+import { isActiveStatus } from "@/lib/status";
 import {
   mayEditSkills,
   mayPromoteSkills,
@@ -101,6 +103,15 @@ const checks = computed(() =>
     (run) =>
       run.agent?.skill === props.name &&
       run.agent.skillOrigin === (skill.value?.origin ?? "repo")
+  )
+);
+// Going or waiting first, then by the day they began.
+const checkGroups = computed(() =>
+  groupByDay(
+    checks.value,
+    (run) => run.createdAt,
+    (run) => run.status === "queued" || isActiveStatus(run.status),
+    now.value
   )
 );
 const versionsNewestFirst = computed(() =>
@@ -194,30 +205,10 @@ const menuReason = computed(() =>
 );
 
 // Which of two skills of this name runs, and the link to it.
-const SHADOWED: Record<
-  ISkillOrigin,
-  (place: string) => {
-    words: string;
-    link: string;
-    origin: ISkillOrigin | null;
-  }
-> = {
-  console: () => ({
-    words:
-      "The repo has a skill of this name on this branch, and that one runs.",
-    link: "Open the repo's",
-    origin: null,
-  }),
-  repo: (place) => ({
-    words: `${place} has a skill of this name, and that one runs.`,
-    link: `Open ${place}'s`,
-    origin: "console",
-  }),
-};
 const shadowed = computed(() =>
   skill.value === null || !skill.value.shadowed
     ? null
-    : SHADOWED[skill.value.origin](STORE_WORDS[storeKind.value].place)
+    : SHADOWED_WORDS[skill.value.origin](storeKind.value)
 );
 
 function run(): void {
@@ -495,17 +486,29 @@ function run(): void {
         </TabsContent>
 
         <TabsContent value="checks" class="mt-3">
+          <!-- By day, as on Runs. Clipped, not hidden, so its headings stick while the column
+               scrolls: at the column's top edge, above its padding. -->
           <div
             v-if="checks.length > 0"
-            class="overflow-hidden rounded-lg border [&>*:last-child]:border-b-0"
+            class="overflow-clip rounded-lg border [&>section:last-child>*:last-child]:border-b-0"
           >
-            <RunRow
-              v-for="check in checks"
-              :key="check.id"
-              :run="check"
-              :now="now"
-              :show-person="modeWords.showsPerson"
-            />
+            <section v-for="group in checkGroups" :key="group.title">
+              <h2
+                class="sticky -top-5 z-1 flex h-8 items-center gap-2 border-b bg-paper px-4 text-sm font-medium"
+              >
+                {{ group.title }}
+                <span class="font-normal text-faint tabular-nums">{{
+                  group.items.length
+                }}</span>
+              </h2>
+              <RunRow
+                v-for="check in group.items"
+                :key="check.id"
+                :run="check"
+                :now="now"
+                :show-person="modeWords.showsPerson"
+              />
+            </section>
           </div>
           <p v-else class="text-sm text-muted-foreground">
             No check of it among the console's runs yet.

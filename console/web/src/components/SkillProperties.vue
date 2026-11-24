@@ -7,7 +7,7 @@ import type {
 import { computed } from "vue";
 import { formatUsd, formatWhen } from "@/lib/format";
 import { runPath } from "@/lib/paths";
-import { originWords, SAFETY_WORDS, STORE_WORDS } from "@/lib/skills";
+import { originWords, SAFETY_WORDS, SHADOWED_WORDS } from "@/lib/skills";
 import { RUN_STATUS_LOOKS, TONE_CLASSES } from "@/lib/status";
 import { toneOfEnvironment } from "@/state/runs";
 import CopyButton from "./CopyButton.vue";
@@ -34,22 +34,11 @@ const safety = computed(() =>
   props.skill.safety === null ? null : SAFETY_WORDS[props.skill.safety]
 );
 // Which of two skills of this name runs: the repo's, or the store's.
-const shadowedWords = computed(() => {
-  if (!props.skill.shadowed) {
-    return null;
-  }
-  const place = STORE_WORDS[props.storeKind].place;
-  return props.skill.origin === "repo"
-    ? {
-        label: `Shadowed by ${place}`,
-        title: `${place} has a skill of this name: that one runs`,
-      }
-    : {
-        label: "Shadowed by the repo",
-        title:
-          "The repo has a skill of this name on this branch: that one runs",
-      };
-});
+const shadowedWords = computed(() =>
+  props.skill.shadowed
+    ? SHADOWED_WORDS[props.skill.origin](props.storeKind)
+    : null
+);
 const lastRun = computed(() => {
   const run = props.skill.lastRun;
   if (run === null) {
@@ -102,7 +91,7 @@ const lastRun = computed(() => {
       <span
         v-if="shadowedWords !== null"
         class="block text-muted-foreground"
-        :title="shadowedWords.title"
+        :title="shadowedWords.words"
         >{{ shadowedWords.label }}</span
       >
     </dd>
