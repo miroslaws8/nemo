@@ -130,8 +130,9 @@ folder of a server console), no database.
   Dark. Below the `md` width the sidebar is a sheet the page bar opens.
 - **Runs** is the home page: the runs list under a strip with one cell per environment (what goes
   there now, with `done / total` while tests run, or its last run, and the latest CI pipeline).
-  A cell filters the list (`/?env=<name>`); **All** / **Failed** narrows it. There is no
-  Environments page.
+  A cell opens its run. An environment in the sidebar filters the list to it (`/?env=<name>`);
+  the strip then shows only that environment, with its **New run**. **All** / **Failed** narrows
+  the list. There is no Environments page.
 
 - **A run** is `pnpm exec playwright test` with a folder of its own, `reports/runs/<run id>/`
   (`QA_CONSOLE_DATA_DIR`; see `E2E_RUN_DIR` above): its events, log, HTML report, traces and the
@@ -170,8 +171,8 @@ folder of a server console), no database.
   a track, the log while they go, and once a step is over its test report (**Tests** / **Log**)
   with the failed tests and their errors. **Stop**, **Run again** (the same pipeline and
   profile, testing what is deployed now instead of waiting for a deploy) and **Clean up**
-  (`pnpm sweep --run <build number>`). The sidebar's environments, the strip and New run say when CI is
-  running on an environment: both use the same QA account and its API limit.
+  (`pnpm sweep --run <build number>`). The sidebar's environments, the strip and New run
+  say when CI is running on an environment: both use the same QA account and its API limit.
 - CI needs the repository and a repository access token: in Bitbucket, the repository's **…** →
   **Settings** → **Security** → **Access tokens** → **Create access token**, with the permissions
   **Pipelines: Read** and **Pipelines: Write** (the token is shown once). Put both in nemo's
@@ -201,8 +202,8 @@ folder of a server console), no database.
 
 ### Agent checks
 
-**New run** (the sidebar, key `C`; ⌘↵ starts) opens a window with the kinds on top — **Agent check** (where the console runs them; **Scripted tests** beside it runs the
-YAML tests): [Hermes Agent](#hermes-agent-skills) opens the app in a browser and
+**New run** (the sidebar, key `C`; ⌘↵ starts) opens a window with the kinds on top — **Agent check**
+(where the console runs them; **Scripted tests** beside it runs the YAML tests): [Hermes Agent](#hermes-agent-skills) opens the app in a browser and
 follows one of the skills — the skill store's ([Skill store](#skill-store)), or one in
 `hermes/skills` of the branch the run tests (or of this working copy) — the way a tester would, with one of the console's models (OpenAI's GPT-6 Luna by default where the console has the
 OpenAI key, Claude Haiku 5.5 or Claude Sonnet 5.5). It is a run like the others: it waits its turn on its environment, prod takes
