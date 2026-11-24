@@ -139,13 +139,16 @@ folder of a server console), no database.
   latest screenshot of each test. The console keeps the newest 30 runs (`QA_CONSOLE_KEEP_RUNS`)
   and deletes the older folders.
 - **While it goes:** a run's page has its actions in the title bar (a **⋯** menu on a narrow
-  screen), its properties beside the tabs, and the tabs **Summary**, **Tests** and **Log** (an
-  agent check has **Check** instead of Summary). Tests: the counts, what each worker runs now (the
-  test, its YAML step with `file:line`, the last screenshot), every test with its steps and errors
-  next to the YAML they point at. Log: the output.
-- **Summary** (a run of tests; it opens first once the run is over): what failed, grouped by
-  cause, the slowest tests and steps, and a timeline of what each worker ran. Playwright's HTML
-  report stays for traces (**Open report**).
+  screen), its properties beside the tabs and, for a run of tests, above the tabs the counts and
+  what each worker runs now (the test, its YAML step with `file:line`, the last screenshot). The tabs are
+  **Summary**, **Tests** and **Log**; an agent check has **Check** (instead of Tests) and **Log**,
+  no Summary, and a test written with AI **Test** and **Log**. Tests: every test with its steps
+  and errors next to the YAML they point at. Log: the output.
+- **Summary** (a run of tests; a run's page opens on it when the run is already over, and one
+  that ends while you watch stays on its tab): what failed, grouped by cause (the error's first
+  line and the element it names), the slowest tests and steps, and a timeline of what each worker
+  ran; any test there opens in **Tests**. Playwright's HTML report stays for traces
+  (**Open report**).
 - **One run or cleanup per environment at a time:** every one there uses the same QA account.
   Another run on that environment waits in a queue, a cleanup is refused until the environment is
   free; at most two runs go at once (`QA_CONSOLE_MAX_ACTIVE_RUNS`).
@@ -171,8 +174,9 @@ folder of a server console), no database.
   a track, the log while they go, and once a step is over its test report (**Tests** / **Log**)
   with the failed tests and their errors. **Stop**, **Run again** (the same pipeline and
   profile, testing what is deployed now instead of waiting for a deploy) and **Clean up**
-  (`pnpm sweep --run <build number>`). The sidebar's environments, the strip and New run
-  say when CI is running on an environment: both use the same QA account and its API limit.
+  (`pnpm sweep --run <build number>`). The strip on Runs and New run say when CI is running on
+  an environment (the sidebar's dot follows the console's own runs): both use the same QA account
+  and its API limit.
 - CI needs the repository and a repository access token: in Bitbucket, the repository's **…** →
   **Settings** → **Security** → **Access tokens** → **Create access token**, with the permissions
   **Pipelines: Read** and **Pipelines: Write** (the token is shown once). Put both in nemo's
@@ -202,8 +206,9 @@ folder of a server console), no database.
 
 ### Agent checks
 
-**New run** (the sidebar, key `C`; ⌘↵ starts) opens a window with the kinds on top — **Agent check**
-(where the console runs them; **Scripted tests** beside it runs the YAML tests): [Hermes Agent](#hermes-agent-skills) opens the app in a browser and
+**New run** (the sidebar, key `C`; ⌘↵ starts) opens a window with the kinds on top — **Tests**
+(the YAML tests), **Agent check** (where the console runs them) and **Write a test**. An agent
+check: [Hermes Agent](#hermes-agent-skills) opens the app in a browser and
 follows one of the skills — the skill store's ([Skill store](#skill-store)), or one in
 `hermes/skills` of the branch the run tests (or of this working copy) — the way a tester would, with one of the console's models (OpenAI's GPT-6 Luna by default where the console has the
 OpenAI key, Claude Haiku 5.5 or Claude Sonnet 5.5). It is a run like the others: it waits its turn on its environment, prod takes
