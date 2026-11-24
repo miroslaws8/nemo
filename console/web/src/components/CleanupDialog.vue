@@ -23,6 +23,8 @@ import type { ICleanupPhase } from "@/types";
 
 // Finds the records a run (local or CI) left behind — named "<data prefix><run id> …", owned by
 // the test user — and deletes them on request: the guarded sweep of `pnpm sweep --run <id>`.
+// A class given to it goes to its button; a page whose "⋯" menu opens it below `md` (its button
+// hidden there) holds `open` and takes `closeAutoFocus` to put the focus back on the menu.
 
 const props = defineProps<{
   env: string;
@@ -38,7 +40,10 @@ const props = defineProps<{
   ) => Promise<ISweepResult | null>;
 }>();
 
-const open = ref(false);
+defineOptions({ inheritAttrs: false });
+
+const open = defineModel<boolean>("open", { default: false });
+const emit = defineEmits<{ closeAutoFocus: [event: Event] }>();
 const phase = ref<ICleanupPhase>("looking");
 const result = ref<ISweepResult | null>(null);
 const typed = ref("");
@@ -97,12 +102,16 @@ watch(open, (isOpen) => {
         variant="outline"
         :size="compact ? 'sm' : 'default'"
         :disabled="disabled"
+        v-bind="$attrs"
       >
         <Trash2Icon aria-hidden="true" />
         <span :class="compact ? 'max-sm:sr-only' : ''">Clean up</span>
       </Button>
     </DialogTrigger>
-    <DialogContent class="sm:max-w-xl">
+    <DialogContent
+      class="sm:max-w-xl"
+      @close-auto-focus="emit('closeAutoFocus', $event)"
+    >
       <DialogHeader>
         <DialogTitle>Clean up after {{ owner }}</DialogTitle>
         <DialogDescription>
