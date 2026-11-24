@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import {
   ChevronDownIcon,
+  EllipsisIcon,
   ExternalLinkIcon,
+  LockIcon,
   OctagonXIcon,
   RotateCcwIcon,
   SquareIcon,
+  Trash2Icon,
   XIcon,
 } from "@lucide/vue";
 import type { IRunRecord, IRunStatus } from "@shared/types";
-import { computed, ref } from "vue";
+import { unrefElement } from "@vueuse/core";
+import { computed, ref, useTemplateRef, watch } from "vue";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,6 +29,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useRunActions } from "@/composables/useRunActions";
@@ -35,8 +41,8 @@ import type { IRunActionSet, IRunKindChoice, IRunOrigin } from "@/types";
 import CleanupDialog from "./CleanupDialog.vue";
 
 // A run's buttons in its title bar: stop it, run it again, clean up after it, open its report.
-// The first of each set is filled, the rest outlined; below `sm` the outlined ones keep only
-// their icon (their word stays for screen readers), so the crumbs keep some room. Why a button
+// The first of each set is filled, the rest outlined; below `md` the outlined ones fold into a
+// "⋯" menu (a dialog it opens gives the focus back to it), so the bar fits a phone. Why a button
 // is greyed out, and what a stopping run waits for, the page says under the bar.
 
 const props = defineProps<{
@@ -69,6 +75,17 @@ const ACTIONS: Record<IRunStatus, IRunActionSet> = {
 const { stop, cleanup } = useRunActions();
 const sending = ref(false);
 const forceOpen = ref(false);
+const cleanupOpen = ref(false);
+const menuButton = useTemplateRef("menuButton");
+
+// Another run (the page stays, its run changes): no dialog of the last one stays open.
+watch(
+  () => props.run.id,
+  () => {
+    forceOpen.value = false;
+    cleanupOpen.value = false;
+  }
+);
 
 // A CI run is stopped, run again and cleaned up from its pipeline's page.
 const ORIGIN_ACTIONS: Record<
@@ -91,6 +108,21 @@ const REPORT_LABELS: Record<IRunKindChoice, string> = {
   author: "Open report",
 };
 const reportLabel = computed(() => REPORT_LABELS[runKindOf(props.run)]);
+// The "⋯" menu shows only when an outlined button folds into it.
+const folds = computed(
+  () =>
+    (actions.value === "ci" && props.run.ci !== null) ||
+    (actions.value === "finished" && (props.cleanable || props.hasReport))
+);
+
+/** A dialog the "⋯" menu opened gives the focus back to the menu: its own trigger is hidden. */
+function returnFocus(event: Event): void {
+  const button = unrefElement(menuButton);
+  if (button instanceof HTMLElement && button.getClientRects().length > 0) {
+    event.preventDefault();
+    button.focus();
+  }
+}
 
 async function requestStop(force: boolean): Promise<void> {
   sending.value = true;
@@ -109,25 +141,27 @@ async function requestStop(force: boolean): Promise<void> {
     <Button
       size="sm"
       variant="outline"
+      class="max-md:hidden"
       as="a"
       :href="run.ci.url"
       target="_blank"
       rel="noopener"
     >
       <ExternalLinkIcon aria-hidden="true" />
-      <span class="max-sm:sr-only">Bitbucket</span>
+      Bitbucket
     </Button>
     <Button
       v-if="hasReport"
       size="sm"
       variant="outline"
+      class="max-md:hidden"
       as="a"
       :href="reportUrl(run.id, null)"
       target="_blank"
       rel="noopener"
     >
       <ExternalLinkIcon aria-hidden="true" />
-      <span class="max-sm:sr-only">{{ reportLabel }}</span>
+      {{ reportLabel }}
     </Button>
   </template>
 
@@ -220,23 +254,81 @@ async function requestStop(force: boolean): Promise<void> {
     </Button>
     <CleanupDialog
       v-if="cleanable"
+      v-model:open="cleanupOpen"
+      class="max-md:hidden"
       :env="run.env"
       owner="this run"
       compact
       :disabled="!acting.allowed"
       :perform="(apply, confirm) => cleanup(run, apply, confirm)"
+      @close-auto-focus="returnFocus"
     />
     <Button
       v-if="hasReport"
       size="sm"
       variant="outline"
+      class="max-md:hidden"
       as="a"
       :href="reportUrl(run.id, null)"
       target="_blank"
       rel="noopener"
     >
       <ExternalLinkIcon aria-hidden="true" />
-      <span class="max-sm:sr-only">{{ reportLabel }}</span>
+      {{ reportLabel }}
     </Button>
   </template>
+
+  <DropdownMenu v-if="folds">
+    <DropdownMenuTrigger as-child>
+      <Button
+        ref="menuButton"
+        size="icon-sm"
+        variant="outline"
+        class="md:hidden"
+        aria-label="More actions"
+      >
+        <EllipsisIcon aria-hidden="true" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" class="w-56">
+      <template v-if="actions === 'ci' && run.ci !== null">
+        <DropdownMenuItem as-child>
+          <a :href="run.ci.url" target="_blank" rel="noopener">
+            <ExternalLinkIcon aria-hidden="true" />
+            Open in Bitbucket
+          </a>
+        </DropdownMenuItem>
+      </template>
+      <DropdownMenuItem
+        v-else-if="cleanable"
+        :disabled="!acting.allowed"
+        @select="cleanupOpen = true"
+      >
+        <Trash2Icon aria-hidden="true" />
+        Clean up…
+      </DropdownMenuItem>
+      <DropdownMenuItem v-if="hasReport" as-child>
+        <a :href="reportUrl(run.id, null)" target="_blank" rel="noopener">
+          <ExternalLinkIcon aria-hidden="true" />
+          {{ reportLabel }}
+        </a>
+      </DropdownMenuItem>
+      <template
+        v-if="
+          actions === 'finished' &&
+          cleanable &&
+          !acting.allowed &&
+          acting.reason !== null
+        "
+      >
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel
+          class="flex items-start gap-1.5 text-xs font-normal text-muted-foreground"
+        >
+          <LockIcon class="mt-0.5 size-3 shrink-0" aria-hidden="true" />
+          {{ acting.reason }}
+        </DropdownMenuLabel>
+      </template>
+    </DropdownMenuContent>
+  </DropdownMenu>
 </template>
