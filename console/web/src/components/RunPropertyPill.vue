@@ -2,7 +2,8 @@
 // One property of a new run in the New run dialog's bar: a round button that opens its menu,
 // or, given `pressed`, turns an option on and off.
 
-defineProps<{ pressed?: boolean }>();
+// Left out (a pill that opens a menu), it is no toggle: no aria-pressed at all.
+withDefaults(defineProps<{ pressed?: boolean }>(), { pressed: undefined });
 </script>
 
 <template>
