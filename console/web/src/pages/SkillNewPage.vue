@@ -3,7 +3,7 @@ import type { ISkillSummary } from "@shared/types";
 import { CopyIcon, FileUpIcon, SparklesIcon } from "@lucide/vue";
 import { skillWrittenSchema } from "@shared/api";
 import { useTitle } from "@vueuse/core";
-import { computed, ref, useId } from "vue";
+import { computed, onBeforeUnmount, ref, useId } from "vue";
 import { useRouter } from "vue-router";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillChip from "@/components/SkillChip.vue";
@@ -52,6 +52,12 @@ const canWrite = computed(
     !writing.value
 );
 
+// Left before the model answered: the answer goes nowhere (no jump back to the form).
+let left = false;
+onBeforeUnmount(() => {
+  left = true;
+});
+
 async function write(): Promise<void> {
   writing.value = true;
   try {
@@ -60,8 +66,14 @@ async function write(): Promise<void> {
       { description: description.value.trim() },
       skillWrittenSchema
     );
+    if (left) {
+      return;
+    }
     skillStart.value = { name: written.name, yaml: written.yaml };
-    await router.push(writtenSkillPath());
+    if ((await router.push(writtenSkillPath())) !== undefined) {
+      // The form did not open: no later blank form may open on this skill.
+      skillStart.value = null;
+    }
   } catch (failure) {
     toast.error(messageOf(failure));
   } finally {

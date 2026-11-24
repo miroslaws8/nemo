@@ -485,6 +485,8 @@ export interface ISkillWriterInput {
   environments: string[];
   // The problems of the last answer (a retry); none the first time.
   problems: string[];
+  // The last answer's skill.yaml (a retry): the model fixes it, not a new one blind.
+  previous: string | null;
 }
 
 /** pnpm author's command line (engine/ai/author/verify.ts). */

@@ -8,7 +8,7 @@ import { parseJsonAnswer } from "./json-answer";
 // other (SkillChecks) and asks once more with the problems when there are errors.
 
 const MAX_ANSWER_TOKENS = 8192;
-const CALL_TIMEOUT_MS = 120_000;
+const CALL_TIMEOUT_MS = 60_000;
 
 const SYSTEM = [
   "You write skills for nemo's agent checks: an AI agent (Hermes) opens the web app in a browser and follows the skill the way a careful tester would, saves screenshots, and ends with RESULT: PASS or RESULT: FAIL.",
@@ -36,7 +36,10 @@ export function skillWriterRequest(input: ISkillWriterInput): IModelRequest {
       ? []
       : [
           "",
-          "Your last skill.yaml had these problems; answer again with all of them fixed:",
+          ...(input.previous === null
+            ? []
+            : [`Your last skill.yaml:\n${input.previous}`, ""]),
+          "It had these problems; answer again with all of them fixed:",
           ...input.problems.map((problem) => `- ${problem}`),
         ];
   return {

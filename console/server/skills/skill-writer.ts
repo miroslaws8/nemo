@@ -95,27 +95,45 @@ export class SkillWriter {
       ),
     };
 
-    let written: ISkillWritten | null = null;
+    let answered: { name: string; yaml: string } | null = null;
     let problems: string[] = [];
+    let failure: string | null = null;
     try {
       for (let attempt = 0; attempt < ATTEMPTS; attempt += 1) {
-        const reply = await client.complete(
-          skillWriterRequest({ ...base, problems })
-        );
-        const answer = parseSkillAnswer(reply.text);
+        let text: string;
+        try {
+          text = (
+            await client.complete(
+              skillWriterRequest({
+                ...base,
+                problems,
+                previous: answered?.yaml ?? null,
+              })
+            )
+          ).text;
+        } catch (error) {
+          // A failed call keeps what an earlier one wrote.
+          failure = error instanceof Error ? error.message : String(error);
+          break;
+        }
+        const answer = parseSkillAnswer(text);
         if (answer === null) {
           problems = ['the answer was not JSON {"name": "qa-…", "yaml": "…"}'];
           continue;
         }
-        const name = SKILL_NAME_PATTERN.test(answer.name)
-          ? answer.name
-          : skillNameFrom(description);
-        const check = await this.checks.check({
-          name,
+        answered = {
+          name: SKILL_NAME_PATTERN.test(answer.name)
+            ? answer.name
+            : skillNameFrom(description),
           yaml: answer.yaml,
+        };
+        // The skill without its name: a taken name is the form's to change, not a reason to ask
+        // the model again.
+        const check = await this.checks.check({
+          name: "",
+          yaml: answered.yaml,
           replacing: false,
         });
-        written = { name, yaml: answer.yaml, problems: check.problems };
         problems = check.problems
           .filter((problem) => problem.severity === "error")
           .map(describeProblem);
@@ -126,9 +144,15 @@ export class SkillWriter {
     } finally {
       this.agents.recordSpend(`skill-write-${crypto.randomUUID()}`, spent);
     }
-    if (written === null) {
-      throw new HttpError(502, "The model wrote no skill.yaml; try again");
+    if (answered === null) {
+      throw new HttpError(
+        502,
+        failure === null
+          ? "The model wrote no skill.yaml; try again"
+          : `The model did not answer: ${failure}`
+      );
     }
-    return written;
+    const check = await this.checks.check({ ...answered, replacing: false });
+    return { ...answered, problems: check.problems };
   }
 }

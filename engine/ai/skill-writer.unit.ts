@@ -17,6 +17,7 @@ const INPUT = {
   example: "description: An example skill\nsteps:\n  - Open the page\n",
   environments: ["demo", "staging"],
   problems: [],
+  previous: null,
 };
 
 function userText(request: ReturnType<typeof skillWriterRequest>): string {
@@ -52,6 +53,17 @@ describe("the skill writer's request", () => {
       userText(request),
       /at least one step[\s\S]*fail_if: required/
     );
+  });
+});
+
+describe("a retry", () => {
+  test("shows the model its previous skill.yaml", () => {
+    const request = skillWriterRequest({
+      ...INPUT,
+      problems: ["steps.2: too long"],
+      previous: "description: the first try\nsteps:\n  - a\n",
+    });
+    assert.match(userText(request), /the first try[\s\S]*steps\.2: too long/);
   });
 });
 
