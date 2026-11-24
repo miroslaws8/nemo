@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from "vue-router";
+import CiListPage from "@/pages/CiListPage.vue";
 import CiPage from "@/pages/CiPage.vue";
 import RunPage from "@/pages/RunPage.vue";
 import RunsPage from "@/pages/RunsPage.vue";
@@ -23,6 +24,7 @@ export const router = createRouter({
   routes: [
     { path: "/", name: "home", component: RunsPage },
     { path: "/runs/:id", name: "run", component: RunPage, props: true },
+    { path: "/ci", name: "ci-list", component: CiListPage },
     {
       path: "/ci/:number(\\d+)",
       name: "ci",

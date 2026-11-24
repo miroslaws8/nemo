@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ciListPath } from "@/lib/paths";
 import type { ISidebarNavItem } from "@/types";
 import { mayStartRuns } from "@/state/access";
 import { ciOverview } from "@/state/ci";
@@ -45,12 +46,12 @@ const navItems = computed<ISidebarNavItem[]>(() => {
     },
     {
       label: "CI",
-      to: "/ci",
+      to: ciListPath(),
       icon: WorkflowIcon,
       count: ci?.pipelines.length ?? 0,
       // Only when the console reads Bitbucket.
       shown: ci?.configured === true,
-      matches: (path) => path === "/ci" || path.startsWith("/ci/"),
+      matches: (path) => path === ciListPath() || path.startsWith("/ci/"),
     },
     {
       label: "Skills",

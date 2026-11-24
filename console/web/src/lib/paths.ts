@@ -112,6 +112,11 @@ export function skillYamlUrl(
   }`;
 }
 
+/** The CI pipelines' list. */
+export function ciListPath(): string {
+  return "/ci";
+}
+
 /** The app's page of a CI pipeline, by its build number. */
 export function ciPath(number: number): string {
   return `/ci/${number}`;
