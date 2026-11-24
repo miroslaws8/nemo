@@ -476,6 +476,17 @@ export interface IAuthorStep {
   submits: boolean;
 }
 
+/** What the skill writer is told (engine/ai/skill-writer.ts). */
+export interface ISkillWriterInput {
+  description: string;
+  fields: { field: string; required: boolean; description: string }[];
+  // A skill.yaml to show the shape.
+  example: string;
+  environments: string[];
+  // The problems of the last answer (a retry); none the first time.
+  problems: string[];
+}
+
 /** pnpm author's command line (engine/ai/author/verify.ts). */
 export interface IAuthorArgs {
   // null: E2E_ENV, else staging.
