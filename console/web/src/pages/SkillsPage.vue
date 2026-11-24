@@ -3,6 +3,7 @@ import { GitBranchIcon, PlusIcon } from "@lucide/vue";
 import { useTitle } from "@vueuse/core";
 import { computed, useId } from "vue";
 import { useRouter } from "vue-router";
+import PageBar from "@/components/PageBar.vue";
 import SkillChips from "@/components/SkillChips.vue";
 import StatusIcon from "@/components/StatusIcon.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
@@ -67,7 +68,11 @@ function pickBranch(value: unknown): void {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-4xl px-6 py-10">
+  <PageBar>
+    <span>Skills</span>
+  </PageBar>
+
+  <div class="px-6 py-5">
     <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
       <div class="min-w-0">
         <h1 class="text-2xl font-semibold tracking-tight">Skills</h1>

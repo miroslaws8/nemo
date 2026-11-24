@@ -2,6 +2,7 @@
 import type { IRetryScope, ITestState } from "@shared/types";
 import { useTitle } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import PageBar from "@/components/PageBar.vue";
 import CiSilence from "@/components/CiSilence.vue";
 import RetryDialog from "@/components/RetryDialog.vue";
 import RunHeader from "@/components/RunHeader.vue";
@@ -234,10 +235,13 @@ async function confirmRetry(options: {
 </script>
 
 <template>
-  <div
-    v-if="run !== undefined"
-    class="mx-auto w-full max-w-6xl space-y-6 px-6 py-6"
-  >
+  <PageBar>
+    <span>{{
+      run === undefined ? "Run" : formatLabel(run.selection.label)
+    }}</span>
+  </PageBar>
+
+  <div v-if="run !== undefined" class="space-y-6 px-6 py-5">
     <RunHeader
       :run="run"
       :now="nowMs"
@@ -383,7 +387,7 @@ async function confirmRetry(options: {
 
   <div
     v-else-if="runsLoaded"
-    class="mx-auto max-w-xl px-6 py-16 text-center text-sm text-muted-foreground"
+    class="px-6 py-5 text-center text-sm text-muted-foreground"
   >
     <p class="text-base font-medium text-foreground">No run {{ id }}</p>
     <p class="mt-1">
@@ -394,7 +398,7 @@ async function confirmRetry(options: {
     </p>
   </div>
 
-  <div v-else class="mx-auto w-full max-w-6xl space-y-4 px-6 py-6">
+  <div v-else class="space-y-4 px-6 py-5">
     <Skeleton class="h-7 w-24 rounded-full" />
     <Skeleton class="h-8 w-80" />
     <Skeleton class="h-2 w-full rounded-full" />

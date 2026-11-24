@@ -2,6 +2,7 @@
 import type { ISkillOrigin, ISkillProblem } from "@shared/types";
 import { useTitle } from "@vueuse/core";
 import { computed, nextTick, ref, useId, watch } from "vue";
+import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillCheckPanel from "@/components/SkillCheckPanel.vue";
 import SkillForm from "@/components/SkillForm.vue";
@@ -122,6 +123,14 @@ const yaml = computed(() =>
   mode.value === "form" ? draftToYaml(draft.value) : yamlText.value
 );
 
+const pageTitle = computed(() =>
+  props.from !== null
+    ? `A new skill from ${props.from}`
+    : chosenTemplate.value !== null
+    ? chosenTemplate.value.label
+    : "A new skill"
+);
+
 useTitle(
   computed(() =>
     props.from !== null
@@ -182,7 +191,11 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
+  <PageBar>
+    <span>{{ pageTitle }}</span>
+  </PageBar>
+
+  <div class="space-y-6 px-6 py-5">
     <nav
       aria-label="Breadcrumb"
       class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
@@ -201,15 +214,7 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
     </nav>
 
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">
-        {{
-          from !== null
-            ? `A new skill from ${from}`
-            : chosenTemplate !== null
-            ? chosenTemplate.label
-            : "A new skill"
-        }}
-      </h1>
+      <h1 class="text-2xl font-semibold tracking-tight">{{ pageTitle }}</h1>
       <p class="mt-1 max-w-prose text-sm text-muted-foreground">
         Give it a name and fill in its fields<template v-if="template !== null"
           >: first the places marked [[…]], which the template left for your

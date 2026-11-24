@@ -6,6 +6,7 @@ import { computed, ref, watch } from "vue";
 import CiReport from "@/components/CiReport.vue";
 import CiStatusNote from "@/components/CiStatusNote.vue";
 import CleanupDialog from "@/components/CleanupDialog.vue";
+import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import RetryDialog from "@/components/RetryDialog.vue";
 import RunLog from "@/components/RunLog.vue";
@@ -181,10 +182,13 @@ async function confirmRerun(options: {
 </script>
 
 <template>
-  <div
-    v-if="pipeline !== undefined"
-    class="mx-auto w-full max-w-6xl space-y-6 px-6 py-6"
-  >
+  <PageBar>
+    <span>{{
+      pipeline === undefined ? `Pipeline #${number}` : ciTitle(pipeline)
+    }}</span>
+  </PageBar>
+
+  <div v-if="pipeline !== undefined" class="space-y-6 px-6 py-5">
     <header class="flex flex-wrap items-start gap-x-8 gap-y-4">
       <div class="min-w-0 flex-[1_1_20rem] space-y-2">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -369,7 +373,7 @@ async function confirmRerun(options: {
     />
   </div>
 
-  <div v-else class="mx-auto max-w-xl px-6 py-16">
+  <div v-else class="px-6 py-5">
     <CiStatusNote
       v-if="ciOverview === null || !ciOverview.configured"
       :overview="ciOverview"

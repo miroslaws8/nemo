@@ -4,6 +4,7 @@ import type { ISkillOrigin } from "@shared/types";
 import { useTitle } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 import CodeView from "@/components/CodeView.vue";
+import PageBar from "@/components/PageBar.vue";
 import RunListItem from "@/components/RunListItem.vue";
 import SkillChip from "@/components/SkillChip.vue";
 import SkillChips from "@/components/SkillChips.vue";
@@ -116,10 +117,11 @@ function run(): void {
 </script>
 
 <template>
-  <div
-    v-if="detail !== null && skill !== null"
-    class="mx-auto w-full max-w-4xl space-y-6 px-6 py-8"
-  >
+  <PageBar>
+    <span>{{ detail?.fields?.title ?? name }}</span>
+  </PageBar>
+
+  <div v-if="detail !== null && skill !== null" class="space-y-6 px-6 py-5">
     <nav aria-label="Breadcrumb" class="text-sm">
       <RouterLink
         :to="skillsPath(branch)"
@@ -432,7 +434,7 @@ function run(): void {
 
   <div
     v-else-if="error !== null"
-    class="mx-auto max-w-xl space-y-3 px-6 py-16 text-center text-sm text-muted-foreground"
+    class="space-y-3 px-6 py-5 text-center text-sm text-muted-foreground"
   >
     <p class="text-base font-medium text-foreground">{{ error }}</p>
     <p>
@@ -452,11 +454,7 @@ function run(): void {
     </p>
   </div>
 
-  <div
-    v-else
-    class="mx-auto w-full max-w-4xl space-y-4 px-6 py-8"
-    aria-label="Reading the skill"
-  >
+  <div v-else class="space-y-4 px-6 py-5" aria-label="Reading the skill">
     <Skeleton class="h-4 w-40" />
     <Skeleton class="h-8 w-80" />
     <Skeleton class="h-4 w-full max-w-prose" />

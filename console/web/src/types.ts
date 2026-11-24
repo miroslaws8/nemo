@@ -178,3 +178,15 @@ export interface ISkillDraft {
   fail_if: string[];
   not_a_failure: string[];
 }
+
+/** A place the sidebar leads to: Runs, CI, Skills. */
+export interface ISidebarNavItem {
+  label: string;
+  to: string;
+  icon: Component;
+  // What the row shows on its right (null: nothing).
+  count: number | null;
+  shown: boolean;
+  // Whether the page at this path belongs to the item (its row then has the active fill).
+  matches: (path: string) => boolean;
+}

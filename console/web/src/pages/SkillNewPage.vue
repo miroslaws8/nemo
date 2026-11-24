@@ -5,6 +5,7 @@ import { skillWrittenSchema } from "@shared/api";
 import { useTitle } from "@vueuse/core";
 import { computed, onBeforeUnmount, ref, useId } from "vue";
 import { useRouter } from "vue-router";
+import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillChip from "@/components/SkillChip.vue";
 import { Button } from "@/components/ui/button";
@@ -115,7 +116,11 @@ function copy(): void {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-4xl space-y-8 px-6 py-8">
+  <PageBar>
+    <span>Add a skill</span>
+  </PageBar>
+
+  <div class="space-y-8 px-6 py-5">
     <nav aria-label="Breadcrumb" class="text-sm">
       <RouterLink
         :to="skillsPath()"

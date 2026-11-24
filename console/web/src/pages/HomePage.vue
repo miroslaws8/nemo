@@ -2,6 +2,7 @@
 import { LockIcon, PlusIcon } from "@lucide/vue";
 import { useTitle } from "@vueuse/core";
 import { computed } from "vue";
+import PageBar from "@/components/PageBar.vue";
 import StatusIcon from "@/components/StatusIcon.vue";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +42,11 @@ const rows = computed(() =>
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-4xl px-6 py-10">
+  <PageBar>
+    <span>Environments</span>
+  </PageBar>
+
+  <div class="px-6 py-5">
     <h1 class="text-2xl font-semibold tracking-tight">Environments</h1>
     <p class="mt-1 max-w-prose text-sm text-muted-foreground">
       {{ modeWords.home }}, one run at a time per environment: every run there

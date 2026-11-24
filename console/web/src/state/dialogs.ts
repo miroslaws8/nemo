@@ -23,3 +23,6 @@ export function openNewRun(
   newRunPreset.value = preset;
   newRunOpen.value = true;
 }
+
+/** The sidebar as a sheet, below `md` (the page bar's menu button opens it). */
+export const navOpen = ref(false);

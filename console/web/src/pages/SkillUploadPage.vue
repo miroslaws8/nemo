@@ -4,6 +4,7 @@ import type { ISkillProblem } from "@shared/types";
 import { useTitle } from "@vueuse/core";
 import { computed, nextTick, ref, useId } from "vue";
 import CodeView from "@/components/CodeView.vue";
+import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillCheckPanel from "@/components/SkillCheckPanel.vue";
 import SkillDropZone from "@/components/SkillDropZone.vue";
@@ -129,7 +130,13 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-6xl space-y-6 px-6 py-8">
+  <PageBar>
+    <span>{{
+      name === null ? "Add a skill" : `A new version of ${name}`
+    }}</span>
+  </PageBar>
+
+  <div class="space-y-6 px-6 py-5">
     <nav
       aria-label="Breadcrumb"
       class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
