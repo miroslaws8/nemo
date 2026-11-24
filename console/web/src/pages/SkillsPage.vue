@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { GitBranchIcon, PlusIcon } from "@lucide/vue";
 import { useTitle } from "@vueuse/core";
-import { computed, useId } from "vue";
+import type { ISkillList, ISkillOrigin } from "@shared/types";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import PageBar from "@/components/PageBar.vue";
-import SkillChips from "@/components/SkillChips.vue";
-import StatusIcon from "@/components/StatusIcon.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
+import SkillRow from "@/components/SkillRow.vue";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -19,23 +19,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBranches } from "@/composables/useBranches";
 import { useClock } from "@/composables/useClock";
 import { useSkillList } from "@/composables/useSkills";
-import { formatUsd, formatWhen } from "@/lib/format";
-import { newSkillPath, runPath, skillPath, skillsPath } from "@/lib/paths";
-import { linkOrigin, sourceWords } from "@/lib/skills";
-import { RUN_STATUS_LOOKS } from "@/lib/status";
+import { newSkillPath, skillsPath } from "@/lib/paths";
+import { sourceWords, STORE_WORDS } from "@/lib/skills";
+import { TONE_CLASSES } from "@/lib/status";
 import { mayEditSkills, mayStartRuns } from "@/state/access";
-import { consoleConfig, environmentNamed, storeWords } from "@/state/config";
+import { consoleConfig, environmentNamed } from "@/state/config";
 
 // Every skill an agent check may follow: the repo's (hermes/skills of a branch: the default
 // environment's unless the page asks for another) and, on a server console, the ones added in it;
-// each with what it changes, where CI runs it and how its last check went.
+// each with what it changes, where CI runs it and how its last check went. The store's skills come
+// first, then the repo's, each under a heading; a group with none is left out.
 
 const props = defineProps<{ branch: string | null }>();
 
 useTitle("Skills · QA Console");
 const router = useRouter();
 const now = useClock();
-const branchId = useId();
 
 const { list, loading, error, reload } = useSkillList(() => props.branch);
 // The ones the console runs first; those it cannot run (scripts, a fixture) after them.
@@ -45,6 +44,40 @@ const skills = computed(() =>
       Number(left.unavailable !== null) - Number(right.unavailable !== null)
   )
 );
+
+// The groups in their order, and how each is headed: the store by its kind, the repo by its commit.
+const GROUPS: {
+  origin: ISkillOrigin;
+  heading: (skillList: ISkillList) => { title: string; detail: string | null };
+}[] = [
+  {
+    origin: "console",
+    heading: (skillList) => ({
+      title: STORE_WORDS[skillList.store].heading,
+      detail: null,
+    }),
+  },
+  {
+    origin: "repo",
+    heading: (skillList) => ({
+      title: "Repo",
+      detail: sourceWords(skillList.source),
+    }),
+  },
+];
+const SKELETON_ROWS = 6;
+
+const groups = computed(() => {
+  const skillList = list.value;
+  if (skillList === null) {
+    return [];
+  }
+  return GROUPS.map((group) => ({
+    origin: group.origin,
+    ...group.heading(skillList),
+    skills: skills.value.filter((skill) => skill.origin === group.origin),
+  })).filter((group) => group.skills.length > 0);
+});
 
 const fromGit = computed(() => consoleConfig.value?.testsFrom === "git");
 // Branches are listed to runners and up (GET /api/branches).
@@ -70,137 +103,104 @@ function pickBranch(value: unknown): void {
 <template>
   <PageBar>
     <span>Skills</span>
+    <template #actions>
+      <Select
+        v-if="mayPickBranch"
+        :model-value="shownBranch"
+        @update:model-value="pickBranch"
+      >
+        <SelectTrigger
+          size="sm"
+          class="w-44 max-sm:w-32"
+          aria-label="Branch of the repo's skills"
+        >
+          <GitBranchIcon aria-hidden="true" />
+          <SelectValue placeholder="A branch" class="min-w-0 flex-1" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem
+            v-for="candidate in branches"
+            :key="candidate.name"
+            :value="candidate.name"
+          >
+            {{ candidate.name }}
+          </SelectItem>
+        </SelectContent>
+      </Select>
+      <span :title="adding.reason ?? undefined">
+        <Button v-if="adding.allowed" size="sm" as-child>
+          <RouterLink :to="newSkillPath()">
+            <PlusIcon aria-hidden="true" />
+            New skill
+          </RouterLink>
+        </Button>
+        <Button v-else size="sm" disabled>
+          <PlusIcon aria-hidden="true" />
+          New skill
+        </Button>
+      </span>
+    </template>
   </PageBar>
 
-  <div class="px-6 py-5">
-    <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
-      <div class="min-w-0">
-        <h1 class="text-2xl font-semibold tracking-tight">Skills</h1>
-        <p class="mt-1 max-w-prose text-sm text-muted-foreground">
-          What an agent check follows: Hermes reads each skill's SKILL.md,
-          written from its skill.yaml. {{ storeWords.skills }}
-        </p>
-      </div>
-      <div class="flex flex-wrap items-end gap-3">
-        <div v-if="mayPickBranch" class="grid gap-1.5">
-          <label
-            :for="branchId"
-            class="flex items-center gap-1.5 text-xs text-muted-foreground"
-          >
-            <GitBranchIcon class="size-3.5" aria-hidden="true" />
-            The repo's skills of
-          </label>
-          <Select :model-value="shownBranch" @update:model-value="pickBranch">
-            <SelectTrigger :id="branchId" class="w-56">
-              <SelectValue placeholder="A branch" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem
-                v-for="candidate in branches"
-                :key="candidate.name"
-                :value="candidate.name"
-              >
-                {{ candidate.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <span :title="adding.reason ?? undefined">
-          <Button v-if="adding.allowed" as-child>
-            <RouterLink :to="newSkillPath()">
-              <PlusIcon aria-hidden="true" />
-              Add skill
-            </RouterLink>
-          </Button>
-          <Button v-else disabled>
-            <PlusIcon aria-hidden="true" />
-            Add skill
-          </Button>
-        </span>
-      </div>
-    </div>
+  <!-- Why New skill is greyed: the role, or a console that only reads the skill store. -->
+  <PermissionNote :permission="adding" class="border-b px-4 py-2" />
 
-    <!-- Why Add skill is greyed: the role, or a console that only reads the skill store. -->
-    <PermissionNote :permission="adding" class="mt-4" />
+  <div
+    v-if="error !== null"
+    class="flex min-h-[38px] flex-wrap items-center gap-x-3 gap-y-1 border-b border-border/60 px-4 py-1.5 text-sm"
+    :class="TONE_CLASSES.fail.soft"
+    role="alert"
+  >
+    <p class="min-w-0 flex-1" :class="TONE_CLASSES.fail.text">{{ error }}</p>
+    <Button size="sm" variant="outline" @click="reload()">Try again</Button>
+  </div>
 
-    <p
-      v-if="list !== null && list.source.sha !== null"
-      class="mt-4 text-xs text-muted-foreground"
-    >
-      The repo's skills of {{ sourceWords(list.source) }}.
-    </p>
-
+  <div v-else-if="list === null" aria-label="Reading the skills">
     <div
-      v-if="error !== null"
-      class="mt-6 flex flex-wrap items-center gap-3 rounded-md border border-fail/30 bg-fail/5 px-4 py-3 text-sm"
+      v-for="index in SKELETON_ROWS"
+      :key="index"
+      class="flex h-[38px] items-center gap-3 border-b border-border/60 px-4"
+      aria-hidden="true"
     >
-      <p class="text-fail">{{ error }}</p>
-      <Button size="sm" variant="outline" @click="reload()">Try again</Button>
+      <Skeleton class="size-1.5 rounded-full" />
+      <Skeleton class="h-3 w-1/4" />
+      <Skeleton class="h-3 w-2/5 max-md:hidden" />
+      <Skeleton class="ml-auto h-3 w-20" />
     </div>
+  </div>
 
-    <ul
-      v-else-if="list !== null && list.skills.length > 0"
-      class="mt-3 divide-y overflow-hidden rounded-lg border bg-card"
-      :aria-busy="loading"
+  <p
+    v-else-if="groups.length === 0"
+    class="py-16 text-center text-sm text-faint"
+  >
+    No skills here.
+    <span class="block text-xs"
+      >Nothing in the hermes/skills of {{ sourceWords(list.source) }}.</span
     >
-      <li
-        v-for="skill in skills"
-        :key="`${skill.name}:${skill.origin}`"
-        class="relative flex flex-wrap items-start gap-x-6 gap-y-2 px-5 py-4 transition-colors focus-within:bg-accent/40 hover:bg-accent/40"
+  </p>
+
+  <div v-else :aria-busy="loading">
+    <section v-for="group in groups" :key="group.origin">
+      <h2
+        class="sticky top-11 z-2 flex h-8 items-center gap-2 border-b bg-paper px-4 text-sm font-medium"
       >
-        <div class="min-w-0 flex-[1_1_20rem]">
-          <RouterLink
-            :to="skillPath(skill.name, linkOrigin(skill), branch)"
-            class="rounded-sm font-medium outline-none after:absolute after:inset-0 after:content-[''] focus-visible:ring-2 focus-visible:ring-ring/50"
-            >{{ skill.title ?? skill.name }}</RouterLink
+        <span class="truncate">
+          {{ group.title }}
+          <span v-if="group.detail !== null" class="font-normal text-faint"
+            >· {{ group.detail }}</span
           >
-          <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span class="font-mono text-xs text-muted-foreground">{{
-              skill.name
-            }}</span>
-            <SkillChips :skill="skill" />
-          </p>
-          <p
-            class="mt-1.5 line-clamp-2 max-w-prose text-sm text-muted-foreground"
-          >
-            {{ skill.description }}
-          </p>
-        </div>
-        <RouterLink
-          v-if="skill.lastRun !== null"
-          :to="runPath(skill.lastRun.id)"
-          class="relative z-10 flex shrink-0 items-center gap-1.5 rounded-sm text-xs text-muted-foreground outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-        >
-          <StatusIcon
-            :look="RUN_STATUS_LOOKS[skill.lastRun.status]"
-            class="size-3.5"
-            aria-hidden="true"
-          />
-          {{ RUN_STATUS_LOOKS[skill.lastRun.status].label }}
-          <template v-if="skill.lastRun.endedAt !== null">
-            {{ formatWhen(skill.lastRun.endedAt, now) }}</template
-          >
-          <template v-if="skill.lastRun.usd !== null">
-            · {{ formatUsd(skill.lastRun.usd) }}</template
-          >
-        </RouterLink>
-        <p v-else class="shrink-0 text-xs text-muted-foreground">
-          No check yet
-        </p>
-      </li>
-    </ul>
-
-    <p
-      v-else-if="list !== null"
-      class="mt-6 rounded-lg border bg-card px-5 py-8 text-center text-sm text-muted-foreground"
-    >
-      No skills here: {{ sourceWords(list.source) }} has no hermes/skills.
-    </p>
-
-    <div v-else class="mt-6 space-y-3" aria-label="Reading the skills">
-      <Skeleton class="h-20 w-full" />
-      <Skeleton class="h-20 w-full" />
-      <Skeleton class="h-20 w-full" />
-    </div>
+        </span>
+        <span class="font-normal text-faint tabular-nums">{{
+          group.skills.length
+        }}</span>
+      </h2>
+      <SkillRow
+        v-for="skill in group.skills"
+        :key="`${skill.name}:${skill.origin}`"
+        :skill="skill"
+        :branch="branch"
+        :now="now"
+      />
+    </section>
   </div>
 </template>

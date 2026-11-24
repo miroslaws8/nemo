@@ -45,22 +45,25 @@ export function skillNameHint(name: string): string | null {
 // Where a console keeps the skills added in it, in words (a stored skill's origin is "console").
 export const STORE_WORDS: Record<
   ISkillStoreKind,
-  { origin: string; chip: string; place: string }
+  { origin: string; chip: string; place: string; heading: string }
 > = {
   "working-tree": {
     origin: "Added in this working copy",
     chip: "Working copy",
     place: "this working copy",
+    heading: "This working copy",
   },
   console: {
     origin: "Added in this console",
     chip: "Console",
     place: "this console",
+    heading: "This console",
   },
   registry: {
     origin: "In the skill store",
     chip: "Store",
     place: "the skill store",
+    heading: "Skill store",
   },
 };
 
