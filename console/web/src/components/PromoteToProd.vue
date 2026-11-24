@@ -20,7 +20,8 @@ import { promoteSkillUrl } from "@/lib/paths";
 import type { IPermission } from "@/types";
 
 // Makes one version of a stored skill the one prod runs (its skill_channel), after a question:
-// prod's checks, CI's after a deploy among them, run it from the next one on.
+// prod's checks, CI's after a deploy among them, run it from the next one on. Below `sm` its
+// button keeps only its icon (the word stays for screen readers), so a version's row keeps one line.
 
 const props = defineProps<{
   name: string;
@@ -62,7 +63,7 @@ async function promote(): Promise<void> {
           :disabled="!permission.allowed || busy"
         >
           <RocketIcon aria-hidden="true" />
-          Promote to prod
+          <span class="max-sm:sr-only">Promote to prod</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

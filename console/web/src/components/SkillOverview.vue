@@ -4,22 +4,26 @@ import { SAFETY_WORDS } from "@/lib/skills";
 import SkillText from "./SkillText.vue";
 
 // A skill's skill.yaml as people read it: what it does and changes, what it keeps to, its steps,
-// its screenshots, what its report says and when it passes or fails.
+// its screenshots, what its report says and when it passes or fails. A reading column: headings
+// at the text's size, steps numbered in a gutter of their own, lists with faint bullets.
 
 defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
+
+const HEADING = "text-sm font-semibold";
+// A list with faint bullets (the marker takes the colour; the text keeps its own).
+const BULLETS = "grid list-disc pl-5 marker:text-faint";
+const CODE = "rounded bg-muted px-1 font-mono text-xs";
 </script>
 
 <template>
-  <div class="grid gap-8 text-sm">
+  <div class="max-w-3xl text-sm [&>section+section]:mt-6">
     <section aria-labelledby="skill-does">
-      <h2 id="skill-does" class="text-base font-semibold">What it does</h2>
+      <h2 id="skill-does" :class="HEADING">What it does</h2>
       <SkillText class="mt-2" :text="fields.summary" />
     </section>
 
     <section aria-labelledby="skill-changes">
-      <h2 id="skill-changes" class="text-base font-semibold">
-        What it changes
-      </h2>
+      <h2 id="skill-changes" :class="HEADING">What it changes</h2>
       <p class="mt-2">
         <span class="font-medium"
           >{{ SAFETY_WORDS[fields.safety].label }}:</span
@@ -37,7 +41,7 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
     </section>
 
     <section aria-labelledby="skill-setup">
-      <h2 id="skill-setup" class="text-base font-semibold">Before it starts</h2>
+      <h2 id="skill-setup" :class="HEADING">Before it starts</h2>
       <dl class="mt-2 grid gap-1">
         <div class="flex flex-wrap gap-x-2">
           <dt class="text-muted-foreground">Takes</dt>
@@ -52,10 +56,7 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
           <dd class="font-mono text-xs leading-5">{{ fields.start_at }}</dd>
         </div>
       </dl>
-      <ul
-        v-if="fields.rules.length > 0"
-        class="mt-3 grid list-disc gap-1.5 pl-5"
-      >
+      <ul v-if="fields.rules.length > 0" :class="BULLETS" class="mt-3 gap-1.5">
         <li v-for="(rule, index) in fields.rules" :key="index">
           <SkillText :text="rule" />
         </li>
@@ -67,16 +68,23 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
       :key="`section-${index}`"
       :aria-labelledby="`skill-section-${index}`"
     >
-      <h2 :id="`skill-section-${index}`" class="text-base font-semibold">
+      <h2 :id="`skill-section-${index}`" :class="HEADING">
         {{ section.title }}
       </h2>
       <SkillText class="mt-2" :text="section.text" />
     </section>
 
     <section aria-labelledby="skill-steps">
-      <h2 id="skill-steps" class="text-base font-semibold">Steps</h2>
-      <ol class="mt-2 grid list-decimal gap-2.5 pl-5">
-        <li v-for="(step, index) in fields.steps" :key="index" class="pl-1">
+      <h2 id="skill-steps" :class="HEADING">Steps</h2>
+      <ol class="mt-2 grid gap-2.5">
+        <li
+          v-for="(step, index) in fields.steps"
+          :key="index"
+          class="grid grid-cols-[24px_minmax(0,1fr)]"
+        >
+          <span class="tabular-nums text-faint" aria-hidden="true"
+            >{{ index + 1 }}.</span
+          >
           <SkillText :text="step" />
         </li>
       </ol>
@@ -86,16 +94,16 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
       v-if="fields.screenshots !== undefined"
       aria-labelledby="skill-shots"
     >
-      <h2 id="skill-shots" class="text-base font-semibold">Screenshots</h2>
+      <h2 id="skill-shots" :class="HEADING">Screenshots</h2>
       <p class="mt-2 text-muted-foreground">
         In
-        <code class="rounded-sm bg-muted px-1 py-px font-mono text-[0.85em]"
+        <code :class="CODE"
           >~/nemo-output/smoke-screens/&lt;env&gt;/{{
             fields.screenshots.folder
           }}/</code
         >
       </p>
-      <ul class="mt-2 grid list-disc gap-1 pl-5">
+      <ul :class="BULLETS" class="mt-2 gap-1">
         <li v-for="(file, index) in fields.screenshots.files" :key="index">
           <SkillText :text="file" />
         </li>
@@ -103,18 +111,14 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
     </section>
 
     <section aria-labelledby="skill-report">
-      <h2 id="skill-report" class="text-base font-semibold">Report</h2>
+      <h2 id="skill-report" :class="HEADING">Report</h2>
       <p class="mt-2 text-muted-foreground">
-        <code class="rounded-sm bg-muted px-1 py-px font-mono text-[0.85em]"
-          >RESULT: PASS</code
-        >
+        <code :class="CODE">RESULT: PASS</code>
         or
-        <code class="rounded-sm bg-muted px-1 py-px font-mono text-[0.85em]"
-          >RESULT: FAIL</code
-        >
+        <code :class="CODE">RESULT: FAIL</code>
         first, then:
       </p>
-      <ul class="mt-2 grid list-disc gap-1 pl-5">
+      <ul :class="BULLETS" class="mt-2 gap-1">
         <li v-for="(item, index) in fields.report" :key="index">
           <SkillText :text="item" />
         </li>
@@ -124,7 +128,8 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
           <h3 class="font-medium text-pass">Passes when</h3>
           <ul
             v-if="fields.pass_if.length > 0"
-            class="mt-1.5 grid list-disc gap-1 pl-5"
+            :class="BULLETS"
+            class="mt-1.5 gap-1"
           >
             <li v-for="(item, index) in fields.pass_if" :key="index">
               <SkillText :text="item" />
@@ -134,7 +139,7 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
         </div>
         <div>
           <h3 class="font-medium text-fail">Fails when</h3>
-          <ul class="mt-1.5 grid list-disc gap-1 pl-5">
+          <ul :class="BULLETS" class="mt-1.5 gap-1">
             <li v-for="(item, index) in fields.fail_if" :key="index">
               <SkillText :text="item" />
             </li>
@@ -143,7 +148,7 @@ defineProps<{ fields: NonNullable<ISkillDetail["fields"]> }>();
       </div>
       <div v-if="fields.not_a_failure.length > 0" class="mt-4">
         <h3 class="font-medium">Not a failure</h3>
-        <ul class="mt-1.5 grid list-disc gap-1 pl-5">
+        <ul :class="BULLETS" class="mt-1.5 gap-1">
           <li v-for="(item, index) in fields.not_a_failure" :key="index">
             <SkillText :text="item" />
           </li>

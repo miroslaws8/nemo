@@ -181,6 +181,13 @@ export interface ISkillDraft {
   not_a_failure: string[];
 }
 
+/** A page of the console a skill's title bar leads to: Use as template, New version…. */
+export interface ISkillLinkAction {
+  label: string;
+  to: string;
+  icon: Component;
+}
+
 /** A place the sidebar leads to: Runs, CI, Skills. */
 export interface ISidebarNavItem {
   label: string;
