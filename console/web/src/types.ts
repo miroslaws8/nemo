@@ -195,3 +195,7 @@ export interface ISidebarNavItem {
 
 /** The Runs page's filter: every run, or the failed ones (`?show=failed`). */
 export type IRunFilter = "all" | "failed";
+
+// The theme the person picks; "system" follows the operating system (state/theme.ts).
+export const THEME_CHOICES = ["system", "light", "dark"] as const;
+export type IThemeChoice = (typeof THEME_CHOICES)[number];

@@ -19,6 +19,7 @@ import { runs } from "@/state/runs";
 import { modeWords } from "@/state/session";
 import ConnectionNotice from "./ConnectionNotice.vue";
 import SidebarEnvironment from "./SidebarEnvironment.vue";
+import ThemeSwitcher from "./ThemeSwitcher.vue";
 import UserMenu from "./UserMenu.vue";
 
 // The console's left column: "New run" (C), the places to go, each environment's state, and who
@@ -174,7 +175,10 @@ onKeyStroke("c", (event) => {
     <div class="mt-auto grid gap-1 pt-2">
       <!-- Below `md` the page bar says it instead: one notice in the accessibility tree. -->
       <ConnectionNotice class="hidden px-2 md:flex" />
-      <UserMenu />
+      <div class="flex items-center gap-1">
+        <UserMenu />
+        <ThemeSwitcher class="ml-auto shrink-0" />
+      </div>
     </div>
   </div>
 </template>

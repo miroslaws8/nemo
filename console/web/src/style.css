@@ -4,9 +4,13 @@
 /*
  * Status is the only colour in the console: a run or a test is pass / fail / flaky / run / stop /
  * idle, and everything else is neutral ink on a quiet grey paper. Dense, Linear-like: 13px body
- * text, Inter and JetBrains Mono, 6px and 8px radii. The theme follows the system
- * (prefers-color-scheme), which is also what Tailwind's `dark:` variant means here.
+ * text, Inter and JetBrains Mono, 6px and 8px radii. The theme is System, Light or Dark
+ * (state/theme.ts, and the script in index.html before the first paint): the choice is resolved
+ * onto `data-theme` of the root, which is what the dark tokens and Tailwind's `dark:` variant
+ * follow.
  */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {
   --radius: 0.375rem;
@@ -41,37 +45,35 @@
   --idle: #a3a7ae;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #0b0c0e;
-    --background: #111215;
-    --foreground: #ecedef;
-    --card: #111215;
-    --card-foreground: #ecedef;
-    --popover: #16171a;
-    --popover-foreground: #ecedef;
-    --primary: #ecedef;
-    --primary-foreground: #0b0c0e;
-    --secondary: #17181c;
-    --secondary-foreground: #ecedef;
-    --muted: #17181c;
-    --muted-foreground: #8b8f98;
-    --faint: #5d616a;
-    --accent: #1d1f24;
-    --accent-foreground: #ecedef;
-    --destructive: #f2695f;
-    --destructive-foreground: #0b0c0e;
-    --border: #1f2126;
-    --input: #26282e;
-    --ring: #6aa6ea;
+:root[data-theme="dark"] {
+  --paper: #0b0c0e;
+  --background: #111215;
+  --foreground: #ecedef;
+  --card: #111215;
+  --card-foreground: #ecedef;
+  --popover: #16171a;
+  --popover-foreground: #ecedef;
+  --primary: #ecedef;
+  --primary-foreground: #0b0c0e;
+  --secondary: #17181c;
+  --secondary-foreground: #ecedef;
+  --muted: #17181c;
+  --muted-foreground: #8b8f98;
+  --faint: #5d616a;
+  --accent: #1d1f24;
+  --accent-foreground: #ecedef;
+  --destructive: #f2695f;
+  --destructive-foreground: #0b0c0e;
+  --border: #1f2126;
+  --input: #26282e;
+  --ring: #6aa6ea;
 
-    --pass: #4cc283;
-    --fail: #f2695f;
-    --flaky: #e8ad3d;
-    --run: #6aa6ea;
-    --stop: #a4acb8;
-    --idle: #5f6570;
-  }
+  --pass: #4cc283;
+  --fail: #f2695f;
+  --flaky: #e8ad3d;
+  --run: #6aa6ea;
+  --stop: #a4acb8;
+  --idle: #5f6570;
 }
 
 @theme inline {

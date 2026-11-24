@@ -6,6 +6,22 @@
     <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <title>QA Console</title>
+    <script>
+      // The stored theme (state/theme.ts) onto the root before the first paint.
+      (function () {
+        var choice = "system";
+        try {
+          choice = localStorage.getItem("qa-console-theme") || "system";
+        } catch (error) {}
+        var dark =
+          choice === "dark" ||
+          (choice !== "light" &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        var root = document.documentElement;
+        root.setAttribute("data-theme", dark ? "dark" : "light");
+        root.style.colorScheme = dark ? "dark" : "light";
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>
