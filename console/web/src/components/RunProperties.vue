@@ -28,11 +28,11 @@ const props = defineProps<{ run: IRunRecord; now: number }>();
 const LINK =
   "rounded-sm text-run underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50";
 
-// A profile picks YAML tests: an agent check runs a skill, an author run writes one test.
+// An agent check runs a skill, not a profile's tests; the other kinds run with a profile.
 const SHOWS_PROFILE: Record<IRunKindChoice, boolean> = {
   tests: true,
   agent: false,
-  author: false,
+  author: true,
 };
 
 const look = computed(() => RUN_STATUS_LOOKS[props.run.status]);

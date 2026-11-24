@@ -23,7 +23,7 @@ const lanes = computed(() =>
     <div
       v-if="lanes.length > 0"
       class="grid gap-3"
-      :class="lanes.length > 1 ? '@xl:grid-cols-2' : 'max-w-xl'"
+      :class="lanes.length > 1 ? '@md:grid-cols-2' : 'max-w-xl'"
     >
       <LaneMonitor
         v-for="entry in lanes"

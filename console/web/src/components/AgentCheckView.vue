@@ -114,7 +114,9 @@ const files = computed(() =>
 </script>
 
 <template>
-  <div class="space-y-6">
+  <!-- A container: its steps and screenshots sit side by side by its own width (the run page
+       gives it less than the window from `lg` up). -->
+  <div class="@container space-y-6">
     <section
       class="rounded-lg border bg-card px-5 py-4"
       :aria-label="going ? 'What the agent does now' : 'Verdict'"
@@ -168,7 +170,7 @@ const files = computed(() =>
       </template>
     </section>
 
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
+    <div class="grid gap-6 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
       <section class="min-w-0" aria-label="Steps">
         <h2 class="mb-2 text-sm font-medium text-muted-foreground">
           Steps the agent took
@@ -229,7 +231,7 @@ const files = computed(() =>
       </section>
 
       <aside
-        class="order-first min-w-0 space-y-3 lg:sticky lg:top-4 lg:order-none lg:self-start"
+        class="order-first min-w-0 space-y-3 @3xl:sticky @3xl:top-4 @3xl:order-none @3xl:self-start"
       >
         <h2 class="text-sm font-medium text-muted-foreground">Screenshots</h2>
         <figure v-if="shown !== undefined" class="space-y-1.5">
