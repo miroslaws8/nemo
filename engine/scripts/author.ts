@@ -1,21 +1,17 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
-import { parse } from "yaml";
 import { z } from "zod";
-import { parseAuthorArgs, verificationVerdict } from "../ai/author/verify";
-import { loadE2eConfig } from "../config";
+import { parseAuthorArgs } from "../ai/author/verify";
 import { buildEnvironment, selectedEnvironmentName } from "../environment";
 import { E2E_ROOT, TESTS_DIRECTORY } from "../paths";
 import { newRunId } from "../run-info";
-import { resolveRun } from "../run-selection";
 
 // Writes a test from a description:
 //   pnpm author [--env demo] "on a phone, the menu leads to the pricing page" [--verify 2] [--save]
-// The AI walks the case (engine/author.spec.ts) and writes a draft in reports/author/<run id>/.
-// The draft is then run on its own, without retries, --verify times in a row (default 1); each
-// run's own JSON report must show it passed and every ai_check judged "pass". --save copies a
-// verified draft into the environment's tests folder.
+// The AI walks the case (engine/author.spec.ts), writes a draft in reports/author/<run id>/ and,
+// in the same run, runs it on its own --verify times in a row (default 1, no retries, every
+// ai_check judged "pass"). --save copies a verified draft into the environment's tests folder.
 
 const PLAYWRIGHT_CLI = path.join(
   E2E_ROOT,
@@ -38,6 +34,7 @@ const resultSchema = z.object({
   draft: z
     .object({ file: z.string(), tier: z.string(), submitsForm: z.boolean() })
     .nullable(),
+  verification: z.object({ verified: z.boolean(), why: z.string() }).nullable(),
 });
 
 function childEnvironment(
@@ -57,76 +54,6 @@ function runPlaywright(args: string[], env: NodeJS.ProcessEnv): number {
     { cwd: E2E_ROOT, env, stdio: "inherit" }
   );
   return result.status ?? 1;
-}
-
-/** A profile of the environment whose run includes the tier, or null. */
-function profileFor(environmentName: string, tier: string): string | null {
-  for (const profileName of Object.keys(loadE2eConfig().profiles)) {
-    try {
-      const run = resolveRun(environmentName, profileName);
-      if (run.tiers.some((resolved) => resolved.name === tier)) {
-        return profileName;
-      }
-    } catch {
-      // This profile has no tier the environment allows.
-    }
-  }
-  return null;
-}
-
-/** How many ai_check steps the draft has (its steps are flat: no templates, no repeats). */
-function aiCheckSteps(draftFile: string): number {
-  const document: unknown = parse(fs.readFileSync(draftFile, "utf8"));
-  const tests = z
-    .object({ tests: z.array(z.object({ steps: z.array(z.unknown()) })) })
-    .parse(document).tests;
-  return tests
-    .flatMap((entry) => entry.steps)
-    .filter(
-      (step) => typeof step === "object" && step !== null && "ai_check" in step
-    ).length;
-}
-
-function verify(
-  environmentName: string,
-  folder: string,
-  draftFile: string,
-  tier: string,
-  times: number
-): { verified: boolean; why: string } {
-  const profile = profileFor(environmentName, tier);
-  if (profile === null) {
-    return {
-      verified: false,
-      why: `not verifiable on ${environmentName}: no profile runs the tier ${tier} there`,
-    };
-  }
-  const checks = aiCheckSteps(draftFile);
-  for (let round = 1; round <= times; round += 1) {
-    console.log(
-      `\nVerifying the draft (${round}/${times}) on ${environmentName}…`
-    );
-    const reportFile = path.join(folder, `verify-${round}.json`);
-    fs.rmSync(reportFile, { force: true });
-    runPlaywright(
-      ["--retries=0", "--reporter=list,json"],
-      childEnvironment({
-        E2E_ENV: environmentName,
-        E2E_PROFILE: profile,
-        E2E_TEST_FILE: draftFile,
-        E2E_RUN_ID: newRunId(),
-        PLAYWRIGHT_JSON_OUTPUT_NAME: reportFile,
-      })
-    );
-    const report: unknown = fs.existsSync(reportFile)
-      ? JSON.parse(fs.readFileSync(reportFile, "utf8"))
-      : null;
-    const why = verificationVerdict(report, checks);
-    if (why !== null) {
-      return { verified: false, why: `run ${round}: ${why}` };
-    }
-  }
-  return { verified: true, why: `passed ${times} time(s) in a row` };
 }
 
 function save(environmentName: string, draftFile: string): string {
@@ -177,6 +104,7 @@ function main(): number {
     childEnvironment({
       E2E_ENV: environmentName,
       E2E_AUTHOR_GOAL: args.goal,
+      E2E_AUTHOR_VERIFY: String(args.verify),
       E2E_RUN_ID: id,
     })
   );
@@ -198,21 +126,10 @@ function main(): number {
   console.log(
     `Draft: ${path.relative(E2E_ROOT, draftFile)} (${result.draft.tier})`
   );
-  const verification = verify(
-    environmentName,
-    folder,
-    draftFile,
-    result.draft.tier,
-    args.verify
-  );
-  fs.writeFileSync(
-    resultFile,
-    JSON.stringify(
-      { ...JSON.parse(fs.readFileSync(resultFile, "utf8")), verification },
-      null,
-      2
-    )
-  );
+  const verification = result.verification ?? {
+    verified: false,
+    why: "the draft was not verified",
+  };
   console.log(
     `\n${verification.verified ? "✓ Verified" : "✗ Not verified"}: ${
       verification.why

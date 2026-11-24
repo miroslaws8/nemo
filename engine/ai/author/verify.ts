@@ -1,8 +1,7 @@
 import { z } from "zod";
 import type { IAuthorArgs } from "../../types";
 
-// pnpm author's arguments, and the verdict on a draft's verification run: read from that run's own
-// JSON report, and failed when there is none (never a pass by default).
+// pnpm author's arguments, and whether a verification's ai_checks were all judged pass.
 
 const OPTIONS = new Set(["--env", "--verify", "--save"]);
 const VALUED = new Set(["--env", "--verify"]);
@@ -47,15 +46,6 @@ export function parseAuthorArgs(argv: string[]): IAuthorArgs {
   };
 }
 
-const statsSchema = z.object({
-  stats: z.object({
-    expected: z.number(),
-    unexpected: z.number(),
-    flaky: z.number(),
-    skipped: z.number(),
-  }),
-});
-
 const outcomeSchema = z.object({ outcome: z.string() });
 
 function aiCheckOutcomes(node: unknown, into: string[]): string[] {
@@ -84,28 +74,20 @@ function aiCheckOutcomes(node: unknown, into: string[]): string[] {
   return into;
 }
 
-/**
- * Why a verification run does not count, or null when it passed: its report exists, its one test
- * passed (not flaky, not skipped), and each of the draft's `aiCheckSteps` ai_checks was judged pass.
- */
-export function verificationVerdict(
-  report: unknown,
-  aiCheckSteps: number
-): string | null {
-  const parsed = statsSchema.safeParse(report);
-  if (!parsed.success) {
-    return "no report of the verification run";
-  }
-  const { expected, unexpected, flaky, skipped } = parsed.data.stats;
-  if (expected < 1 || unexpected > 0 || flaky > 0 || skipped > 0) {
-    return `the draft did not pass (passed ${expected}, failed ${unexpected}, flaky ${flaky}, skipped ${skipped})`;
-  }
-  const outcomes = aiCheckOutcomes(report, []);
-  if (outcomes.length !== aiCheckSteps) {
-    return `${aiCheckSteps} ai_check step(s), but ${outcomes.length} judged`;
+function judged(outcomes: string[], expected: number): string | null {
+  if (outcomes.length !== expected) {
+    return `${expected} ai_check step(s), but ${outcomes.length} judged`;
   }
   const notPass = outcomes.filter((outcome) => outcome !== "pass");
   return notPass.length === 0
     ? null
     : `an ai_check was not judged pass (${notPass.join(", ")})`;
+}
+
+/** The same for the annotations a verification run added to its test (in-process). */
+export function aiChecksVerdict(
+  annotations: { type: string; description?: string }[],
+  expected: number
+): string | null {
+  return judged(aiCheckOutcomes(annotations, []), expected);
 }

@@ -1,19 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
+import { devices } from "@playwright/test";
 import { createModelClient } from "./ai/client";
 import { captureViewport } from "./ai/evidence";
 import { draftTest } from "./ai/author/draft";
 import { authorCase } from "./ai/author/loop";
 import { targetRefusal, watchWrites } from "./ai/author/page-guards";
+import { aiChecksVerdict } from "./ai/author/verify";
 import { aiRunContext } from "./ai/run-context";
 import { resolveAiSettings } from "./ai/settings";
 import { runSpend } from "./ai/spend";
 import { environmentVariables, getEnvironment } from "./environment";
+import { ErrorMonitor } from "./error-monitor";
 import { test } from "./fixtures";
+import { parseTestSuite } from "./loader";
+import { notifier } from "./notices";
 import { E2E_ROOT } from "./paths";
+import { runPaths } from "./run-dir";
 import { runId, runVariables, testVariables } from "./run-info";
-import { runSteps, TEST_FRAME } from "./runner";
+import { runSteps, runTestCase, TEST_FRAME } from "./runner";
 import { selectedProfileName } from "./run-selection";
+import { assertNoErrors } from "./steps/assertions";
+import { parseYamlText } from "./yaml-document";
 import type {
   IAuthorDraft,
   IAuthorResult,
@@ -40,11 +48,20 @@ function firstLine(error: unknown): string {
     .split("\n")[0];
 }
 
+/** Where this author run writes: the run's folder (the console), else reports/author/<run id>. */
+function authorFolder(): string {
+  const runDir = runPaths().runDir;
+  return runDir === null
+    ? path.join(E2E_ROOT, "reports", "author", runId())
+    : path.join(runDir, "author");
+}
+
 test(`author: ${goal}`, async ({
   page,
   api,
   resources,
   errorMonitor,
+  browser,
 }, testInfo) => {
   testInfo.setTimeout(AUTHOR_TIMEOUT_MS);
   if (goal === "") {
@@ -169,7 +186,7 @@ test(`author: ${goal}`, async ({
     };
   };
 
-  const folder = path.join(E2E_ROOT, "reports", "author", runId());
+  const folder = authorFolder();
   fs.mkdirSync(folder, { recursive: true });
   let result: IAuthorResult = {
     outcome: "incomplete",
@@ -178,6 +195,66 @@ test(`author: ${goal}`, async ({
     turns: [],
   };
   let draft: IAuthorDraft | null = null;
+  let verification: { verified: boolean; why: string } | null = null;
+
+  // The draft, run on its own like any test (fresh browser, no retries), `times` times in a row;
+  // every ai_check it holds must be judged pass. In this process, so its steps are live too.
+  const verify = async (
+    yaml: string,
+    times: number
+  ): Promise<{ verified: boolean; why: string }> => {
+    const suite = parseTestSuite(
+      "draft",
+      parseYamlText(yaml, "draft"),
+      environment
+    );
+    for (let round = 1; round <= times; round += 1) {
+      const why =
+        await test.step(`verify the draft (${round}/${times})`, async () => {
+          const fresh = await browser.newContext({
+            ...(environment.device === null ? {} : devices[environment.device]),
+            baseURL: environment.baseUrl,
+            ...(environment.signsIn
+              ? { storageState: environment.storageStatePath }
+              : {}),
+          });
+          const freshPage = await fresh.newPage();
+          const monitor = await ErrorMonitor.attach(
+            freshPage,
+            base,
+            api.origin,
+            notifier(testInfo)
+          );
+          const before = testInfo.annotations.length;
+          try {
+            for (const testCase of suite.cases) {
+              await runTestCase(testCase, {
+                ...context,
+                page: freshPage,
+                errorMonitor: monitor,
+                aiCheckCount: 0,
+                stepLog: [],
+              });
+              await assertNoErrors(freshPage, monitor);
+            }
+          } catch (thrown) {
+            return firstLine(thrown);
+          } finally {
+            await fresh.close();
+          }
+          const checks = suite.cases
+            .flatMap((testCase) => testCase.steps)
+            .filter(
+              (step) => step.kind === "action" && step.keyword === "ai_check"
+            ).length;
+          return aiChecksVerdict(testInfo.annotations.slice(before), checks);
+        });
+      if (why !== null) {
+        return { verified: false, why: `run ${round}: ${why}` };
+      }
+    }
+    return { verified: true, why: `passed ${times} time(s) in a row` };
+  };
   try {
     await page.goto("/");
     let turn = 0;
@@ -208,6 +285,13 @@ test(`author: ${goal}`, async ({
         path.join(folder, `${draft.slug}.test.yaml`),
         draft.yaml
       );
+      verification = await verify(
+        draft.yaml,
+        Math.max(
+          1,
+          Math.min(5, Number(process.env.E2E_AUTHOR_VERIFY ?? "1") || 1)
+        )
+      );
     }
   } finally {
     // Written whatever happened: the transcript is what tells why.
@@ -220,6 +304,7 @@ test(`author: ${goal}`, async ({
           outcome: result.outcome,
           summary: result.summary,
           turns: result.turns,
+          verification,
           draft:
             draft === null
               ? null
