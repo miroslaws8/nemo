@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { cn } from "cn";
 import type { HTMLAttributes } from "vue";
-import { TONE_CLASSES } from "@/lib/status";
+import StatusGlyph from "@/components/StatusGlyph.vue";
 import type { IStatusLook } from "@/types";
 
 const props = defineProps<{
@@ -12,20 +12,14 @@ const props = defineProps<{
 
 <template>
   <span
-    :class="
-      cn(
-        'inline-flex size-4 shrink-0',
-        TONE_CLASSES[look.tone].text,
-        props.class
-      )
-    "
+    :class="cn('inline-flex size-3.5 shrink-0', props.class)"
     :title="look.label"
   >
-    <component
-      :is="look.icon"
+    <StatusGlyph
+      :glyph="look.glyph"
+      :tone="look.tone"
+      :live="look.live"
       class="size-full"
-      :class="look.live ? 'motion-safe:animate-spin' : ''"
-      aria-hidden="true"
     />
     <span class="sr-only">{{ look.label }}</span>
   </span>

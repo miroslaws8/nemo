@@ -1,21 +1,13 @@
 <script setup lang="ts">
-import { TONE_CLASSES } from "@/lib/status";
+import StatusGlyph from "@/components/StatusGlyph.vue";
 import type { IStatusLook } from "@/types";
 
 defineProps<{ look: IStatusLook }>();
 </script>
 
 <template>
-  <span
-    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium"
-    :class="[TONE_CLASSES[look.tone].soft, TONE_CLASSES[look.tone].text]"
-  >
-    <component
-      :is="look.icon"
-      class="size-4"
-      :class="look.live ? 'motion-safe:animate-spin' : ''"
-      aria-hidden="true"
-    />
-    {{ look.label }}
+  <span class="inline-flex items-center gap-1.5 text-sm font-medium">
+    <StatusGlyph :glyph="look.glyph" :tone="look.tone" :live="look.live" />
+    <span class="text-foreground">{{ look.label }}</span>
   </span>
 </template>

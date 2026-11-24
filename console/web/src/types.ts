@@ -11,12 +11,25 @@ import type { Component } from "vue";
 /** The colour family of a status: the only colours the console uses. */
 export type ITone = "pass" | "fail" | "flaky" | "run" | "stop" | "idle";
 
-/** How a run or test status reads: its words, colour and icon. */
+/** The drawings of a status (StatusGlyph.vue). */
+export const GLYPHS = [
+  "check",
+  "cross",
+  "bang",
+  "pie",
+  "dashed",
+  "square",
+  "minus",
+  "pause",
+] as const;
+export type IGlyph = (typeof GLYPHS)[number];
+
+/** How a run or test status reads: its words, colour and glyph. */
 export interface IStatusLook {
   label: string;
   tone: ITone;
-  icon: Component;
-  // Something is still going on: the icon spins.
+  glyph: IGlyph;
+  // Something is still going on: the glyph spins.
   live: boolean;
 }
 

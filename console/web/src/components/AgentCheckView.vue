@@ -19,6 +19,7 @@ import {
 } from "@/lib/status";
 import { consoleConfig } from "@/state/config";
 import CopyButton from "./CopyButton.vue";
+import StatusGlyph from "./StatusGlyph.vue";
 import StatusIcon from "./StatusIcon.vue";
 
 // An agent check as it goes: what the agent does now (and how far it is into its limits), each
@@ -140,11 +141,11 @@ const files = computed(() =>
       </template>
       <template v-else>
         <div class="flex items-start gap-3">
-          <component
-            :is="look.icon"
-            class="mt-0.5 size-5 shrink-0"
-            :class="TONE_CLASSES[look.tone].text"
-            aria-hidden="true"
+          <StatusGlyph
+            :glyph="look.glyph"
+            :tone="look.tone"
+            :live="look.live"
+            class="mt-0.5 size-5"
           />
           <div class="min-w-0 flex-1 space-y-1">
             <p
