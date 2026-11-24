@@ -21,7 +21,9 @@ import StatusIcon from "./StatusIcon.vue";
 
 // One run in a list: glyph · label · its markers · environment · profile · duration · who started
 // it (a server console only: a local one has no `startedBy`). Below `md` the profile and the person
-// go. Every column template is a whole class name, so Tailwind finds it.
+// go, and so do the tags and "waiting for" below `sm`: a phone keeps the label readable. The
+// markers never push the row wider than the page. Every column template is a whole class name,
+// so Tailwind finds it.
 
 const props = defineProps<{
   run: IRunRecord;
@@ -31,9 +33,9 @@ const props = defineProps<{
 
 const COLUMNS = {
   withPerson:
-    "grid-cols-[14px_minmax(0,1fr)_auto_88px_56px] md:grid-cols-[14px_minmax(0,1fr)_auto_88px_88px_56px_56px]",
+    "grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_56px] md:grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_88px_56px_56px]",
   withoutPerson:
-    "grid-cols-[14px_minmax(0,1fr)_auto_88px_56px] md:grid-cols-[14px_minmax(0,1fr)_auto_88px_88px_56px]",
+    "grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_56px] md:grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_88px_56px]",
 } as const;
 
 // The outlined tags of a run, in this order.
@@ -85,12 +87,12 @@ const person = computed(() =>
     }}</span>
 
     <span
-      class="flex items-center justify-end gap-1.5 text-xs whitespace-nowrap"
+      class="flex min-w-0 items-center justify-end gap-1.5 overflow-hidden text-xs whitespace-nowrap"
     >
       <span
         v-for="tag in tags"
         :key="tag"
-        class="rounded-full border px-1.5 text-xs font-medium text-muted-foreground"
+        class="rounded-full border px-1.5 text-xs font-medium text-muted-foreground max-sm:hidden"
         >{{ tag }}</span
       >
       <template v-if="progress !== null">
@@ -108,7 +110,7 @@ const person = computed(() =>
       <span v-if="usage !== null" class="text-faint tabular-nums">{{
         usage
       }}</span>
-      <span v-if="run.status === 'queued'" class="text-faint"
+      <span v-if="run.status === 'queued'" class="text-faint max-sm:hidden"
         >waiting for {{ run.env }}</span
       >
     </span>

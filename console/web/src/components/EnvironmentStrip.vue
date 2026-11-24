@@ -48,9 +48,10 @@ const single = computed(() => props.environments.length === 1);
 
 <template>
   <!-- Cells reach 1px past their right and bottom edges, so the hairlines between them meet
-       however they wrap; the strip clips the ones at its own edges. -->
+       however they wrap; the strip clips the ones at its own edges. It never shrinks in the page's
+       column, however long the list below. -->
   <div
-    class="grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] overflow-hidden border-b"
+    class="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(240px,1fr))] overflow-hidden border-b"
   >
     <section
       v-for="cell in cells"
