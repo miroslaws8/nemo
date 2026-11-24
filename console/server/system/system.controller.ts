@@ -114,6 +114,7 @@ export class SystemController {
         reason: this.skillStore.readOnly,
         channels: this.skillStore.kind !== "working-tree",
       },
+      authoring: this.workspace.authoring,
       agents: this.agents.info(),
     };
   }

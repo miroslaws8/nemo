@@ -7,6 +7,7 @@ import {
 } from "@nestjs/common";
 import { APP_FILTER, APP_GUARD } from "@nestjs/core";
 import { AgentsModule } from "./agents/agents.module";
+import { AuthoringModule } from "./authoring/authoring.module";
 import { createAccess } from "./auth/access";
 import { AuthModule } from "./auth/auth.module";
 import { CiModule } from "./ci/ci.module";
@@ -45,6 +46,7 @@ export class AppModule implements NestModule {
         SystemModule,
         RunsModule,
         AgentsModule,
+        AuthoringModule,
         SkillsModule,
         CiModule,
         IngestModule,

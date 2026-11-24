@@ -62,6 +62,9 @@ import type {
   catalogSchema,
   ciRunSchema,
   agentRunSchema,
+  authorAnswerSchema,
+  authorResultSchema,
+  authorRunSchema,
   agentSkillsSchema,
   agentSpendSchema,
   agentsInfoSchema,
@@ -75,6 +78,7 @@ import type {
   ingestStreamRequestSchema,
   runSourceSchema,
   startAgentRunRequestSchema,
+  startAuthorRunRequestSchema,
   TEST_SOURCES,
 } from "./api";
 
@@ -143,6 +147,12 @@ export type ISkillExample = z.infer<typeof skillExampleSchema>;
 export type ISkillTemplateList = z.infer<typeof skillTemplateListSchema>;
 export type IAgentSpend = z.infer<typeof agentSpendSchema>;
 export type IStartAgentRunRequest = z.infer<typeof startAgentRunRequestSchema>;
+export type IAuthorRun = z.infer<typeof authorRunSchema>;
+export type IStartAuthorRunRequest = z.infer<
+  typeof startAuthorRunRequestSchema
+>;
+export type IAuthorResult = z.infer<typeof authorResultSchema>;
+export type IAuthorAnswer = z.infer<typeof authorAnswerSchema>;
 export type ICatalogTest = z.infer<typeof catalogTestSchema>;
 export type ILogChunk = z.infer<typeof logChunkSchema>;
 export type ISourceSnippet = z.infer<typeof sourceSnippetSchema>;

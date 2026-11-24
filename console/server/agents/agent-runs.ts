@@ -319,6 +319,7 @@ export class AgentRuns implements IRunKind {
       alongsideCi: false,
       listLines: null,
       agent: { ...agent, queuedBy: null, usage: null },
+      author: null,
     };
   }
 

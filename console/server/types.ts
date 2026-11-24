@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { ILiveEvent } from "../../engine/types";
 import type {
   IAgentRun,
+  IAuthorRun,
   IBranch,
   ICatalogTest,
   IConsoleMode,
@@ -66,6 +67,8 @@ export interface IRunPlan {
   source: IRunSource;
   // An agent check (Hermes); null: a run of the YAML tests.
   agent: IAgentRun | null;
+  // A test written from a description (pnpm author); null: not one.
+  author: IAuthorRun | null;
 }
 
 /** How a run's process starts. */
@@ -227,6 +230,10 @@ export interface IRunners {
  */
 export interface IWorkspace {
   readonly testsFrom: ITestSource;
+  // Writing tests with AI here (New run → Write a test), or why not.
+  readonly authoring: { available: boolean; reason: string | null };
+  // A verified draft, into the environment's tests folder; an existing file is refused (409).
+  saveTest(env: string, name: string, yaml: string): string;
   // The commit a new run or a listing uses: the branch asked for, else the environment's own.
   // `profile` null: an agent check (no profile of tests to check the commit for).
   resolve(

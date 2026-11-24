@@ -54,6 +54,31 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
+// What a server console says of writing tests with AI: its runs get no model keys, and its tests
+// come from git (docs/superpowers/specs/2026-11-24-test-author-design.md, part 3).
+const SERVER_AUTHORING =
+  "Writing tests with AI comes to the team's console later (it needs the model proxy and pull requests); use pnpm author or a local console.";
+
+const TEST_NAME = /^[a-z0-9][a-z0-9-]*\.test\.yaml$/;
+
+/** A new test file in the working tree: tests/<the environment's folder, else authored>/<name>. */
+function writeNewTest(env: string, name: string, yaml: string): string {
+  if (!TEST_NAME.test(name)) {
+    throw new HttpError(400, `"${name}" is not a test file name`);
+  }
+  const folder = buildEnvironment(env).testsFolder ?? "authored";
+  const target = path.join(E2E_ROOT, "tests", folder, name);
+  const relative = path.relative(E2E_ROOT, target);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  try {
+    // "wx": never over a file that is there.
+    fs.writeFileSync(target, yaml, { flag: "wx" });
+  } catch {
+    throw new HttpError(409, `${relative} exists: not overwritten`);
+  }
+  return relative;
+}
+
 function badRequest(error: unknown): HttpError {
   return new HttpError(400, messageOf(error));
 }
@@ -110,6 +135,11 @@ function commitPageOf(url: string): string | null {
 /** The working tree this console runs in (a developer's machine). */
 class WorkingTree implements IWorkspace {
   readonly testsFrom = "working-tree";
+  readonly authoring = { available: true, reason: null };
+
+  saveTest(env: string, name: string, yaml: string): string {
+    return writeNewTest(env, name, yaml);
+  }
   private readonly listings = new Map<
     string,
     { at: number; tests: ICatalogTest[] }
@@ -240,6 +270,11 @@ class WorkingTree implements IWorkspace {
 /** Snapshots of nemo's commits (a server console). */
 class GitSnapshots implements IWorkspace {
   readonly testsFrom = "git";
+  readonly authoring = { available: false, reason: SERVER_AUTHORING };
+
+  saveTest(): string {
+    throw new HttpError(409, SERVER_AUTHORING);
+  }
   private readonly repo: GitRepo;
   private readonly deps: DepsCache;
   private readonly browsers: BrowserCache;

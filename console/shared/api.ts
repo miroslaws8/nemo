@@ -121,6 +121,11 @@ export const agentRunSchema = z.object({
   usage: agentUsageSchema.nullable().default(null),
 });
 
+/** A test written by AI from a description (pnpm author; engine/author.spec.ts). */
+export const authorRunSchema = z.object({
+  goal: z.string().min(1),
+});
+
 /** reports/runs/<id>/run.json */
 export const runRecordSchema = z.object({
   id: z.string().min(1),
@@ -152,6 +157,8 @@ export const runRecordSchema = z.object({
   alongsideCi: z.boolean().default(false),
   // An agent check (Hermes); null: a run of the YAML tests.
   agent: agentRunSchema.nullable().default(null),
+  // A test being written from a description; null: not an author run.
+  author: authorRunSchema.nullable().default(null),
 });
 
 /** GET /api/runs: newest first. */
@@ -234,6 +241,10 @@ export const consoleConfigSchema = z.object({
     reason: null,
     channels: false,
   }),
+  // Writing tests with AI here (New run → Write a test), or why not.
+  authoring: z
+    .object({ available: z.boolean(), reason: z.string().nullable() })
+    .default({ available: false, reason: null }),
   agents: agentsInfoSchema.default({
     available: false,
     reason: null,
@@ -282,6 +293,54 @@ export const startAgentRunRequestSchema = z.strictObject({
   alongsideCi: z.boolean().optional(),
   confirm: z.string().optional(),
 });
+
+/** POST /api/author-runs */
+export const startAuthorRunRequestSchema = z.strictObject({
+  env: z.string().min(1),
+  // What to check, in a person's words.
+  goal: z
+    .string()
+    .trim()
+    .min(5)
+    .max(500)
+    .regex(/^[^\p{Cc}]*$/u, "one paragraph, no control characters"),
+});
+
+/** <run dir>/author/result.json, as the author writes it (engine/author.spec.ts). */
+export const authorResultSchema = z.object({
+  goal: z.string(),
+  environment: z.string(),
+  outcome: z.enum(["done", "impossible", "incomplete"]),
+  summary: z.string(),
+  turns: z.array(
+    z.object({
+      tool: z.string(),
+      input: z.unknown(),
+      ok: z.boolean(),
+      result: z.string(),
+    })
+  ),
+  verification: z
+    .object({ verified: z.boolean(), why: z.string() })
+    .nullable()
+    .default(null),
+  draft: z
+    .object({
+      file: z.string(),
+      tier: z.string(),
+      submitsForm: z.boolean(),
+    })
+    .nullable(),
+});
+
+/** GET /api/runs/<id>/author: the result (null while it runs) and the draft's YAML. */
+export const authorAnswerSchema = z.object({
+  result: authorResultSchema.nullable(),
+  draft: z.object({ file: z.string(), yaml: z.string() }).nullable(),
+});
+
+/** POST /api/runs/<id>/author/save: where the test went, from the repository root. */
+export const saveTestAnswerSchema = z.object({ file: z.string() });
 
 /** GET /api/catalog: the tests a run of one environment × profile can select. */
 export const catalogTestSchema = liveTestSchema.extend({

@@ -1,4 +1,5 @@
 import { type DynamicModule, Global, Module } from "@nestjs/common";
+import { AuthorRuns } from "../authoring/author-runs";
 import { AgentRuns } from "../agents/agent-runs";
 import type { IRunFiles } from "../files/run-files";
 import { IngestService } from "../ingest/service";
@@ -61,11 +62,16 @@ export class CoreModule {
             new AgentRuns(settings, runners, workspace, skills),
           inject: [WORKSPACE, SKILL_STORE],
         },
+        { provide: AuthorRuns, useFactory: () => new AuthorRuns() },
         {
           provide: RunManager,
-          useFactory: (hub: SseHub, workspace: IWorkspace, agents: AgentRuns) =>
-            new RunManager(hub, workspace, runners, agents),
-          inject: [SseHub, WORKSPACE, AgentRuns],
+          useFactory: (
+            hub: SseHub,
+            workspace: IWorkspace,
+            agents: AgentRuns,
+            authors: AuthorRuns
+          ) => new RunManager(hub, workspace, runners, agents, authors),
+          inject: [SseHub, WORKSPACE, AgentRuns, AuthorRuns],
         },
         {
           provide: CiSource,
@@ -89,6 +95,7 @@ export class CoreModule {
         SKILL_STORE,
         SseHub,
         AgentRuns,
+        AuthorRuns,
         RunManager,
         CiSource,
         IngestService,

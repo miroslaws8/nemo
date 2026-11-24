@@ -22,13 +22,16 @@ import type {
   IRunSource,
   IRunStatus,
   IStartAgentRunRequest,
+  IStartAuthorRunRequest,
   IStartRunRequest,
   ISweepResult,
   ITestState,
   ITestStatus,
 } from "../shared/types";
 import type { AgentRuns } from "./agents/agent-runs";
+import type { AuthorRuns } from "./authoring/author-runs";
 import { CiClaims } from "./ci-claims";
+import { loadE2eConfig } from "../../engine/config";
 import { requireOffered } from "./environments";
 import { HttpError } from "./http-error";
 import { NdjsonTail, readAllEvents } from "./ndjson-tail";
@@ -245,6 +248,7 @@ function retryPlan(
     skipNeeds: request.skipNeeds ?? parent.run.skipNeeds,
     alongsideCi: false,
     agent: null,
+    author: null,
   };
   const chosen = RETRY_CHOICES[request.scope](
     parent,
@@ -298,15 +302,16 @@ export class RunManager implements ISweeper {
   // Environments CI steps asked for: queued runs wait there (ci/ingest.mts wait).
   private readonly claims = new CiClaims(() => this.pump());
   private draining = false;
-  private readonly kinds: Record<"tests" | "agent", IRunKind>;
+  private readonly kinds: Record<"tests" | "agent" | "author", IRunKind>;
 
   constructor(
     private readonly hub: SseHub,
     private readonly workspace: IWorkspace,
     private readonly runners: IRunners,
-    private readonly agents: AgentRuns
+    private readonly agents: AgentRuns,
+    authors: AuthorRuns
   ) {
-    this.kinds = { tests: TEST_RUNS, agent: agents };
+    this.kinds = { tests: TEST_RUNS, agent: agents, author: authors };
   }
 
   /** After a (re)start: follow runners still going, settle the ones that ended, re-queue. */
@@ -455,6 +460,46 @@ export class RunManager implements ISweeper {
     return this.enqueue(await this.planFor(env, profile, request, source), by);
   }
 
+  /** Queues a test written with AI from a description (engine/author.spec.ts). */
+  async startAuthor(
+    request: IStartAuthorRunRequest,
+    by: string | null
+  ): Promise<IRunRecord> {
+    this.checkAcceptingWork();
+    const env = request.env.toLowerCase();
+    if (requireOffered(env).guarded) {
+      throw new HttpError(
+        400,
+        `${env} is guarded: write tests on another environment (e.g. staging); they run on ${env} too`
+      );
+    }
+    if (!this.workspace.authoring.available) {
+      throw new HttpError(409, this.workspace.authoring.reason ?? "not here");
+    }
+    const profile = loadE2eConfig().default_profile;
+    const source = await this.workspace.resolve(env, profile, null);
+    return this.enqueue(
+      {
+        env,
+        profile,
+        kind: "run",
+        parentId: null,
+        selection: {
+          label: `✎ ${request.goal.slice(0, 80)}`,
+          testIds: null,
+          grep: null,
+        },
+        skipNeeds: false,
+        alongsideCi: false,
+        listLines: null,
+        source,
+        agent: null,
+        author: { goal: request.goal },
+      },
+      by
+    );
+  }
+
   /** Queues an agent check (Hermes runs a skill of the environment's commit). */
   async startAgent(
     request: IStartAgentRunRequest,
@@ -484,6 +529,7 @@ export class RunManager implements ISweeper {
         listLines: null,
         source,
         agent,
+        author: null,
       },
       by
     );
@@ -757,6 +803,7 @@ export class RunManager implements ISweeper {
       },
       alongsideCi: false,
       agent: null,
+      author: null,
     });
     live.ingestNext = 0;
     return { record: live.record, next: 0 };
@@ -889,6 +936,7 @@ export class RunManager implements ISweeper {
       alongsideCi: request.alongsideCi ?? false,
       source,
       agent: null,
+      author: null,
     };
     const testIds = request.selection?.testIds;
     if (testIds !== undefined) {
@@ -967,6 +1015,7 @@ export class RunManager implements ISweeper {
       sha: plan.source.sha,
       ci: null,
       agent: plan.agent,
+      author: plan.author,
     };
     this.save(record);
     if (plan.listLines !== null) {
@@ -1271,6 +1320,9 @@ export class RunManager implements ISweeper {
   }
 
   private kindOf(record: IRunRecord): IRunKind {
+    if (record.author !== null) {
+      return this.kinds.author;
+    }
     return this.kinds[record.agent === null ? "tests" : "agent"];
   }
 
