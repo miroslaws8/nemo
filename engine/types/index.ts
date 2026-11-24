@@ -463,6 +463,40 @@ export interface IAiSettings {
   author: IAuthorSettings | null;
 }
 
+/** A step the test author kept: it worked; `submits` when it sent a form (it writes data). */
+export interface IAuthorStep {
+  keyword: string;
+  args: unknown;
+  submits: boolean;
+}
+
+/** One tool call of the author and what came of it. */
+export interface IAuthorTurn {
+  tool: string;
+  input: unknown;
+  ok: boolean;
+  result: string;
+}
+
+export interface IAuthorResult {
+  outcome: "done" | "impossible" | "incomplete";
+  summary: string;
+  kept: IAuthorStep[];
+  turns: IAuthorTurn[];
+}
+
+/** What the author loop is given: the model, a look at the page, and a way to run a step. */
+export interface IAuthorDeps {
+  client: IModelClient;
+  observe: () => Promise<IEvidence>;
+  // Runs the step (guards first): the error, or null; and whether it submitted a form.
+  act: (step: {
+    keyword: string;
+    args: unknown;
+  }) => Promise<{ error: string | null; submits: boolean }>;
+  maxActions: number;
+}
+
 export interface IAuthorSettings {
   model: string;
   maxActions: number;
