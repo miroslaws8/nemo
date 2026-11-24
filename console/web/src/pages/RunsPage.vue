@@ -13,7 +13,7 @@ import { groupByDay } from "@/lib/groups";
 import { isActiveStatus, isFailedRun } from "@/lib/status";
 import { consoleConfig, environmentNamed } from "@/state/config";
 import { runs, runsLoaded } from "@/state/runs";
-import { me } from "@/state/session";
+import { modeWords } from "@/state/session";
 import type { IRunFilter } from "@/types";
 
 // The home page: every environment's state, then the runs (going or waiting first, then by day).
@@ -69,8 +69,6 @@ const groups = computed(() => {
     now.value
   );
 });
-
-const showPerson = computed(() => me.value?.mode === "server");
 
 function chooseFilter(value: unknown): void {
   const chosen = FILTERS.find((entry) => entry.filter === value);
@@ -146,7 +144,7 @@ function chooseFilter(value: unknown): void {
         :key="run.id"
         :run="run"
         :now="now"
-        :show-person="showPerson"
+        :show-person="modeWords.showsPerson"
       />
     </section>
   </template>

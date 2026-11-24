@@ -25,6 +25,7 @@ const MODE_WORDS: Record<IMe["mode"], IModeWords> = {
     runsNav: "Runs on this Mac",
     newRun: "Runs on this Mac, logged in as the environment's QA account.",
     home: "Tests run on this Mac against each environment",
+    showsPerson: false,
   },
   server: {
     runsTab: "Console",
@@ -32,6 +33,7 @@ const MODE_WORDS: Record<IMe["mode"], IModeWords> = {
     newRun:
       "Runs on the console's server, logged in as the environment's QA account.",
     home: "Tests run on the console's server against each environment",
+    showsPerson: true,
   },
 };
 

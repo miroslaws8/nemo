@@ -33,7 +33,7 @@ import { mayEditSkills, mayPromoteSkills, mayStartRuns } from "@/state/access";
 import { consoleConfig } from "@/state/config";
 import { openNewRun } from "@/state/dialogs";
 import { runs } from "@/state/runs";
-import { me } from "@/state/session";
+import { modeWords } from "@/state/session";
 import type { IPermission } from "@/types";
 
 // One skill: what it does as its skill.yaml says, what Hermes reads (SKILL.md), the file itself,
@@ -364,7 +364,7 @@ function run(): void {
             :key="check.id"
             :run="check"
             :now="now"
-            :show-person="me?.mode === 'server'"
+            :show-person="modeWords.showsPerson"
           />
         </div>
         <p v-else class="text-sm text-muted-foreground">

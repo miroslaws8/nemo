@@ -144,6 +144,8 @@ export interface IModeWords {
   runsNav: string;
   newRun: string;
   home: string;
+  // Who started a run is a column of the runs list (a local console has no people).
+  showsPerson: boolean;
 }
 
 /** What a console's skill store means for its Skills pages (by where it keeps skills). */

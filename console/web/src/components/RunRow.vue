@@ -20,10 +20,11 @@ import ProgressBar from "./ProgressBar.vue";
 import StatusIcon from "./StatusIcon.vue";
 
 // One run in a list: glyph · label · its markers · environment · profile · duration · who started
-// it (a server console only: a local one has no `startedBy`). Below `md` the profile and the person
-// go, and so do the tags and "waiting for" below `sm`: a phone keeps the label readable. The
-// markers never push the row wider than the page. Every column template is a whole class name,
-// so Tailwind finds it.
+// it (a server console only: a local one has no `startedBy`). Below `lg` the profile, the person,
+// the tags and the mini bar go, and "waiting for" below `sm`: the label stays readable. From `sm`
+// up the label keeps 8rem; the markers take what is left and clip, never wrapping or pushing the
+// row wider than the page (a phone has no room for the floor). The duration's track holds
+// "59 m 59 s". Every column template is a whole class name, so Tailwind finds it.
 
 const props = defineProps<{
   run: IRunRecord;
@@ -33,9 +34,9 @@ const props = defineProps<{
 
 const COLUMNS = {
   withPerson:
-    "grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_56px] md:grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_88px_56px_56px]",
+    "grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_72px] sm:grid-cols-[14px_minmax(8rem,1fr)_minmax(0,auto)_88px_72px] lg:grid-cols-[14px_minmax(8rem,1fr)_minmax(0,auto)_88px_88px_72px_56px]",
   withoutPerson:
-    "grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_56px] md:grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_88px_56px]",
+    "grid-cols-[14px_minmax(0,1fr)_minmax(0,auto)_88px_72px] sm:grid-cols-[14px_minmax(8rem,1fr)_minmax(0,auto)_88px_72px] lg:grid-cols-[14px_minmax(8rem,1fr)_minmax(0,auto)_88px_88px_72px]",
 } as const;
 
 // The outlined tags of a run, in this order.
@@ -92,11 +93,11 @@ const person = computed(() =>
       <span
         v-for="tag in tags"
         :key="tag"
-        class="rounded-full border px-1.5 text-xs font-medium text-muted-foreground max-sm:hidden"
+        class="rounded-full border px-1.5 text-xs font-medium text-muted-foreground max-lg:hidden"
         >{{ tag }}</span
       >
       <template v-if="progress !== null">
-        <ProgressBar :counts="progress" class="w-[70px] max-sm:hidden" />
+        <ProgressBar :counts="progress" class="w-[70px] max-lg:hidden" />
         <span class="text-faint tabular-nums"
           >{{ doneCount(progress) }}/{{ progress.total }}</span
         >
@@ -123,13 +124,14 @@ const person = computed(() =>
       />
       <span class="truncate">{{ run.env }}</span>
     </span>
-    <span class="truncate text-muted-foreground max-md:hidden">{{
+    <span class="truncate text-muted-foreground max-lg:hidden">{{
       run.agent === null ? run.profile : "—"
     }}</span>
-    <span class="text-right text-muted-foreground tabular-nums">{{
-      duration
-    }}</span>
-    <span v-if="showPerson" class="flex justify-end max-md:hidden">
+    <span
+      class="text-right whitespace-nowrap text-muted-foreground tabular-nums"
+      >{{ duration }}</span
+    >
+    <span v-if="showPerson" class="flex justify-end max-lg:hidden">
       <span v-if="run.ci !== null" class="text-xs text-faint">pipeline</span>
       <span
         v-else-if="person !== null"
