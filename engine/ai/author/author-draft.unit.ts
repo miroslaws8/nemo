@@ -96,6 +96,36 @@ describe("the author's draft", () => {
     assert.ok(!draft.yaml.includes("https://edplay.ai"));
   });
 
+  test("the same step twice in a row is written once, without YAML aliases", () => {
+    const check = (): { keyword: string; args: unknown; submits: boolean } => ({
+      keyword: "expect_visible",
+      args: { text: "Plans" },
+      submits: false,
+    });
+    const draft = draftTest(
+      "plans",
+      "plans show",
+      [LOOKING[0], check(), check()],
+      demo,
+      false
+    );
+    assert.equal(draft.yaml.match(/text: Plans/g)?.length, 1);
+    const shared = { button: "Open menu" };
+    const twice = draftTest(
+      "menu",
+      "menu opens",
+      [
+        { keyword: "click", args: shared, submits: false },
+        { keyword: "expect_visible", args: { text: "Menu" }, submits: false },
+        { keyword: "click", args: shared, submits: false },
+        { keyword: "expect_visible", args: { text: "Menu" }, submits: false },
+      ],
+      demo,
+      false
+    );
+    assert.ok(!/[&*]a\d/.test(twice.yaml), twice.yaml);
+  });
+
   test("a submitted form where writes are not allowed is refused", () => {
     assert.throws(
       () =>

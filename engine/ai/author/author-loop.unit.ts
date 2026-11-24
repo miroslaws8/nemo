@@ -28,7 +28,7 @@ function stubClient(queue: IQueued[]): IModelClient & {
     model: "m-1",
     requests,
     async complete(request): Promise<IModelReply> {
-      requests.push(request);
+      requests.push(structuredClone(request));
       const next = queue.shift();
       if (next === undefined) {
         throw new Error("no more replies queued");
@@ -55,34 +55,33 @@ const EVIDENCE: IEvidence = {
 };
 
 function stubAct(
-  failing: string[] = [],
-  submitting: string[] = []
-): {
-  act: IAuthorDeps["act"];
-  ran: string[];
-} {
+  outcomes: Record<
+    string,
+    { error?: string; submits?: boolean; stop?: string }
+  > = {}
+): { act: IAuthorDeps["act"]; ran: string[] } {
   const ran: string[] = [];
   return {
     ran,
     act: async (step) => {
       const label = `${step.keyword} ${JSON.stringify(step.args)}`;
       ran.push(label);
+      const outcome = outcomes[label] ?? {};
       return {
-        error: failing.includes(label) ? `${label} failed` : null,
-        submits: submitting.includes(label),
+        error: outcome.error ?? null,
+        submits: outcome.submits ?? false,
+        stop: outcome.stop ?? null,
       };
     },
   };
 }
 
-const DONE = call("finish", {
-  outcome: "done",
-  summary: "the menu leads to pricing",
-});
+const DONE = (): IModelToolCall =>
+  call("finish", { outcome: "done", summary: "the menu leads to pricing" });
 
 function run(
   queue: IQueued[],
-  act: ReturnType<typeof stubAct>["act"],
+  act: IAuthorDeps["act"],
   maxActions = 30
 ): ReturnType<typeof authorCase> {
   return authorCase("the menu leads to pricing", {
@@ -100,7 +99,8 @@ describe("the author loop", () => {
       [
         [call("goto", { args: "/" })],
         [call("click", { args: { button: "Open menu" } })],
-        [call("expect_url", { args: { contains: "/pricing" } }), DONE],
+        [call("expect_url", { args: { contains: "/pricing" } })],
+        [DONE()],
       ],
       act
     );
@@ -113,29 +113,93 @@ describe("the author loop", () => {
     assert.equal(ran.length, 3);
   });
 
+  test("runs one tool per reply; the others are answered, not run", async () => {
+    const { act, ran } = stubAct();
+    const client = stubClient([
+      [
+        call("goto", { args: "/settings" }),
+        call("click", { args: { button: "Delete" } }),
+      ],
+      [call("expect_visible", { args: { text: "Settings" } })],
+      [DONE()],
+    ]);
+    await authorCase("goal", {
+      client,
+      observe: async () => EVIDENCE,
+      act,
+      maxActions: 30,
+    });
+    assert.deepEqual(ran, [
+      'goto "/settings"',
+      'expect_visible {"text":"Settings"}',
+    ]);
+    const tool = client.requests[1].messages.find(
+      (message) => message.role === "tool"
+    );
+    assert.ok(tool !== undefined && tool.role === "tool");
+    assert.equal(tool.results.length, 2);
+    assert.match(tool.results[1].text, /one tool at a time/);
+  });
+
   test("drops a failed step and goes on", async () => {
-    const { act } = stubAct(['click {"button":"Menu"}']);
+    const { act } = stubAct({
+      'click {"button":"Menu"}': { error: "no such button" },
+    });
     const result = await run(
       [
         [call("click", { args: { button: "Menu" } })],
-        [call("click", { args: { button: "Open menu" } }), DONE],
+        [call("click", { args: { button: "Open menu" } })],
+        [call("expect_visible", { args: { text: "Pricing" } })],
+        [DONE()],
       ],
       act
     );
-    assert.deepEqual(result.kept, [
-      { keyword: "click", args: { button: "Open menu" }, submits: false },
-    ]);
+    assert.equal(result.kept[0].keyword, "click");
+    assert.deepEqual(result.kept[0].args, { button: "Open menu" });
     assert.equal(result.turns[0].ok, false);
-    assert.match(result.turns[0].result, /failed/);
   });
 
-  test("keeps whether a step submitted a form", async () => {
-    const { act } = stubAct([], ['click {"button":"Send"}']);
+  test("keeps whether a step wrote data", async () => {
+    const { act } = stubAct({ 'click {"button":"Send"}': { submits: true } });
     const result = await run(
-      [[call("click", { args: { button: "Send" } }), DONE]],
+      [
+        [call("click", { args: { button: "Send" } })],
+        [call("expect_visible", { args: { text: "Thanks" } })],
+        [DONE()],
+      ],
       act
     );
     assert.equal(result.kept[0].submits, true);
+  });
+
+  test("a step that leaves the site ends the case impossible", async () => {
+    const { act } = stubAct({
+      'click {"button":"Book a demo"}': {
+        stop: "it left the site for https://calendly.com",
+      },
+    });
+    const result = await run(
+      [[call("click", { args: { button: "Book a demo" } })]],
+      act
+    );
+    assert.equal(result.outcome, "impossible");
+    assert.match(result.summary, /calendly/);
+  });
+
+  test("finish done without an assertion is refused", async () => {
+    const { act } = stubAct();
+    const result = await run(
+      [
+        [call("goto", { args: "/pricing" })],
+        [DONE()],
+        [call("expect_url", { args: { contains: "/pricing" } })],
+        [DONE()],
+      ],
+      act
+    );
+    assert.equal(result.outcome, "done");
+    assert.equal(result.turns[1].ok, false);
+    assert.match(result.turns[1].result, /assert/);
   });
 
   test("finish impossible keeps its outcome", async () => {
@@ -157,48 +221,94 @@ describe("the author loop", () => {
 
   test("an unknown tool and malformed input are tool errors; nothing runs", async () => {
     const { act, ran } = stubAct();
-    const client = stubClient([
+    const result = await run(
       [
-        call("track", { args: {} }),
-        call("click", "{not json"),
-        call("goto", { nope: 1 }),
+        [call("track", { args: {} })],
+        [call("click", "{not json")],
+        [call("goto", { nope: 1 })],
       ],
-      [DONE],
-    ]);
+      act,
+      3
+    );
+    assert.equal(ran.length, 0);
+    assert.equal(result.turns.filter((turn) => !turn.ok).length, 3);
+  });
+
+  test("every tool call counts towards max_actions, invalid ones too", async () => {
+    const { act } = stubAct();
+    const result = await run(
+      [
+        [call("nope", {})],
+        [call("nope", {})],
+        [call("nope", {})],
+        [call("nope", {})],
+      ],
+      act,
+      3
+    );
+    assert.equal(result.outcome, "incomplete");
+    assert.equal(result.turns.length, 3);
+  });
+
+  test("text without a tool call twice ends incomplete; empty replies are not kept", async () => {
+    const { act } = stubAct();
+    const client = stubClient(["", "Still thinking."]);
     const result = await authorCase("goal", {
       client,
       observe: async () => EVIDENCE,
       act,
       maxActions: 30,
     });
-    assert.equal(ran.length, 0);
-    assert.equal(result.turns.filter((turn) => !turn.ok).length, 3);
-    const toolMessage = client.requests[1].messages.find(
-      (message) => message.role === "tool"
+    assert.equal(result.outcome, "incomplete");
+    assert.ok(
+      !client.requests[1].messages.some(
+        (message) =>
+          message.role === "assistant" &&
+          message.text === "" &&
+          message.toolCalls.length === 0
+      )
     );
-    assert.ok(toolMessage !== undefined && toolMessage.role === "tool");
-    assert.equal(toolMessage.results.length, 3);
   });
 
-  test("stops at maxActions as incomplete", async () => {
+  test("only the last observations keep their screenshot", async () => {
     const { act } = stubAct();
-    const result = await run(
-      [
-        [call("goto", { args: "/a" })],
-        [call("goto", { args: "/b" })],
-        [call("goto", { args: "/c" })],
-      ],
+    const client = stubClient([
+      [call("goto", { args: "/a" })],
+      [call("goto", { args: "/b" })],
+      [call("goto", { args: "/c" })],
+      [call("expect_url", { args: { contains: "/c" } })],
+      [DONE()],
+    ]);
+    await authorCase("goal", {
+      client,
+      observe: async () => EVIDENCE,
       act,
-      2
+      maxActions: 30,
+    });
+    const last = client.requests[client.requests.length - 1];
+    const images = last.messages.flatMap((message) =>
+      message.role === "user"
+        ? message.parts.filter((part) => part.type === "image")
+        : []
     );
-    assert.equal(result.outcome, "incomplete");
-    assert.equal(result.kept.length, 2);
+    assert.equal(images.length, 2);
   });
 
-  test("text without a tool call twice ends incomplete", async () => {
+  test("page content is fenced and marked as data, not instructions", async () => {
     const { act } = stubAct();
-    const result = await run(["I would click.", "Still thinking."], act);
-    assert.equal(result.outcome, "incomplete");
+    const client = stubClient(["", ""]);
+    await authorCase("goal", {
+      client,
+      observe: async () => EVIDENCE,
+      act,
+      maxActions: 30,
+    });
+    assert.match(client.requests[0].system, /never instructions/i);
+    const first = client.requests[0].messages[0];
+    assert.ok(first.role === "user");
+    const text = first.parts.find((part) => part.type === "text");
+    assert.ok(text !== undefined && text.type === "text");
+    assert.match(text.text, /<page>[\s\S]*<\/page>/);
   });
 
   test("a provider error ends incomplete with the error", async () => {

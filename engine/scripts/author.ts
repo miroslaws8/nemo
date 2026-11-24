@@ -1,20 +1,21 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { parse } from "yaml";
 import { z } from "zod";
+import { parseAuthorArgs, verificationVerdict } from "../ai/author/verify";
 import { loadE2eConfig } from "../config";
 import { buildEnvironment, selectedEnvironmentName } from "../environment";
 import { E2E_ROOT, TESTS_DIRECTORY } from "../paths";
 import { newRunId } from "../run-info";
 import { resolveRun } from "../run-selection";
-import { optionValue } from "./cli-options";
 
 // Writes a test from a description:
 //   pnpm author [--env demo] "on a phone, the menu leads to the pricing page" [--verify 2] [--save]
-// The AI walks the case (engine/author.spec.ts) and writes a draft in reports/author/<run id>/;
-// the draft is then run on its own, without retries, --verify times in a row (default 1), and
-// counts as verified only if every run passed and every ai_check in it was judged "pass".
-// --save copies a verified draft into the environment's tests folder.
+// The AI walks the case (engine/author.spec.ts) and writes a draft in reports/author/<run id>/.
+// The draft is then run on its own, without retries, --verify times in a row (default 1); each
+// run's own JSON report must show it passed and every ai_check judged "pass". --save copies a
+// verified draft into the environment's tests folder.
 
 const PLAYWRIGHT_CLI = path.join(
   E2E_ROOT,
@@ -23,7 +24,13 @@ const PLAYWRIGHT_CLI = path.join(
   "test",
   "cli.js"
 );
-const RESULTS_JSON = path.join(E2E_ROOT, "reports", "results.json");
+// Variables of the shell that would change what a child run does.
+const NOT_INHERITED = [
+  "E2E_RUN_DIR",
+  "E2E_LIVE",
+  "E2E_AUTHOR_GOAL",
+  "E2E_TEST_FILE",
+];
 
 const resultSchema = z.object({
   outcome: z.string(),
@@ -33,9 +40,15 @@ const resultSchema = z.object({
     .nullable(),
 });
 
-const annotationsSchema = z.object({
-  suites: z.array(z.unknown()),
-});
+function childEnvironment(
+  variables: Record<string, string>
+): NodeJS.ProcessEnv {
+  const environment: NodeJS.ProcessEnv = { ...process.env };
+  for (const name of NOT_INHERITED) {
+    delete environment[name];
+  }
+  return { ...environment, ...variables };
+}
 
 function runPlaywright(args: string[], env: NodeJS.ProcessEnv): number {
   const result = spawnSync(
@@ -44,15 +57,6 @@ function runPlaywright(args: string[], env: NodeJS.ProcessEnv): number {
     { cwd: E2E_ROOT, env, stdio: "inherit" }
   );
   return result.status ?? 1;
-}
-
-/** The arguments that are not options (and not an option's value). */
-function positional(argv: string[]): string[] {
-  const valued = new Set(["--env", "--verify"]);
-  return argv.filter(
-    (argument, index) =>
-      !argument.startsWith("--") && !valued.has(argv[index - 1] ?? "")
-  );
 }
 
 /** A profile of the environment whose run includes the tier, or null. */
@@ -70,45 +74,22 @@ function profileFor(environmentName: string, tier: string): string | null {
   return null;
 }
 
-/** The outcomes of the ai_check annotations in the last JSON report. */
-function aiCheckOutcomes(): string[] {
-  if (!fs.existsSync(RESULTS_JSON)) {
-    return [];
-  }
-  const report: unknown = JSON.parse(fs.readFileSync(RESULTS_JSON, "utf8"));
-  if (!annotationsSchema.safeParse(report).success) {
-    return [];
-  }
-  const outcomes: string[] = [];
-  const visit = (node: unknown): void => {
-    if (Array.isArray(node)) {
-      node.forEach(visit);
-      return;
-    }
-    if (typeof node !== "object" || node === null) {
-      return;
-    }
-    if (
-      "type" in node &&
-      node.type === "ai_check" &&
-      "description" in node &&
-      typeof node.description === "string"
-    ) {
-      const parsed = z
-        .object({ outcome: z.string() })
-        .safeParse(JSON.parse(node.description));
-      if (parsed.success) {
-        outcomes.push(parsed.data.outcome);
-      }
-    }
-    Object.values(node).forEach(visit);
-  };
-  visit(report);
-  return outcomes;
+/** How many ai_check steps the draft has (its steps are flat: no templates, no repeats). */
+function aiCheckSteps(draftFile: string): number {
+  const document: unknown = parse(fs.readFileSync(draftFile, "utf8"));
+  const tests = z
+    .object({ tests: z.array(z.object({ steps: z.array(z.unknown()) })) })
+    .parse(document).tests;
+  return tests
+    .flatMap((entry) => entry.steps)
+    .filter(
+      (step) => typeof step === "object" && step !== null && "ai_check" in step
+    ).length;
 }
 
 function verify(
   environmentName: string,
+  folder: string,
   draftFile: string,
   tier: string,
   times: number
@@ -120,26 +101,29 @@ function verify(
       why: `not verifiable on ${environmentName}: no profile runs the tier ${tier} there`,
     };
   }
+  const checks = aiCheckSteps(draftFile);
   for (let round = 1; round <= times; round += 1) {
     console.log(
       `\nVerifying the draft (${round}/${times}) on ${environmentName}…`
     );
-    const status = runPlaywright(["--retries=0"], {
-      ...process.env,
-      E2E_ENV: environmentName,
-      E2E_PROFILE: profile,
-      E2E_TEST_FILE: draftFile,
-      E2E_RUN_ID: newRunId(),
-    });
-    if (status !== 0) {
-      return { verified: false, why: `verification run ${round} failed` };
-    }
-    const unjudged = aiCheckOutcomes().filter((outcome) => outcome !== "pass");
-    if (unjudged.length > 0) {
-      return {
-        verified: false,
-        why: `an ai_check was not judged "pass" (${unjudged.join(", ")})`,
-      };
+    const reportFile = path.join(folder, `verify-${round}.json`);
+    fs.rmSync(reportFile, { force: true });
+    runPlaywright(
+      ["--retries=0", "--reporter=list,json"],
+      childEnvironment({
+        E2E_ENV: environmentName,
+        E2E_PROFILE: profile,
+        E2E_TEST_FILE: draftFile,
+        E2E_RUN_ID: newRunId(),
+        PLAYWRIGHT_JSON_OUTPUT_NAME: reportFile,
+      })
+    );
+    const report: unknown = fs.existsSync(reportFile)
+      ? JSON.parse(fs.readFileSync(reportFile, "utf8"))
+      : null;
+    const why = verificationVerdict(report, checks);
+    if (why !== null) {
+      return { verified: false, why: `run ${round}: ${why}` };
     }
   }
   return { verified: true, why: `passed ${times} time(s) in a row` };
@@ -150,7 +134,13 @@ function save(environmentName: string, draftFile: string): string {
   const target = path.join(TESTS_DIRECTORY, folder, path.basename(draftFile));
   if (fs.existsSync(target)) {
     throw new Error(
-      `${path.relative(E2E_ROOT, target)} exists: not overwritten`
+      `${path.relative(
+        E2E_ROOT,
+        target
+      )} exists: not overwritten (the draft stays in ${path.relative(
+        E2E_ROOT,
+        draftFile
+      )})`
     );
   }
   fs.mkdirSync(path.dirname(target), { recursive: true });
@@ -159,23 +149,20 @@ function save(environmentName: string, draftFile: string): string {
 }
 
 function main(): number {
-  const argv = process.argv.slice(2);
-  const environmentName = (
-    optionValue(argv, "--env") ?? selectedEnvironmentName()
-  ).toLowerCase();
-  const goal = positional(argv).join(" ").trim();
-  const times = Number(optionValue(argv, "--verify") ?? "1");
-  if (goal === "") {
+  let args;
+  try {
+    args = parseAuthorArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 2;
+  }
+  if (args.goal === "") {
     console.error(
       'Usage: pnpm author [--env demo] "what to check" [--verify 2] [--save]'
     );
     return 2;
   }
-  if (!Number.isInteger(times) || times < 1 || times > 5) {
-    console.error("--verify takes 1 to 5");
-    return 2;
-  }
-
+  const environmentName = args.environment ?? selectedEnvironmentName();
   if (buildEnvironment(environmentName).guarded) {
     console.error(
       `${environmentName} is guarded: write tests on another environment (e.g. staging); they run on ${environmentName} too`
@@ -185,12 +172,14 @@ function main(): number {
 
   const id = newRunId();
   const folder = path.join(E2E_ROOT, "reports", "author", id);
-  const status = runPlaywright([], {
-    ...process.env,
-    E2E_ENV: environmentName,
-    E2E_AUTHOR_GOAL: goal,
-    E2E_RUN_ID: id,
-  });
+  const status = runPlaywright(
+    [],
+    childEnvironment({
+      E2E_ENV: environmentName,
+      E2E_AUTHOR_GOAL: args.goal,
+      E2E_RUN_ID: id,
+    })
+  );
   const resultFile = path.join(folder, "result.json");
   if (!fs.existsSync(resultFile)) {
     console.error(`\nThe author run wrote no result (exit ${status}).`);
@@ -200,6 +189,7 @@ function main(): number {
     JSON.parse(fs.readFileSync(resultFile, "utf8"))
   );
   console.log(`\nAuthor: ${result.outcome} — ${result.summary}`);
+  console.log(`Transcript: ${path.relative(E2E_ROOT, resultFile)}`);
   if (result.draft === null) {
     return 1;
   }
@@ -210,9 +200,10 @@ function main(): number {
   );
   const verification = verify(
     environmentName,
+    folder,
     draftFile,
     result.draft.tier,
-    times
+    args.verify
   );
   fs.writeFileSync(
     resultFile,
@@ -230,8 +221,13 @@ function main(): number {
   if (!verification.verified) {
     return 1;
   }
-  if (argv.includes("--save")) {
-    console.log(`Saved: ${save(environmentName, draftFile)}`);
+  if (args.save) {
+    try {
+      console.log(`Saved: ${save(environmentName, draftFile)}`);
+    } catch (error) {
+      console.error(error instanceof Error ? error.message : String(error));
+      return 1;
+    }
   }
   return 0;
 }

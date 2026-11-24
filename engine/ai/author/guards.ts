@@ -22,8 +22,12 @@ function escapeRegExp(text: string): string {
 
 /** Why a target named `name` must not be pressed, or null: a whole avoid word or phrase in it. */
 export function refuseByAvoid(name: string, avoid: string[]): string | null {
+  // Whole words in any alphabet: \b knows only ASCII letters.
   const word = avoid.find((candidate) =>
-    new RegExp(`\\b${escapeRegExp(candidate.trim())}\\b`, "i").test(name)
+    new RegExp(
+      `(?<![\\p{L}\\p{N}])${escapeRegExp(candidate.trim())}(?![\\p{L}\\p{N}])`,
+      "iu"
+    ).test(name)
   );
   return word === undefined
     ? null

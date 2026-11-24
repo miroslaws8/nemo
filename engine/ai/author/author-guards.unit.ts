@@ -52,6 +52,12 @@ describe("author tools", () => {
     }
   });
 
+  test("no tool schema carries a $schema key (strict servers refuse it)", () => {
+    for (const tool of tools) {
+      assert.ok(!JSON.stringify(tool.schema).includes('"$schema"'), tool.name);
+    }
+  });
+
   test("no tool for track or setups", () => {
     assert.ok(!tools.some((tool) => tool.name === "track"));
   });

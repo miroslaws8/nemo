@@ -64,15 +64,42 @@ export const DEFAULT_AUTHOR_AVOID = [
   "delete",
   "remove",
   "sign out",
+  "signout",
   "log out",
+  "logout",
   "unsubscribe",
 ];
+
+/** Paths of telemetry a page sends by itself (analytics, logging, error reporting): not a write. */
+export const DEFAULT_AUTHOR_IGNORE_WRITES = [
+  "/collect",
+  "/log_event",
+  "/trackevents?",
+  "/track",
+  "/beacon",
+  "/events?$",
+  "/rum",
+  "/telemetry",
+  "/api/\\d+/envelope",
+  "/\\$rpc/",
+];
+
+const regexSource = z.string().refine((source) => {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}, "not a valid regular expression");
 
 const authorSchema = z.strictObject({
   // A role with tool calling and vision.
   model: roleNameSchema,
   max_actions: z.number().int().min(5).max(100).default(30),
   avoid: z.array(z.string().min(1)).default(DEFAULT_AUTHOR_AVOID),
+  // Regular expressions for paths of the app's own telemetry: their POSTs are not writes.
+  ignore_writes: z.array(regexSource).default(DEFAULT_AUTHOR_IGNORE_WRITES),
 });
 
 export const aiSettingsSchema = z.strictObject({

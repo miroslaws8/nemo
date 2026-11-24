@@ -1,79 +1,43 @@
 import fs from "node:fs";
 import path from "node:path";
-import type { Page } from "@playwright/test";
 import { createModelClient } from "./ai/client";
 import { captureViewport } from "./ai/evidence";
 import { draftTest } from "./ai/author/draft";
-import { refuseByAvoid, refuseGoto } from "./ai/author/guards";
 import { authorCase } from "./ai/author/loop";
+import { targetRefusal, watchWrites } from "./ai/author/page-guards";
 import { aiRunContext } from "./ai/run-context";
 import { resolveAiSettings } from "./ai/settings";
 import { runSpend } from "./ai/spend";
 import { environmentVariables, getEnvironment } from "./environment";
 import { test } from "./fixtures";
-import { locate } from "./locate";
 import { E2E_ROOT } from "./paths";
 import { runId, runVariables, testVariables } from "./run-info";
 import { runSteps, TEST_FRAME } from "./runner";
 import { selectedProfileName } from "./run-selection";
-import { targetSchema } from "./schema";
-import type { IAuthorStep, IRunContext } from "./types";
+import type {
+  IAuthorDraft,
+  IAuthorResult,
+  IAuthorStep,
+  IRunContext,
+} from "./types";
 
 // pnpm author's one test (engine/scripts/author.ts starts it as the project <env>:author): the AI
-// walks the described case with nemo's steps as tools (engine/ai/author/), guarded here before
-// each step runs, and the steps that worked become the draft in reports/author/<run id>/.
+// walks the described case with nemo's steps as tools (engine/ai/author/). Before a step runs, its
+// target is checked (engine/ai/author/page-guards.ts); while it runs, writes are watched on the
+// network and, where the environment does not allow them, stopped; after it, a page off the site
+// ends the case. The steps that worked become the draft in reports/author/<run id>/.
 
 const environment = getEnvironment();
 const goal = process.env.E2E_AUTHOR_GOAL?.trim() ?? "";
 const AUTHOR_TIMEOUT_MS = 15 * 60_000;
+const TARGET_WAIT_MS = 10_000;
 const START_STEP: IAuthorStep = { keyword: "goto", args: "/", submits: false };
 
-/** The output folder of this author run. */
-export function authorFolder(): string {
-  return path.join(E2E_ROOT, "reports", "author", runId());
-}
-
-const targetLike = targetSchema;
-
-/** A click target's accessible name (or text) and whether it submits a form. */
-async function inspectTarget(
-  page: Page,
-  args: unknown
-): Promise<{ name: string; submits: boolean } | null> {
-  const target = targetLike.safeParse(args);
-  if (!target.success) {
-    return null;
-  }
-  const element = locate(page, target.data).first();
-  if ((await element.count()) === 0) {
-    return null;
-  }
-  return element.evaluate((node) => {
-    const name =
-      node.getAttribute("aria-label") ?? node.textContent?.trim() ?? "";
-    const submits =
-      (node instanceof HTMLButtonElement || node instanceof HTMLInputElement) &&
-      node.type === "submit" &&
-      node.form !== null;
-    return { name, submits };
-  });
-}
-
-/** Whether Enter now would submit a form: the focus is in a form's field. */
-async function enterSubmits(page: Page, args: unknown): Promise<boolean> {
-  const key =
-    typeof args === "string"
-      ? args
-      : typeof args === "object" && args !== null && "key" in args
-      ? String(args.key)
-      : "";
-  if (key !== "Enter") {
-    return false;
-  }
-  return page.evaluate(() => {
-    const focused = document.activeElement;
-    return focused !== null && focused.closest("form") !== null;
-  });
+function firstLine(error: unknown): string {
+  // Without the report's colour codes: what the model reads.
+  return (error instanceof Error ? error.message : String(error))
+    .replace(/\u001b\[[0-9;]*m/g, "")
+    .split("\n")[0];
 }
 
 test(`author: ${goal}`, async ({
@@ -100,6 +64,18 @@ test(`author: ${goal}`, async ({
   const author = settings.author;
   const client = createModelClient(settings, author.model, runSpend());
   const base = new URL(environment.baseUrl).origin;
+  const appOrigins = [
+    base,
+    ...(environment.apiUrl === null
+      ? []
+      : [new URL(environment.apiUrl).origin]),
+  ];
+  const writes = await watchWrites(
+    page,
+    environment.authorWrites,
+    appOrigins,
+    author.ignoreWrites
+  );
   const context: IRunContext = {
     page,
     api,
@@ -121,34 +97,32 @@ test(`author: ${goal}`, async ({
   const act = async (step: {
     keyword: string;
     args: unknown;
-  }): Promise<{ error: string | null; submits: boolean }> => {
-    let submits = false;
-    if (step.keyword === "goto" && typeof step.args === "string") {
-      const refused = refuseGoto(step.args, environment.baseUrl);
-      if (refused !== null) {
-        return { error: refused, submits };
-      }
-    }
-    if (step.keyword === "click") {
-      const target = await inspectTarget(page, step.args);
-      if (target !== null) {
-        const refused = refuseByAvoid(target.name, author.avoid);
-        if (refused !== null) {
-          return { error: refused, submits };
-        }
-        submits = target.submits;
-      }
-    }
-    if (step.keyword === "press") {
-      submits = await enterSubmits(page, step.args);
-    }
-    if (submits && !environment.authorWrites) {
-      return {
-        error: `this would send a form, and ${environment.name} does not allow writes (author_writes): check the form without sending it`,
-        submits,
-      };
+  }): Promise<{
+    error: string | null;
+    submits: boolean;
+    stop: string | null;
+  }> => {
+    const refused = await targetRefusal(
+      page,
+      step.keyword,
+      step.args,
+      author.avoid,
+      environment.baseUrl,
+      TARGET_WAIT_MS
+    );
+    if (refused !== null) {
+      return { error: refused, submits: false, stop: null };
     }
     position += 1;
+    const before = page.url();
+    // A step that is not kept must leave no trace on the page: the draft is only what was kept.
+    const undo = async (): Promise<void> => {
+      if (page.url() !== before) {
+        await page.goto(before).catch(() => undefined);
+      }
+    };
+    writes.begin();
+    let error: string | null = null;
     try {
       await runSteps(
         [
@@ -167,82 +141,99 @@ test(`author: ${goal}`, async ({
         context,
         TEST_FRAME
       );
-    } catch (error) {
+    } catch (thrown) {
+      error = firstLine(thrown);
+    }
+    const written = writes.end();
+    const origin = new URL(page.url()).origin;
+    if (origin !== base) {
+      return { error, submits: false, stop: `it left the site for ${origin}` };
+    }
+    if (written.length > 0 && !environment.authorWrites) {
+      await undo();
       return {
-        // The first line, without the report's colour codes: what the model reads.
-        error: (error instanceof Error ? error.message : String(error))
-          .replace(/\u001b\[[0-9;]*m/g, "")
-          .split("\n")[0],
-        submits,
+        error: `this sends data (${written.join(", ")}) and ${
+          environment.name
+        } does not allow writes (author_writes): it was stopped; check the page without sending it`,
+        submits: false,
+        stop: null,
       };
     }
-    if (new URL(page.url()).origin !== base) {
-      await page.goBack().catch(() => undefined);
-      return {
-        error: `that left the site (${
-          new URL(page.url()).origin
-        }); stay on ${base}`,
-        submits,
-      };
+    if (error !== null) {
+      await undo();
     }
-    return { error: null, submits };
+    return {
+      error,
+      submits: error === null && written.length > 0,
+      stop: null,
+    };
   };
 
-  await page.goto("/");
-  let turn = 0;
-  const folder = authorFolder();
+  const folder = path.join(E2E_ROOT, "reports", "author", runId());
   fs.mkdirSync(folder, { recursive: true });
-  const result = await authorCase(goal, {
-    client,
-    observe: async () => {
-      const evidence = await captureViewport(page);
-      turn += 1;
-      fs.writeFileSync(path.join(folder, `turn-${turn}.png`), evidence.png);
-      return evidence;
-    },
-    act,
-    maxActions: author.maxActions,
-  });
-
-  const kept =
-    result.kept[0]?.keyword === "goto"
-      ? result.kept
-      : [START_STEP, ...result.kept];
-  const draft =
-    result.outcome === "done"
-      ? draftTest(
-          goal,
-          result.summary,
-          kept,
-          environment,
-          environment.authorWrites
-        )
-      : null;
-  if (draft !== null) {
-    fs.writeFileSync(path.join(folder, `${draft.slug}.test.yaml`), draft.yaml);
-  }
-  fs.writeFileSync(
-    path.join(folder, "result.json"),
-    JSON.stringify(
-      {
-        goal,
-        environment: environment.name,
-        outcome: result.outcome,
-        summary: result.summary,
-        turns: result.turns,
-        draft:
-          draft === null
-            ? null
-            : {
-                file: `${draft.slug}.test.yaml`,
-                tier: draft.tier,
-                submitsForm: draft.submitsForm,
-              },
+  let result: IAuthorResult = {
+    outcome: "incomplete",
+    summary: "the author did not run to the end",
+    kept: [],
+    turns: [],
+  };
+  let draft: IAuthorDraft | null = null;
+  try {
+    await page.goto("/");
+    let turn = 0;
+    result = await authorCase(goal, {
+      client,
+      observe: async () => {
+        const evidence = await captureViewport(page);
+        turn += 1;
+        fs.writeFileSync(path.join(folder, `turn-${turn}.png`), evidence.png);
+        return evidence;
       },
-      null,
-      2
-    )
-  );
+      act,
+      maxActions: author.maxActions,
+    });
+    if (result.outcome === "done") {
+      const kept =
+        result.kept[0]?.keyword === "goto"
+          ? result.kept
+          : [START_STEP, ...result.kept];
+      draft = draftTest(
+        goal,
+        result.summary,
+        kept,
+        environment,
+        environment.authorWrites
+      );
+      fs.writeFileSync(
+        path.join(folder, `${draft.slug}.test.yaml`),
+        draft.yaml
+      );
+    }
+  } finally {
+    // Written whatever happened: the transcript is what tells why.
+    fs.writeFileSync(
+      path.join(folder, "result.json"),
+      JSON.stringify(
+        {
+          goal,
+          environment: environment.name,
+          outcome: result.outcome,
+          summary: result.summary,
+          turns: result.turns,
+          draft:
+            draft === null
+              ? null
+              : {
+                  file: `${draft.slug}.test.yaml`,
+                  tier: draft.tier,
+                  submitsForm: draft.submitsForm,
+                },
+        },
+        null,
+        2
+      )
+    );
+  }
   await testInfo.attach("result.json", {
     path: path.join(folder, "result.json"),
   });

@@ -592,14 +592,21 @@ pnpm author --env staging "the contact form sends a message" --verify 2 --save
   (default 1); an `ai_check` in it counts only when judged `pass`. Only a verified draft is saved:
   `--save` copies it to the environment's tests folder (`tests/<tests>/`, else `tests/authored/`),
   never over a file. Read it, then commit it.
-- **Safety, in the engine:** never on a `guarded` environment (write on staging; the test runs on
-  prod too); no `goto` off the site, and a click that leaves it is undone; no click on a control
-  named with a word of `ai.author.avoid` (pay, buy, checkout, purchase, publish, delete, remove,
-  sign out, log out, unsubscribe). Forms: only where the environment sets `author_writes: true`
-  (staging here) may it send one; such a test is `regression`, tagged `writes`, runs only on that
-  environment (`environments: [staging]`) and is not cleaned up. Elsewhere it never sends a form.
-- **Settings:** `ai.author: { model, max_actions: 30, avoid: […] }`, a role with tool calling and
-  vision. `params` on a model go into the request as they are: OpenAI's reasoning models take
+- **Safety, in the engine (not the prompt):** never on a `guarded` environment (write on staging;
+  the test runs on prod too). One step per model reply, looked at in between. A `goto` off the site
+  is refused, and a step that leaves it ends the case. A `click`/`press` target is found first
+  (waited for; not found = refused) and refused when its text, label, value, alt, title or link
+  path holds a word of `ai.author.avoid` (pay, buy, checkout, purchase, publish, delete, remove,
+  sign out, signout, log out, logout, unsubscribe); so is a `goto` path with one.
+- **Writes are seen on the network:** a request that is not a read (POST, PUT, DELETE …) to the
+  app (its site, its `api_url`), or a form sent anywhere, is a write; telemetry paths
+  (`ai.author.ignore_writes`: collect, log_event, trackevents, beacon, Sentry …) are not. Where
+  the environment does not set `author_writes: true`, every such request is stopped before it
+  leaves and the step is not kept (the page goes back to where it was). Where it does (staging
+  here), a test that wrote is `regression`, tagged `writes`, runs only there
+  (`environments: [staging]`) and is not cleaned up.
+- **Settings:** `ai.author: { model, max_actions: 30, avoid: […], ignore_writes: […] }`, a role
+  with tool calling and vision; `max_actions` counts every tool call. `params` on a model go into the request as they are: OpenAI's reasoning models take
   tools in Chat Completions only with `params: { reasoning_effort: none }` (the role `tools` here).
 - A test file may name the environments that run it: `environments: [staging]`.
 

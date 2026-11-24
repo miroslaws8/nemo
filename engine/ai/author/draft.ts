@@ -74,6 +74,12 @@ export function draftTest(
         name: clean(summary) || clean(goal),
         steps: kept
           .map((step) => asRoute(step, environment.baseUrl))
+          // A step the model repeated at once says nothing more.
+          .filter(
+            (step, index, steps) =>
+              index === 0 ||
+              JSON.stringify(steps[index - 1]) !== JSON.stringify(step)
+          )
           .map((step) => ({ [step.keyword]: step.args })),
       },
     ],
@@ -81,7 +87,7 @@ export function draftTest(
   const yaml = [
     ...HEADER,
     ...(submitsForm ? [WRITES_NOTE] : []),
-    stringify(document, { lineWidth: 100 }),
+    stringify(document, { lineWidth: 100, aliasDuplicateObjects: false }),
   ].join("\n");
 
   // A draft that does not load is a bug here, not a test to offer.

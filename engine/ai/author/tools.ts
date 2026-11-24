@@ -45,6 +45,12 @@ export const finishSchema = z.strictObject({
   summary: z.string().min(3).max(200),
 });
 
+/** A JSON Schema without its "$schema" keys: tool parameters are a schema's body only. */
+function bare(schema: Record<string, unknown>): Record<string, unknown> {
+  const { $schema: _dialect, ...body } = schema;
+  return body;
+}
+
 function argsTool(
   name: string,
   description: string,
@@ -55,7 +61,7 @@ function argsTool(
     description,
     schema: {
       type: "object",
-      properties: { args: z.toJSONSchema(args, { io: "input" }) },
+      properties: { args: bare(z.toJSONSchema(args, { io: "input" })) },
       required: ["args"],
       additionalProperties: false,
     },
@@ -77,7 +83,7 @@ export function authorTools(): IModelTool[] {
       name: "finish",
       description:
         "End the case: outcome done (the goal is reached and asserted) or impossible (it cannot be reached; say why), and a one-line summary of what the test checks.",
-      schema: { ...finishJson, type: "object" },
+      schema: { ...bare(finishJson), type: "object" },
     },
   ];
 }

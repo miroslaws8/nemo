@@ -431,13 +431,33 @@
                 "delete",
                 "remove",
                 "sign out",
+                "signout",
                 "log out",
+                "logout",
                 "unsubscribe"
               ],
               "type": "array",
               "items": {
                 "type": "string",
                 "minLength": 1
+              }
+            },
+            "ignore_writes": {
+              "default": [
+                "/collect",
+                "/log_event",
+                "/trackevents?",
+                "/track",
+                "/beacon",
+                "/events?$",
+                "/rum",
+                "/telemetry",
+                "/api/\\d+/envelope",
+                "/\\$rpc/"
+              ],
+              "type": "array",
+              "items": {
+                "type": "string"
               }
             }
           },

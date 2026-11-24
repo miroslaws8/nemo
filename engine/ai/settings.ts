@@ -47,6 +47,9 @@ export function resolveAiSettingsFrom(
             model: section.author.model,
             maxActions: section.author.max_actions,
             avoid: [...section.author.avoid],
+            ignoreWrites: section.author.ignore_writes.map(
+              (source) => new RegExp(source, "i")
+            ),
           },
   };
 }

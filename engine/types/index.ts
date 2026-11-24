@@ -476,6 +476,22 @@ export interface IAuthorStep {
   submits: boolean;
 }
 
+/** pnpm author's command line (engine/ai/author/verify.ts). */
+export interface IAuthorArgs {
+  // null: E2E_ENV, else staging.
+  environment: string | null;
+  goal: string;
+  verify: number;
+  save: boolean;
+}
+
+/** The writes a step made, seen on the network (engine/ai/author/page-guards.ts). */
+export interface IWriteWatch {
+  begin(): void;
+  // "POST /save" for each write since begin().
+  end(): string[];
+}
+
 /** The YAML test the author wrote (engine/ai/author/draft.ts). */
 export interface IAuthorDraft {
   yaml: string;
@@ -504,10 +520,12 @@ export interface IAuthorDeps {
   client: IModelClient;
   observe: () => Promise<IEvidence>;
   // Runs the step (guards first): the error, or null; and whether it submitted a form.
-  act: (step: {
-    keyword: string;
-    args: unknown;
-  }) => Promise<{ error: string | null; submits: boolean }>;
+  // `stop`: the case cannot go on (the step left the site) and ends impossible.
+  act: (step: { keyword: string; args: unknown }) => Promise<{
+    error: string | null;
+    submits: boolean;
+    stop: string | null;
+  }>;
   maxActions: number;
 }
 
@@ -515,6 +533,8 @@ export interface IAuthorSettings {
   model: string;
   maxActions: number;
   avoid: string[];
+  // Telemetry paths whose POSTs are not writes (ai.author.ignore_writes).
+  ignoreWrites: RegExp[];
 }
 
 /** How far a page reaches past the window's right edge (expect_fits_width). */
