@@ -4,6 +4,7 @@ import type { ISkillProblem } from "@shared/types";
 import { useTitle } from "@vueuse/core";
 import { computed, nextTick, ref, useId } from "vue";
 import CodeView from "@/components/CodeView.vue";
+import NoteBanner from "@/components/NoteBanner.vue";
 import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillCheckPanel from "@/components/SkillCheckPanel.vue";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useSkillEditor } from "@/composables/useSkillEditor";
-import { skillPath, skillsPath } from "@/lib/paths";
+import { newSkillPath, skillPath, skillsPath } from "@/lib/paths";
 import { skillNameHint } from "@/lib/skills";
 import type { ITone } from "@/types";
 
@@ -74,6 +75,8 @@ const marks = computed(() => {
 });
 
 const nameHint = computed(() => skillNameHint(skillName.value));
+const CRUMB =
+  "rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
 
 const cancelTo = computed(() =>
   props.name === null
@@ -131,146 +134,151 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
 
 <template>
   <PageBar>
-    <span>{{
-      name === null ? "Add a skill" : `A new version of ${name}`
-    }}</span>
-  </PageBar>
-
-  <div class="space-y-6 px-6 py-5">
-    <nav
-      aria-label="Breadcrumb"
-      class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-    >
+    <RouterLink :to="skillsPath()" :class="CRUMB">Skills</RouterLink>
+    <template v-if="name === null">
+      <RouterLink :to="newSkillPath()" :class="CRUMB">New skill</RouterLink>
+      <span>Upload</span>
+    </template>
+    <template v-else>
       <RouterLink
-        :to="skillsPath()"
-        class="rounded-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-        >Skills</RouterLink
+        :to="skillPath(name, replacedOrigin)"
+        :class="[CRUMB, 'font-mono text-xs']"
+        >{{ name }}</RouterLink
       >
-      <template v-if="name !== null">
-        <span aria-hidden="true">/</span>
-        <RouterLink
-          :to="skillPath(name, replacedOrigin)"
-          class="rounded-sm font-mono text-xs underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-          >{{ name }}</RouterLink
-        >
-      </template>
-    </nav>
+      <span>New version</span>
+    </template>
+  </PageBar>
+  <h1 class="sr-only">
+    {{ name === null ? "Add a skill" : `A new version of ${name}` }}
+  </h1>
 
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">
-        {{ name === null ? "Add a skill" : `A new version of ${name}` }}
-      </h1>
-      <p class="mt-1 max-w-prose text-sm text-muted-foreground">
-        Bring its skill.yaml: drop the file or paste the text. The console
-        checks it as you go and shows what Hermes will read; once it has no
-        errors, {{ name === null ? "add it" : "save it" }} and it is ready to
-        run.
-      </p>
+  <!-- From `lg` the file and the check each scroll in their own column; below, one page. -->
+  <div class="lg:flex lg:min-h-0 lg:flex-1">
+    <div class="min-w-0 lg:flex-1 lg:overflow-y-auto">
+      <div class="mx-auto w-full max-w-3xl space-y-6 px-6 pt-6">
+        <PermissionNote :permission="editing" />
+        <NoteBanner
+          v-if="name !== null && current !== null && current.hash === null"
+          tone="idle"
+          class="text-muted-foreground"
+        >
+          {{ name }} lives in the repo: change hermes/skills/{{
+            name
+          }}/skill.yaml there (its page has the file to start from).
+        </NoteBanner>
+        <NoteBanner v-if="name !== null && currentError !== null" tone="fail">
+          {{ currentError }}
+        </NoteBanner>
+
+        <section aria-labelledby="skill-source" class="min-w-0 space-y-4">
+          <h2 id="skill-source" class="sr-only">The skill.yaml</h2>
+
+          <div v-if="name === null" class="grid gap-1.5">
+            <Label :for="ids.name">Name</Label>
+            <Input
+              :id="ids.name"
+              v-model="skillName"
+              class="font-mono"
+              placeholder="qa-…"
+              autocomplete="off"
+              spellcheck="false"
+              :aria-invalid="nameHint !== null && skillName.trim() !== ''"
+              :aria-describedby="`${ids.name}-hint`"
+            />
+            <p
+              :id="`${ids.name}-hint`"
+              class="text-xs"
+              :class="
+                nameHint !== null && skillName.trim() !== ''
+                  ? 'text-fail'
+                  : 'text-muted-foreground'
+              "
+            >
+              {{ nameHint ?? `Its folder: hermes/skills/${skillName.trim()}/` }}
+            </p>
+          </div>
+
+          <template v-if="text === '' && !typing">
+            <SkillDropZone @file="takeFile" />
+            <p class="text-xs text-muted-foreground">
+              Or
+              <button
+                type="button"
+                class="rounded-sm text-run underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
+                @click="typing = true"
+              >
+                paste its text</button
+              >.
+            </p>
+            <SkillFieldsHelp />
+          </template>
+
+          <template v-else>
+            <div class="flex flex-wrap items-center gap-1.5">
+              <p
+                class="mr-auto min-w-0 truncate font-mono text-xs text-muted-foreground"
+              >
+                {{ fileName ?? "Pasted text" }}
+              </p>
+              <Button
+                v-if="text !== ''"
+                size="sm"
+                variant="outline"
+                @click="typing = !typing"
+              >
+                {{ typing ? "Done" : "Edit" }}
+              </Button>
+              <Button size="sm" variant="ghost" @click="startOver()">
+                Start over
+              </Button>
+            </div>
+            <Textarea
+              v-if="typing"
+              :id="ids.text"
+              v-model="text"
+              aria-label="skill.yaml text"
+              class="max-h-[36rem] min-h-[28rem] bg-muted font-mono text-xs leading-5"
+              spellcheck="false"
+              wrap="off"
+              placeholder="description: …"
+            />
+            <CodeView
+              v-else
+              ref="sourceView"
+              :text="text"
+              :label="fileName ?? 'skill.yaml'"
+              :marks="marks"
+            />
+          </template>
+
+          <NoteBanner v-if="fileProblem !== null" tone="fail" alert>
+            {{ fileProblem }}
+          </NoteBanner>
+        </section>
+      </div>
+
+      <footer class="sticky bottom-0 z-[5] mt-6 border-t bg-background">
+        <div
+          class="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3"
+        >
+          <p class="min-w-0 flex-1 basis-60 text-xs text-muted-foreground">
+            {{ happens }}
+          </p>
+          <div class="ml-auto flex shrink-0 items-center gap-1.5">
+            <Button variant="ghost" size="sm" as-child>
+              <RouterLink :to="cancelTo">Cancel</RouterLink>
+            </Button>
+            <Button size="sm" :disabled="!canSave" @click="save()">{{
+              saveLabel
+            }}</Button>
+          </div>
+        </div>
+      </footer>
     </div>
 
-    <PermissionNote :permission="editing" />
-    <p
-      v-if="name !== null && current !== null && current.hash === null"
-      class="rounded-md border bg-muted/40 px-4 py-3 text-sm"
+    <aside
+      class="min-w-0 px-6 py-6 max-lg:border-t lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto lg:border-l lg:px-5 xl:w-[30rem]"
     >
-      {{ name }} lives in the repo: change hermes/skills/{{ name }}/skill.yaml
-      there (its page has the file to start from).
-    </p>
-    <p
-      v-if="name !== null && currentError !== null"
-      class="rounded-md border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail"
-    >
-      {{ currentError }}
-    </p>
-
-    <div class="grid items-start gap-6 lg:grid-cols-2">
-      <section aria-labelledby="skill-source" class="min-w-0 space-y-4">
-        <h2 id="skill-source" class="sr-only">The skill.yaml</h2>
-
-        <div v-if="name === null" class="grid gap-1.5">
-          <Label :for="ids.name">Name</Label>
-          <Input
-            :id="ids.name"
-            v-model="skillName"
-            class="font-mono"
-            placeholder="qa-…"
-            autocomplete="off"
-            spellcheck="false"
-            :aria-invalid="nameHint !== null && skillName.trim() !== ''"
-            :aria-describedby="`${ids.name}-hint`"
-          />
-          <p
-            :id="`${ids.name}-hint`"
-            class="text-xs"
-            :class="
-              nameHint !== null && skillName.trim() !== ''
-                ? 'text-fail'
-                : 'text-muted-foreground'
-            "
-          >
-            {{ nameHint ?? `Its folder: hermes/skills/${skillName.trim()}/` }}
-          </p>
-        </div>
-
-        <template v-if="text === '' && !typing">
-          <SkillDropZone @file="takeFile" />
-          <p class="text-sm text-muted-foreground">
-            Or
-            <button
-              type="button"
-              class="rounded-sm text-run underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-              @click="typing = true"
-            >
-              paste its text</button
-            >.
-          </p>
-          <SkillFieldsHelp />
-        </template>
-
-        <template v-else>
-          <div class="flex flex-wrap items-center gap-2">
-            <p class="mr-auto truncate font-mono text-xs text-muted-foreground">
-              {{ fileName ?? "Pasted text" }}
-            </p>
-            <Button
-              v-if="text !== ''"
-              size="sm"
-              variant="outline"
-              @click="typing = !typing"
-            >
-              {{ typing ? "Done" : "Edit" }}
-            </Button>
-            <Button size="sm" variant="ghost" @click="startOver()">
-              Start over
-            </Button>
-          </div>
-          <Textarea
-            v-if="typing"
-            :id="ids.text"
-            v-model="text"
-            aria-label="skill.yaml text"
-            class="min-h-[28rem] font-mono text-xs leading-5"
-            spellcheck="false"
-            placeholder="description: …"
-          />
-          <CodeView
-            v-else
-            ref="sourceView"
-            :text="text"
-            :label="fileName ?? 'skill.yaml'"
-            :marks="marks"
-          />
-        </template>
-
-        <p
-          v-if="fileProblem !== null"
-          role="alert"
-          class="rounded-md border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail"
-        >
-          {{ fileProblem }}
-        </p>
-      </section>
-
       <SkillCheckPanel
         :status="status"
         :problems="problems"
@@ -279,16 +287,6 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
         :yaml="null"
         @show="showProblem"
       />
-    </div>
-
-    <footer class="flex flex-wrap items-center gap-x-6 gap-y-3 border-t pt-4">
-      <p class="mr-auto max-w-prose text-sm text-muted-foreground">
-        {{ happens }}
-      </p>
-      <Button variant="ghost" as-child>
-        <RouterLink :to="cancelTo">Cancel</RouterLink>
-      </Button>
-      <Button :disabled="!canSave" @click="save()">{{ saveLabel }}</Button>
-    </footer>
+    </aside>
   </div>
 </template>

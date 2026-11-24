@@ -27,25 +27,21 @@ function placeOf(problem: ISkillProblem): string | null {
 </script>
 
 <template>
-  <ul class="grid gap-2 text-sm">
+  <ul class="grid gap-1.5 text-sm">
     <li
       v-for="(problem, index) in problems"
       :key="index"
-      class="flex items-start gap-2 rounded-md border px-3 py-2"
-      :class="
-        problem.severity === 'error'
-          ? 'border-fail/30 bg-fail/5'
-          : 'border-flaky/30 bg-flaky/5'
-      "
+      class="flex items-start gap-2 rounded-md px-3 py-2"
+      :class="problem.severity === 'error' ? 'bg-fail/10' : 'bg-flaky/10'"
     >
       <CircleXIcon
         v-if="problem.severity === 'error'"
-        class="mt-0.5 size-4 shrink-0 text-fail"
+        class="mt-[3px] size-3.5 shrink-0 text-fail"
         aria-label="Error"
       />
       <TriangleAlertIcon
         v-else
-        class="mt-0.5 size-4 shrink-0 text-flaky"
+        class="mt-[3px] size-3.5 shrink-0 text-flaky"
         aria-label="Warning"
       />
       <div class="flex min-w-0 flex-wrap items-baseline gap-x-1.5">

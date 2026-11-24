@@ -55,7 +55,11 @@ function move(index: number, by: number): void {
 </script>
 
 <template>
-  <fieldset :id="fieldId(path)" class="grid min-w-0 gap-2" tabindex="-1">
+  <fieldset
+    :id="fieldId(path)"
+    class="grid min-w-0 grid-cols-1 gap-2"
+    tabindex="-1"
+  >
     <legend class="text-sm font-medium">{{ label }}</legend>
     <p v-if="hint !== undefined" class="-mt-1 text-xs text-muted-foreground">
       {{ hint }}
@@ -67,7 +71,7 @@ function move(index: number, by: number): void {
     >
       {{ message }}
     </p>
-    <component :is="ordered ? 'ol' : 'ul'" class="grid gap-2">
+    <component :is="ordered ? 'ol' : 'ul'" class="grid grid-cols-1 gap-2">
       <li
         v-for="(item, index) in items"
         :key="index"

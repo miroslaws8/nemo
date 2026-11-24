@@ -34,15 +34,15 @@ onChange((files) => {
 <template>
   <div
     ref="zone"
-    class="flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-6 py-12 text-center transition-colors"
+    class="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed px-6 py-10 text-center transition-colors"
     :class="
       isOverDropZone
-        ? 'border-run bg-run/5'
-        : 'border-input bg-card hover:border-ring/60'
+        ? 'border-run bg-run/10'
+        : 'border-border bg-muted/40 hover:border-ring/60'
     "
   >
     <FileUpIcon
-      class="size-8"
+      class="size-5"
       :class="isOverDropZone ? 'text-run' : 'text-muted-foreground'"
       aria-hidden="true"
     />

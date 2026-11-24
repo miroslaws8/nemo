@@ -29,19 +29,17 @@ onMounted(async () => {
       <DownloadIcon class="size-3.5" aria-hidden="true" />
       Download an example ({{ example.name }})
     </a>
-    <details class="group rounded-md border bg-card">
+    <details class="group rounded-md ring-1 ring-border">
       <summary
         class="cursor-pointer rounded-md px-3 py-2 font-medium outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50"
       >
         What a skill.yaml holds
       </summary>
-      <dl class="grid gap-2 border-t px-3 py-3">
+      <dl class="grid gap-2 border-t px-3 py-3 text-xs">
         <div v-for="entry in example.fields" :key="entry.field">
           <dt class="flex items-center gap-1.5">
-            <code class="font-mono text-xs">{{ entry.field }}</code>
-            <span v-if="entry.required" class="text-xs text-muted-foreground"
-              >required</span
-            >
+            <code class="font-mono">{{ entry.field }}</code>
+            <span v-if="entry.required" class="text-faint">required</span>
           </dt>
           <dd class="text-muted-foreground">{{ entry.description }}</dd>
         </div>

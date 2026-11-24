@@ -66,9 +66,9 @@ function setSection(
 </script>
 
 <template>
-  <div class="grid gap-8">
+  <div class="grid grid-cols-1 gap-8">
     <section aria-labelledby="form-basics" class="grid gap-4">
-      <h3 id="form-basics" class="text-base font-semibold">What it is</h3>
+      <h3 id="form-basics" class="text-sm font-semibold">What it is</h3>
       <div class="grid gap-1.5">
         <Label :for="fieldId(['title'])">Title</Label>
         <Input
@@ -130,7 +130,7 @@ function setSection(
     </section>
 
     <section aria-labelledby="form-changes" class="grid gap-4">
-      <h3 id="form-changes" class="text-base font-semibold">What it changes</h3>
+      <h3 id="form-changes" class="text-sm font-semibold">What it changes</h3>
       <RadioGroup
         :id="fieldId(['safety'])"
         :model-value="draft.safety"
@@ -153,7 +153,7 @@ function setSection(
             class="grid gap-0.5 font-normal"
           >
             <span class="font-medium">{{ SAFETY_WORDS[safety].label }}</span>
-            <span class="text-muted-foreground">{{
+            <span class="text-xs leading-snug text-muted-foreground">{{
               SAFETY_WORDS[safety].hint
             }}</span>
           </Label>
@@ -194,7 +194,7 @@ function setSection(
     </section>
 
     <section aria-labelledby="form-setup" class="grid gap-4">
-      <h3 id="form-setup" class="text-base font-semibold">Before it starts</h3>
+      <h3 id="form-setup" class="text-sm font-semibold">Before it starts</h3>
       <div class="grid gap-4 sm:grid-cols-2">
         <div class="grid gap-1.5">
           <Label :for="fieldId(['start_at'])">Start page</Label>
@@ -255,7 +255,7 @@ function setSection(
           :model-value="draft.screenshots !== null"
           @update:model-value="(value) => toggleShots(value === true)"
         />
-        <Label id="form-shots" :for="ids.shots" class="text-base font-semibold"
+        <Label id="form-shots" :for="ids.shots" class="text-sm font-semibold"
           >The agent saves screenshots</Label
         >
       </div>
@@ -307,7 +307,7 @@ function setSection(
     </section>
 
     <section aria-labelledby="form-report" class="grid gap-5">
-      <h3 id="form-report" class="text-base font-semibold">Report</h3>
+      <h3 id="form-report" class="text-sm font-semibold">Report</h3>
       <ListField
         :model-value="draft.report"
         label="What the report gives"
@@ -351,7 +351,7 @@ function setSection(
     </section>
 
     <details
-      class="group rounded-md border bg-card"
+      class="group rounded-md ring-1 ring-border"
       :open="draft.sections.length > 0"
     >
       <summary

@@ -53,15 +53,12 @@ const MARKS: Record<IDiffLine["kind"], string> = {
   </p>
   <figure
     v-else
-    class="overflow-hidden rounded-lg border bg-card text-xs"
+    class="overflow-hidden rounded-md bg-muted font-mono text-xs ring-1 ring-border"
     aria-label="Changes against the current version"
   >
-    <div class="max-h-[36rem] overflow-auto py-1.5 font-mono leading-5">
+    <div class="max-h-[36rem] overflow-auto py-1.5 leading-5">
       <template v-for="(row, index) in rows" :key="index">
-        <div
-          v-if="row.kind === 'fold'"
-          class="px-3 py-0.5 text-muted-foreground italic"
-        >
+        <div v-if="row.kind === 'fold'" class="px-3 py-0.5 text-faint italic">
           ⋯ {{ row.count }} unchanged line{{ row.count === 1 ? "" : "s" }}
         </div>
         <div

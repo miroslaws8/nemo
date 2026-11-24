@@ -2,6 +2,7 @@
 import type { ISkillOrigin, ISkillProblem } from "@shared/types";
 import { useTitle } from "@vueuse/core";
 import { computed, nextTick, ref, useId, watch } from "vue";
+import NoteBanner from "@/components/NoteBanner.vue";
 import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillCheckPanel from "@/components/SkillCheckPanel.vue";
@@ -123,6 +124,15 @@ const yaml = computed(() =>
   mode.value === "form" ? draftToYaml(draft.value) : yamlText.value
 );
 
+// The last crumb: what it starts from, short.
+const crumb = computed(() =>
+  props.from !== null
+    ? `Copy of ${props.from}`
+    : chosenTemplate.value?.label ?? "Form"
+);
+const CRUMB =
+  "rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
+
 const pageTitle = computed(() =>
   props.from !== null
     ? `A new skill from ${props.from}`
@@ -192,113 +202,127 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
 
 <template>
   <PageBar>
-    <span>{{ pageTitle }}</span>
+    <RouterLink :to="skillsPath()" :class="CRUMB">Skills</RouterLink>
+    <RouterLink :to="newSkillPath()" :class="CRUMB">New skill</RouterLink>
+    <span :title="pageTitle">{{ crumb }}</span>
   </PageBar>
+  <h1 class="sr-only">{{ pageTitle }}</h1>
 
-  <div class="space-y-6 px-6 py-5">
-    <nav
-      aria-label="Breadcrumb"
-      class="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground"
-    >
-      <RouterLink
-        :to="skillsPath()"
-        class="rounded-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-        >Skills</RouterLink
-      >
-      <span aria-hidden="true">/</span>
-      <RouterLink
-        :to="newSkillPath()"
-        class="rounded-sm underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-        >Add a skill</RouterLink
-      >
-    </nav>
+  <!-- From `lg` the form and the check each scroll in their own column; below, one page. -->
+  <div class="lg:flex lg:min-h-0 lg:flex-1">
+    <div class="min-w-0 lg:flex-1 lg:overflow-y-auto">
+      <div class="mx-auto w-full max-w-3xl space-y-6 px-6 pt-6">
+        <PermissionNote :permission="editing" />
+        <NoteBanner v-if="loadProblem !== null" tone="fail" alert>
+          {{ loadProblem }}
+        </NoteBanner>
 
-    <div>
-      <h1 class="text-2xl font-semibold tracking-tight">{{ pageTitle }}</h1>
-      <p class="mt-1 max-w-prose text-sm text-muted-foreground">
-        Give it a name and fill in its fields<template v-if="template !== null"
-          >: first the places marked [[…]], which the template left for your
-          words</template
-        >. The console checks it as you go and shows what Hermes will read; once
-        it has no errors, add it and it is ready to run.
-      </p>
+        <section
+          v-if="ready"
+          aria-labelledby="compose-skill"
+          class="min-w-0 space-y-6"
+        >
+          <h2 id="compose-skill" class="sr-only">The skill</h2>
+          <div class="grid gap-1.5">
+            <Label :for="ids.name">Name</Label>
+            <Input
+              :id="ids.name"
+              v-model="skillName"
+              class="font-mono"
+              placeholder="qa-…"
+              autocomplete="off"
+              spellcheck="false"
+              :aria-invalid="nameHint !== null && skillName.trim() !== ''"
+              :aria-describedby="`${ids.name}-hint`"
+            />
+            <p
+              :id="`${ids.name}-hint`"
+              class="text-xs"
+              :class="
+                nameHint !== null && skillName.trim() !== ''
+                  ? 'text-fail'
+                  : 'text-muted-foreground'
+              "
+            >
+              {{ nameHint ?? `Its folder: hermes/skills/${skillName.trim()}/` }}
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <span :id="ids.mode" class="text-sm font-medium">Edit it as</span>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              :model-value="mode"
+              :aria-labelledby="ids.mode"
+              @update:model-value="chooseMode"
+            >
+              <ToggleGroupItem value="form">Form</ToggleGroupItem>
+              <ToggleGroupItem value="yaml">YAML</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <NoteBanner v-if="yamlProblem !== null" tone="fail" alert>
+            {{ yamlProblem }}
+          </NoteBanner>
+          <p
+            v-if="template !== null"
+            class="-mt-3 text-xs text-muted-foreground"
+          >
+            First fill in the places marked [[…]]: the template left them for
+            your words.
+          </p>
+
+          <SkillForm
+            v-if="mode === 'form'"
+            v-model="draft"
+            :problems="problems"
+          />
+          <Textarea
+            v-else
+            :id="ids.yaml"
+            v-model="yamlText"
+            aria-label="skill.yaml text"
+            class="max-h-[36rem] min-h-[28rem] bg-muted font-mono text-xs leading-5"
+            spellcheck="false"
+            wrap="off"
+          />
+        </section>
+        <div
+          v-else-if="loadProblem === null"
+          class="grid gap-3"
+          aria-label="Reading what it starts from"
+        >
+          <Skeleton class="h-8 w-full max-w-80" />
+          <Skeleton class="h-64 w-full" />
+        </div>
+      </div>
+
+      <footer class="sticky bottom-0 z-[5] mt-6 border-t bg-background">
+        <div
+          class="mx-auto flex w-full max-w-3xl flex-wrap items-center gap-x-4 gap-y-2 px-6 py-3"
+        >
+          <p class="min-w-0 flex-1 basis-60 text-xs text-muted-foreground">
+            {{ happens }}
+          </p>
+          <div class="ml-auto flex shrink-0 items-center gap-1.5">
+            <Button variant="ghost" size="sm" as-child>
+              <RouterLink :to="newSkillPath()">Cancel</RouterLink>
+            </Button>
+            <Button size="sm" :disabled="!canSave" @click="save()">{{
+              saveLabel
+            }}</Button>
+          </div>
+        </div>
+      </footer>
     </div>
 
-    <PermissionNote :permission="editing" />
-    <p
-      v-if="loadProblem !== null"
-      role="alert"
-      class="rounded-md border border-fail/30 bg-fail/5 px-4 py-3 text-sm text-fail"
+    <aside
+      v-if="ready"
+      class="min-w-0 px-6 py-6 max-lg:border-t lg:w-[26rem] lg:shrink-0 lg:overflow-y-auto lg:border-l lg:px-5 xl:w-[30rem]"
     >
-      {{ loadProblem }}
-    </p>
-
-    <div v-if="ready" class="grid items-start gap-6 lg:grid-cols-2">
-      <section aria-labelledby="compose-skill" class="min-w-0 space-y-6">
-        <h2 id="compose-skill" class="sr-only">The skill</h2>
-        <div class="grid gap-1.5">
-          <Label :for="ids.name">Name</Label>
-          <Input
-            :id="ids.name"
-            v-model="skillName"
-            class="font-mono"
-            placeholder="qa-…"
-            autocomplete="off"
-            spellcheck="false"
-            :aria-invalid="nameHint !== null && skillName.trim() !== ''"
-            :aria-describedby="`${ids.name}-hint`"
-          />
-          <p
-            :id="`${ids.name}-hint`"
-            class="text-xs"
-            :class="
-              nameHint !== null && skillName.trim() !== ''
-                ? 'text-fail'
-                : 'text-muted-foreground'
-            "
-          >
-            {{ nameHint ?? `Its folder: hermes/skills/${skillName.trim()}/` }}
-          </p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <span :id="ids.mode" class="text-sm text-muted-foreground"
-            >Edit it as</span
-          >
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            :model-value="mode"
-            :aria-labelledby="ids.mode"
-            @update:model-value="chooseMode"
-          >
-            <ToggleGroupItem value="form">Form</ToggleGroupItem>
-            <ToggleGroupItem value="yaml">YAML</ToggleGroupItem>
-          </ToggleGroup>
-        </div>
-        <p v-if="yamlProblem !== null" role="alert" class="text-sm text-fail">
-          {{ yamlProblem }}
-        </p>
-
-        <SkillForm
-          v-if="mode === 'form'"
-          v-model="draft"
-          :problems="problems"
-        />
-        <Textarea
-          v-else
-          :id="ids.yaml"
-          v-model="yamlText"
-          aria-label="skill.yaml text"
-          class="min-h-[36rem] font-mono text-xs leading-5"
-          spellcheck="false"
-        />
-      </section>
-
       <SkillCheckPanel
         ref="panel"
-        class="lg:sticky lg:top-4"
         :status="status"
         :problems="problems"
         :result="result"
@@ -306,24 +330,6 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
         :yaml="yaml"
         @show="showProblem"
       />
-    </div>
-    <div
-      v-else-if="loadProblem === null"
-      class="grid gap-3"
-      aria-label="Reading what it starts from"
-    >
-      <Skeleton class="h-9 w-80" />
-      <Skeleton class="h-64 w-full" />
-    </div>
-
-    <footer class="flex flex-wrap items-center gap-x-6 gap-y-3 border-t pt-4">
-      <p class="mr-auto max-w-prose text-sm text-muted-foreground">
-        {{ happens }}
-      </p>
-      <Button variant="ghost" as-child>
-        <RouterLink :to="newSkillPath()">Cancel</RouterLink>
-      </Button>
-      <Button :disabled="!canSave" @click="save()">{{ saveLabel }}</Button>
-    </footer>
+    </aside>
   </div>
 </template>
