@@ -2,7 +2,9 @@ import { runListSchema } from "@shared/api";
 import type { IRunRecord } from "@shared/types";
 import { computed, ref } from "vue";
 import { getJson } from "@/lib/api";
-import { isActiveStatus } from "@/lib/status";
+import { environmentTone } from "@/lib/environment-tone";
+import { isActiveStatus, isFinishedStatus } from "@/lib/status";
+import type { ITone } from "@/types";
 
 // Every run record (reports/runs/*/run.json), newest first. The event stream ("run" events) keeps
 // it current; it is loaded again whenever the stream (re)connects, so nothing missed stays stale.
@@ -61,4 +63,16 @@ export function queuedOn(environment: string): IRunRecord[] {
   return runs.value.filter(
     (run) => run.env === environment && run.status === "queued"
   );
+}
+
+/** The newest run on an environment that is over (whichever way), if any. */
+export function lastFinishedOn(environment: string): IRunRecord | undefined {
+  return runs.value.find(
+    (run) => run.env === environment && isFinishedStatus(run.status)
+  );
+}
+
+/** An environment's colour: run while a run goes there, else how its last run ended. */
+export function toneOfEnvironment(environment: string): ITone {
+  return environmentTone(activeRunOn(environment), lastFinishedOn(environment));
 }

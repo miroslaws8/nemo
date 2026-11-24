@@ -2,7 +2,9 @@ import { ACTIVE_RUN_STATUSES } from "@shared/api";
 import type {
   ICiStatus,
   ICiStepStatus,
+  IRunCounts,
   IRunPhase,
+  IRunRecord,
   IRunStatus,
   IStepState,
   ITestStatus,
@@ -200,4 +202,26 @@ export function isActiveStatus(status: IRunStatus): boolean {
 /** Neither waiting nor going: the run is over (whichever way). */
 export function isFinishedStatus(status: IRunStatus): boolean {
   return status !== "queued" && !isActiveStatus(status);
+}
+
+/** Run statuses that read as a failure, whatever the counts say. */
+const FAILED_RUN_STATUSES: ReadonlySet<IRunStatus> = new Set([
+  "failed",
+  "crashed",
+  "timedout",
+  "killed",
+]);
+
+/** A run that failed, or one with failed tests so far (the Runs page's Failed filter). */
+export function isFailedRun(run: IRunRecord): boolean {
+  const counts = run.summary ?? run.progress;
+  return (
+    FAILED_RUN_STATUSES.has(run.status) ||
+    (counts !== null && counts.failed > 0)
+  );
+}
+
+/** Tests a run has finished, whichever way (its total less the ones going or waiting). */
+export function doneCount(counts: IRunCounts): number {
+  return counts.total - counts.running - counts.queued;
 }

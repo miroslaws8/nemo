@@ -5,7 +5,7 @@ import { useTitle } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 import CodeView from "@/components/CodeView.vue";
 import PageBar from "@/components/PageBar.vue";
-import RunListItem from "@/components/RunListItem.vue";
+import RunRow from "@/components/RunRow.vue";
 import SkillChip from "@/components/SkillChip.vue";
 import SkillChips from "@/components/SkillChips.vue";
 import SkillOverview from "@/components/SkillOverview.vue";
@@ -33,6 +33,7 @@ import { mayEditSkills, mayPromoteSkills, mayStartRuns } from "@/state/access";
 import { consoleConfig } from "@/state/config";
 import { openNewRun } from "@/state/dialogs";
 import { runs } from "@/state/runs";
+import { me } from "@/state/session";
 import type { IPermission } from "@/types";
 
 // One skill: what it does as its skill.yaml says, what Hermes reads (SKILL.md), the file itself,
@@ -354,17 +355,18 @@ function run(): void {
       </TabsContent>
 
       <TabsContent value="checks" class="mt-5">
-        <ul
+        <div
           v-if="checks.length > 0"
-          class="divide-y rounded-lg border bg-card px-1 py-1"
+          class="overflow-hidden rounded-lg border bg-card [&>*:last-child]:border-b-0"
         >
-          <RunListItem
+          <RunRow
             v-for="check in checks"
             :key="check.id"
             :run="check"
             :now="now"
+            :show-person="me?.mode === 'server'"
           />
-        </ul>
+        </div>
         <p v-else class="text-sm text-muted-foreground">
           No check of it among the console's runs yet.
         </p>

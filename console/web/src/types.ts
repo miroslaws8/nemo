@@ -190,3 +190,6 @@ export interface ISidebarNavItem {
   // Whether the page at this path belongs to the item (its row then has the active fill).
   matches: (path: string) => boolean;
 }
+
+/** The Runs page's filter: every run, or the failed ones (`?show=failed`). */
+export type IRunFilter = "all" | "failed";

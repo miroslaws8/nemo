@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import CiPage from "@/pages/CiPage.vue";
-import HomePage from "@/pages/HomePage.vue";
 import RunPage from "@/pages/RunPage.vue";
+import RunsPage from "@/pages/RunsPage.vue";
 import SignInPage from "@/pages/SignInPage.vue";
 import SkillComposePage from "@/pages/SkillComposePage.vue";
 import SkillNewPage from "@/pages/SkillNewPage.vue";
@@ -21,7 +21,7 @@ function textOf(value: unknown): string | null {
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: "/", name: "home", component: HomePage },
+    { path: "/", name: "home", component: RunsPage },
     { path: "/runs/:id", name: "run", component: RunPage, props: true },
     {
       path: "/ci/:number(\\d+)",
