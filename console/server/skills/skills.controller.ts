@@ -14,6 +14,7 @@ import {
   promoteSkillRequestSchema,
   replaceSkillRequestSchema,
   skillCheckRequestSchema,
+  writeSkillRequestSchema,
 } from "../../shared/api";
 import { SKILL_EDITOR } from "../../shared/access";
 import type {
@@ -27,6 +28,8 @@ import type {
   ISkillTemplateList,
   ISkillList,
   ISkillOrigin,
+  ISkillWritten,
+  IWriteSkillRequest,
 } from "../../shared/types";
 import { Access } from "../common/access.decorator";
 import { Actor, SearchParams } from "../common/request-params";
@@ -35,6 +38,7 @@ import { HttpError } from "../http-error";
 import type { IActor } from "../types";
 import { SkillCatalog } from "./skill-catalog";
 import { SkillChecks } from "./skill-check";
+import { SkillWriter } from "./skill-writer";
 
 // The Skills page (docs/guide.md → QA Console → Skills): every skill agent checks may follow, and adding
 // one or giving one a new version from a skill.yaml — checked, then written (a local console: the
@@ -76,7 +80,8 @@ function versionOf(query: URLSearchParams): number | null {
 export class SkillsController {
   constructor(
     private readonly catalog: SkillCatalog,
-    private readonly checks: SkillChecks
+    private readonly checks: SkillChecks,
+    private readonly writer: SkillWriter
   ) {}
 
   @Get()
@@ -128,6 +133,16 @@ export class SkillsController {
       .type("text/yaml; charset=utf-8")
       .attachment(`${name}.skill.yaml`)
       .send(text);
+  }
+
+  // A skill.yaml written by AI from a description, checked; nothing is added (the form does that).
+  @Post("write")
+  @Access(SKILL_EDITOR)
+  @HttpCode(200)
+  write(
+    @Body(new ZodBodyPipe(writeSkillRequestSchema)) request: IWriteSkillRequest
+  ): Promise<ISkillWritten> {
+    return this.writer.write(request.description);
   }
 
   // Changes nothing: the page asks at every pause in typing (not in the audit log).

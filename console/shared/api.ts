@@ -241,6 +241,10 @@ export const consoleConfigSchema = z.object({
     reason: null,
     channels: false,
   }),
+  // Writing a skill from a description here (Skills → Add skill → Describe it), or why not.
+  skillWriting: z
+    .object({ available: z.boolean(), reason: z.string().nullable() })
+    .default({ available: false, reason: null }),
   // Writing tests with AI here (New run → Write a test), or why not.
   authoring: z
     .object({ available: z.boolean(), reason: z.string().nullable() })
@@ -498,6 +502,18 @@ export const skillCheckSchema = z.object({
 });
 
 /** POST /api/skills */
+/** POST /api/skills/write: what the skill should check, in a person's words. */
+export const writeSkillRequestSchema = z.strictObject({
+  description: z.string().trim().min(10).max(1000),
+});
+
+/** What the model wrote, as the console checked it: open it in the form, fix, add. */
+export const skillWrittenSchema = z.object({
+  name: z.string(),
+  yaml: z.string(),
+  problems: z.array(skillProblemSchema),
+});
+
 export const addSkillRequestSchema = z.strictObject({
   name: z.string().max(100),
   yaml: skillYamlSchema,

@@ -4,6 +4,7 @@ import { SKILL_STORE, WORKSPACE } from "../core/tokens";
 import type { IWorkspace } from "../types";
 import { SkillCatalog } from "./skill-catalog";
 import { SkillChecks } from "./skill-check";
+import { SkillWriter } from "./skill-writer";
 import type { ISkillStore } from "./skill-stores";
 import { SkillsController } from "./skills.controller";
 
@@ -24,6 +25,15 @@ import { SkillsController } from "./skills.controller";
       useFactory: (store: ISkillStore, catalog: SkillCatalog) =>
         new SkillChecks(store, catalog),
       inject: [SKILL_STORE, SkillCatalog],
+    },
+    {
+      provide: SkillWriter,
+      useFactory: (
+        checks: SkillChecks,
+        catalog: SkillCatalog,
+        agents: AgentRuns
+      ) => new SkillWriter(checks, catalog, agents),
+      inject: [SkillChecks, SkillCatalog, AgentRuns],
     },
   ],
 })

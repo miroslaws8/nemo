@@ -192,6 +192,22 @@ export class AgentRuns implements IRunKind {
     };
   }
 
+  /** Other AI work of the console (writing a skill) counts against the same daily limit. */
+  checkAiBudget(): void {
+    const { todayUsd, dailyUsd } = this.spend();
+    if (todayUsd >= dailyUsd) {
+      throw new HttpError(
+        429,
+        `The console's AI spent $${todayUsd} today, its limit of $${dailyUsd} (QA_CONSOLE_AGENT_DAILY_USD): try again tomorrow (UTC)`
+      );
+    }
+  }
+
+  /** What such work cost, under an id of its own. */
+  recordSpend(id: string, usd: number): void {
+    this.ledger.add(id, usd);
+  }
+
   /** The skills CI has the console run on `env` (agent_checks in the commit's e2e.config.yaml). */
   async listedChecks(env: string, source: IRunSource): Promise<string[]> {
     const parsed = listedChecksSchema.safeParse(

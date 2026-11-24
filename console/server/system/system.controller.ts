@@ -17,6 +17,7 @@ import { Access } from "../common/access.decorator";
 import { Actor, SearchParams } from "../common/request-params";
 import { SETTINGS, SKILL_STORE, WORKSPACE } from "../core/tokens";
 import type { ISkillStore } from "../skills/skill-stores";
+import { skillWriting } from "../skills/skill-writer";
 import { offeredEnvironments, requireOffered } from "../environments";
 import { HttpError } from "../http-error";
 import { RunManager } from "../run-manager";
@@ -115,6 +116,7 @@ export class SystemController {
         channels: this.skillStore.kind !== "working-tree",
       },
       authoring: this.workspace.authoring,
+      skillWriting: skillWriting(),
       agents: this.agents.info(),
     };
   }

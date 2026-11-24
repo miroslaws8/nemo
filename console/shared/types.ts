@@ -79,6 +79,8 @@ import type {
   runSourceSchema,
   startAgentRunRequestSchema,
   startAuthorRunRequestSchema,
+  writeSkillRequestSchema,
+  skillWrittenSchema,
   TEST_SOURCES,
 } from "./api";
 
@@ -148,6 +150,8 @@ export type ISkillTemplateList = z.infer<typeof skillTemplateListSchema>;
 export type IAgentSpend = z.infer<typeof agentSpendSchema>;
 export type IStartAgentRunRequest = z.infer<typeof startAgentRunRequestSchema>;
 export type IAuthorRun = z.infer<typeof authorRunSchema>;
+export type IWriteSkillRequest = z.infer<typeof writeSkillRequestSchema>;
+export type ISkillWritten = z.infer<typeof skillWrittenSchema>;
 export type IStartAuthorRunRequest = z.infer<
   typeof startAuthorRunRequestSchema
 >;
