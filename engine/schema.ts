@@ -236,6 +236,8 @@ export const testFileSchema = z.strictObject({
         .regex(/^[a-z0-9-]+$/, "tags are lowercase words joined by dashes")
     )
     .default([]),
+  // Only these environments run the file (e.g. a test that writes data: [staging]); left out, all.
+  environments: z.array(z.string().min(1)).min(1).optional(),
   // A setup name, or { name: { ...params } } to pass params (e.g. { order: { as: other_order } }).
   setup: z.array(z.union([z.string().min(1), recordSchema])).default([]),
   each: eachSchema.optional(),

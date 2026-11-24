@@ -304,19 +304,50 @@ export function parseTestSuite(
   checkSignedOut(environment, setupCalls, cases, file, templates);
   checkTitles(definition.suite, cases, file);
 
+  const environments = definition.environments ?? null;
+  const known = Object.keys(loadE2eConfig().environments);
+  const unknown = (environments ?? []).filter((name) => !known.includes(name));
+  if (unknown.length > 0) {
+    throw new Error(
+      `${file}: environments: no environment ${unknown.join(
+        ", "
+      )} — e2e.config.yaml defines: ${known.join(", ")}`
+    );
+  }
+
   return {
     file,
     suite: definition.suite,
     tier: definition.tier,
     tags: definition.tags,
+    environments,
     cases,
   };
 }
 
 /** Reads every tests/**\/*.test.yaml; a malformed file fails the whole run with its location. */
+/** The suites `environment` runs: a file with `environments` runs only there. */
+export function forEnvironment(
+  suites: ITestSuite[],
+  environment: IEnvironment
+): ITestSuite[] {
+  return suites.filter(
+    (suite) =>
+      suite.environments === null ||
+      suite.environments.includes(environment.name)
+  );
+}
+
 export function loadTestSuites(environment: IEnvironment): ITestSuite[] {
-  return findTestFiles(environment).map((filePath) => {
-    const file = path.relative(E2E_ROOT, filePath);
-    return parseTestSuite(file, readYamlDocument(filePath, file), environment);
-  });
+  return forEnvironment(
+    findTestFiles(environment).map((filePath) => {
+      const file = path.relative(E2E_ROOT, filePath);
+      return parseTestSuite(
+        file,
+        readYamlDocument(filePath, file),
+        environment
+      );
+    }),
+    environment
+  );
 }

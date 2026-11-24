@@ -283,6 +283,8 @@ export interface ITestSuite {
   suite: string;
   tier: string;
   tags: string[];
+  // The environments that run it (`environments` in the file); null: every one.
+  environments: string[] | null;
   cases: ITestCase[];
 }
 
@@ -468,6 +470,14 @@ export interface IAuthorStep {
   keyword: string;
   args: unknown;
   submits: boolean;
+}
+
+/** The YAML test the author wrote (engine/ai/author/draft.ts). */
+export interface IAuthorDraft {
+  yaml: string;
+  slug: string;
+  tier: "smoke" | "regression";
+  submitsForm: boolean;
 }
 
 /** One tool call of the author and what came of it. */
