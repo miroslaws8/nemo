@@ -3,77 +3,82 @@
 
 /*
  * Status is the only colour in the console: a run or a test is pass / fail / flaky / run / stop /
- * idle, and everything else is navy ink on a cool paper canvas. The theme follows the
- * system (prefers-color-scheme), which is also what Tailwind's `dark:` variant means here.
+ * idle, and everything else is neutral ink on a quiet grey paper. Dense, Linear-like: 13px body
+ * text, Inter and JetBrains Mono, 6px and 8px radii. The theme follows the system
+ * (prefers-color-scheme), which is also what Tailwind's `dark:` variant means here.
  */
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.375rem;
 
-  --paper: #f4f5f7;
+  --paper: #f5f5f6;
   --background: #ffffff;
-  --foreground: #071a31;
+  --foreground: #1a1b1e;
   --card: #ffffff;
-  --card-foreground: #071a31;
+  --card-foreground: #1a1b1e;
   --popover: #ffffff;
-  --popover-foreground: #071a31;
-  --primary: #071a31;
+  --popover-foreground: #1a1b1e;
+  --primary: #1a1b1e;
   --primary-foreground: #ffffff;
-  --secondary: #edf0f3;
-  --secondary-foreground: #071a31;
-  --muted: #edf0f3;
-  --muted-foreground: #5a6776;
-  --accent: #e9edf2;
-  --accent-foreground: #071a31;
-  --destructive: #b42318;
+  --secondary: #f3f3f5;
+  --secondary-foreground: #1a1b1e;
+  --muted: #f3f3f5;
+  --muted-foreground: #6b6e76;
+  --faint: #9b9ea5;
+  --accent: #ebebee;
+  --accent-foreground: #1a1b1e;
+  --destructive: #d6392b;
   --destructive-foreground: #ffffff;
-  --border: #e1e5ea;
-  --input: #d3d9e0;
-  --ring: #1e5ea7;
+  --border: #e8e8eb;
+  --input: #e1e1e5;
+  --ring: #3b78d8;
 
-  --pass: #1b7a3d;
-  --fail: #c0291d;
-  --flaky: #a96400;
-  --run: #1e5ea7;
-  --stop: #4a5565;
-  --idle: #97a1ae;
+  --pass: #1f8f4e;
+  --fail: #d6392b;
+  --flaky: #c27c0e;
+  --run: #3b78d8;
+  --stop: #5b616b;
+  --idle: #a3a7ae;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #0a111b;
-    --background: #101925;
-    --foreground: #e2e8f0;
-    --card: #101925;
-    --card-foreground: #e2e8f0;
-    --popover: #142031;
-    --popover-foreground: #e2e8f0;
-    --primary: #e2e8f0;
-    --primary-foreground: #0a111b;
-    --secondary: #1a2534;
-    --secondary-foreground: #e2e8f0;
-    --muted: #1a2534;
-    --muted-foreground: #93a0b1;
-    --accent: #1e2a3b;
-    --accent-foreground: #e2e8f0;
-    --destructive: #f0675d;
-    --destructive-foreground: #0a111b;
-    --border: #212e40;
-    --input: #2b3a4f;
+    --paper: #0b0c0e;
+    --background: #111215;
+    --foreground: #ecedef;
+    --card: #111215;
+    --card-foreground: #ecedef;
+    --popover: #16171a;
+    --popover-foreground: #ecedef;
+    --primary: #ecedef;
+    --primary-foreground: #0b0c0e;
+    --secondary: #17181c;
+    --secondary-foreground: #ecedef;
+    --muted: #17181c;
+    --muted-foreground: #8b8f98;
+    --faint: #5d616a;
+    --accent: #1d1f24;
+    --accent-foreground: #ecedef;
+    --destructive: #f2695f;
+    --destructive-foreground: #0b0c0e;
+    --border: #1f2126;
+    --input: #26282e;
     --ring: #6aa6ea;
 
     --pass: #4cc283;
-    --fail: #f26b61;
-    --flaky: #efb43f;
+    --fail: #f2695f;
+    --flaky: #e8ad3d;
     --run: #6aa6ea;
-    --stop: #a4b0c0;
-    --idle: #627187;
+    --stop: #a4acb8;
+    --idle: #5f6570;
   }
 }
 
 @theme inline {
-  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
 
   --radius-sm: calc(var(--radius) - 2px);
   --radius-md: var(--radius);
@@ -93,6 +98,7 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
@@ -116,5 +122,9 @@
   html,
   body {
     @apply bg-paper text-foreground font-sans antialiased;
+  }
+  body {
+    letter-spacing: -0.005em;
+    font-feature-settings: "cv11", "ss01";
   }
 }
