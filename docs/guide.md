@@ -573,6 +573,36 @@ there (prod here); with AI off, `ai_check` only attaches the screenshot and the 
 QA console (`pnpm console`) runs with this machine's `.env`, so its runs are judged like the CLI's;
 a server console's runs get no AI keys yet, and their `ai_check` steps are not judged.
 
+## Writing a test with AI
+
+Describe what to check; the AI walks it in a browser with nemo's own steps and writes the test:
+
+```bash
+pnpm author --env demo "On a phone, the FAQ question about where data lives opens its answer"
+pnpm author --env staging "the contact form sends a message" --verify 2 --save
+```
+
+- **How:** the project `<env>:author` (`engine/author.spec.ts`) opens the site signed in, on the
+  environment's device, and shows the model the screen and the ARIA snapshot; the model calls one
+  step at a time (`goto`, `click`, `fill`, `press`, `expect…`, `ai_check`) and sees the page again.
+  A step that fails is not kept. When the goal is reached it adds the assertions that prove it
+  and calls `finish`. The draft is `reports/author/<run id>/<slug>.test.yaml`, with
+  `result.json` (every step it tried) and a screenshot per turn.
+- **Verified:** the draft is then run on its own, without retries, `--verify` times in a row
+  (default 1); an `ai_check` in it counts only when judged `pass`. Only a verified draft is saved:
+  `--save` copies it to the environment's tests folder (`tests/<tests>/`, else `tests/authored/`),
+  never over a file. Read it, then commit it.
+- **Safety, in the engine:** never on a `guarded` environment (write on staging; the test runs on
+  prod too); no `goto` off the site, and a click that leaves it is undone; no click on a control
+  named with a word of `ai.author.avoid` (pay, buy, checkout, purchase, publish, delete, remove,
+  sign out, log out, unsubscribe). Forms: only where the environment sets `author_writes: true`
+  (staging here) may it send one; such a test is `regression`, tagged `writes`, runs only on that
+  environment (`environments: [staging]`) and is not cleaned up. Elsewhere it never sends a form.
+- **Settings:** `ai.author: { model, max_actions: 30, avoid: […] }`, a role with tool calling and
+  vision. `params` on a model go into the request as they are: OpenAI's reasoning models take
+  tools in Chat Completions only with `params: { reasoning_effort: none }` (the role `tools` here).
+- A test file may name the environments that run it: `environments: [staging]`.
+
 ## A test file
 
 ```yaml

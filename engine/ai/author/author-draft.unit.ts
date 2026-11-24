@@ -76,6 +76,26 @@ describe("the author's draft", () => {
     assert.deepEqual(suite.environments, ["staging"]);
   });
 
+  test("a goto to the site's own URL becomes its route", () => {
+    const draft = draftTest(
+      "home",
+      "home opens",
+      [
+        { keyword: "goto", args: "https://edplay.ai/", submits: false },
+        {
+          keyword: "goto",
+          args: "https://edplay.ai/pricing?x=1",
+          submits: false,
+        },
+      ],
+      demo,
+      false
+    );
+    assert.match(draft.yaml, /- goto: \/\n/);
+    assert.match(draft.yaml, /- goto: \/pricing\?x=1\n/);
+    assert.ok(!draft.yaml.includes("https://edplay.ai"));
+  });
+
   test("a submitted form where writes are not allowed is refused", () => {
     assert.throws(
       () =>

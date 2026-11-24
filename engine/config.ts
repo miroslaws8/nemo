@@ -72,6 +72,9 @@ const environmentSettingsSchema = z.strictObject({
     })
     .optional(),
   allowed_tiers: z.array(nameSchema).min(1).optional(),
+  // pnpm author may send forms here (its tests then write data that is not cleaned up): only
+  // where no real data lives, never prod. Elsewhere it refuses to submit.
+  author_writes: z.boolean().default(false),
   // `ai: false`: no AI here, whatever the `ai` section says.
   ai: aiSwitchSchema,
   // Runs write real data with the shared QA account: tools ask for an explicit confirmation.

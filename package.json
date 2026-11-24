@@ -8,6 +8,7 @@
     "test:list": "playwright test --list",
     "unit": "tsx --test --test-timeout=30000 \"engine/**/*.unit.ts\"",
     "demo": "E2E_ENV=demo playwright test",
+    "author": "tsx engine/scripts/author.ts",
     "report": "playwright show-report reports/html",
     "ui": "tsx engine/scripts/ui.ts",
     "console": "pnpm --dir console/server start",

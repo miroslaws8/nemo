@@ -80,6 +80,7 @@ function settings(overrides: Partial<IAiModelSettings>): IAiModelSettings {
     keyVariable: "QA_AI_KEY",
     vision: true,
     usdPerMillion: { input: 1, output: 1 },
+    params: {},
     ...overrides,
   };
 }
@@ -257,6 +258,33 @@ describe("tool calling", () => {
       { id: "toolu_1", name: "click", input: { button: "Open menu" } },
     ]);
     assert.equal(reply.text, "Opening it.");
+  });
+});
+
+describe("model params", () => {
+  test("go into the request body as they are (openai)", async () => {
+    const { fetchImpl, seen } = fakeFetch(200, OPENAI_REPLY);
+    await MODEL_PROTOCOLS.openai.complete(
+      settings({ params: { reasoning_effort: "none" } }),
+      "key",
+      REQUEST,
+      fetchImpl
+    );
+    assert.equal(seen[0].body.reasoning_effort, "none");
+  });
+
+  test("go into the request body as they are (anthropic)", async () => {
+    const { fetchImpl, seen } = fakeFetch(200, ANTHROPIC_REPLY);
+    await MODEL_PROTOCOLS.anthropic.complete(
+      settings({
+        protocol: "anthropic",
+        params: { service_tier: "standard_only" },
+      }),
+      "key",
+      REQUEST,
+      fetchImpl
+    );
+    assert.equal(seen[0].body.service_tier, "standard_only");
   });
 });
 

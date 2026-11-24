@@ -73,6 +73,7 @@ export const anthropicProtocol: IModelProtocol = {
       maxRetries: 1,
     });
     const message = await client.messages.create({
+      ...settings.params,
       model: settings.model,
       max_tokens: request.maxTokens,
       system: request.system,

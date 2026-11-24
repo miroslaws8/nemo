@@ -27,6 +27,7 @@ function settings(
           overrides.keyVariable === undefined ? KEY : overrides.keyVariable,
         vision: true,
         usdPerMillion: { input: 0.5, output: 2 },
+        params: {},
       },
     },
     judge: {

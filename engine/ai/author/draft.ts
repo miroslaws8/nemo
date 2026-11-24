@@ -24,6 +24,22 @@ function clean(text: string): string {
   return text.replace(TITLE_SEPARATOR, "-").replace(/\s+/g, " ").trim();
 }
 
+/** A goto to the site's own address as its route, so the test follows QA_<NAME>_URL. */
+function asRoute(step: IAuthorStep, baseUrl: string): IAuthorStep {
+  if (step.keyword !== "goto" || typeof step.args !== "string") {
+    return step;
+  }
+  const base = new URL(baseUrl).origin;
+  try {
+    const url = new URL(step.args);
+    return url.origin === base
+      ? { ...step, args: `${url.pathname}${url.search}${url.hash}` }
+      : step;
+  } catch {
+    return step;
+  }
+}
+
 function slugOf(goal: string): string {
   const slug = goal
     .toLowerCase()
@@ -56,7 +72,9 @@ export function draftTest(
     tests: [
       {
         name: clean(summary) || clean(goal),
-        steps: kept.map((step) => ({ [step.keyword]: step.args })),
+        steps: kept
+          .map((step) => asRoute(step, environment.baseUrl))
+          .map((step) => ({ [step.keyword]: step.args })),
       },
     ],
   };

@@ -14,6 +14,7 @@ const SETTINGS: IAiSettings = {
       keyVariable: KEY,
       vision: true,
       usdPerMillion: { input: 1, output: 1 },
+      params: {},
     },
   },
   judge: {

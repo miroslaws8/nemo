@@ -32,7 +32,7 @@ const REPEAT_SETTLE_MS = 3_000;
 // here (the least to wait; the API's longer advice wins).
 const RATE_LIMIT_REPLAY_FLOORS_MS = [5_000, 30_000];
 
-const TEST_FRAME: IStepFrame = {
+export const TEST_FRAME: IStepFrame = {
   params: null,
   numberPrefix: "",
   callChain: [],

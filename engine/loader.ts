@@ -39,6 +39,11 @@ function isInFolder(entry: string, folder: string): boolean {
 // An environment's own folder (`tests` in e2e.config.yaml), else every test outside the folders
 // other environments name: a public demo's tests never run against staging.
 function findTestFiles(environment: IEnvironment): string[] {
+  // One file, wherever it is: a draft to verify (pnpm author), not the suite.
+  const single = process.env.E2E_TEST_FILE?.trim() ?? "";
+  if (single !== "") {
+    return [path.resolve(E2E_ROOT, single)];
+  }
   const ownFolder = environment.testsFolder;
   const claimedFolders = Object.values(loadE2eConfig().environments).flatMap(
     (settings) => (settings.tests === undefined ? [] : [settings.tests])

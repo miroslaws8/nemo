@@ -103,6 +103,10 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
 - Every model answer is validated with zod (`parseJsonAnswer`); every call counts against the
   run's budget (`engine/ai/spend.ts`). AI never turns a failed deterministic step green; an
   answer it is unsure of, or none, is an `ai review` annotation, never a silent pass.
+- `pnpm author` (`engine/author.spec.ts`, `engine/ai/author/`) writes a test from a description:
+  the model calls the step registry's steps as tools; guards (site, `ai.author.avoid`, forms only
+  where `author_writes`) run in the engine before a step, never only in the prompt; a draft is
+  saved only after it passed a run of its own.
 - Unit tests are `engine/**/*.unit.ts` (`node:test`, `pnpm unit`); they call no real model.
 
 ## Engine code (TypeScript)

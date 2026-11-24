@@ -33,6 +33,9 @@ const modelSchema = z.strictObject({
     .nullable(),
   // It reads images: the judge sends screenshots.
   vision: z.boolean().default(false),
+  // More fields for the request body, as the provider names them, e.g. { reasoning_effort: none }
+  // (OpenAI's reasoning models take tools only so). How one model differs, without code.
+  params: z.record(z.string(), z.unknown()).default({}),
   // List prices, for the run's budget.
   usd_per_million: z.strictObject({
     input: z.number().min(0),

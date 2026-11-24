@@ -1,6 +1,4 @@
-import { createModelClient } from "./ai/client";
-import { resolveAiSettings } from "./ai/settings";
-import { runSpend } from "./ai/spend";
+import { aiRunContext } from "./ai/run-context";
 import { loadE2eConfig } from "./config";
 import { environmentVariables, getEnvironment } from "./environment";
 import { test } from "./fixtures";
@@ -8,34 +6,15 @@ import { loadTestSuites } from "./loader";
 import { withRateLimitNote } from "./rate-limit";
 import { runTestCase } from "./runner";
 import { runVariables, testVariables } from "./run-info";
-import { selectedProfileName } from "./run-selection";
 import { assertNoErrors } from "./steps/assertions";
-import type { IAiRunContext, ITestBody, ITestCase } from "./types";
+import type { ITestBody, ITestCase } from "./types";
 
 // The only Playwright spec: it turns every tests/**/*.test.yaml into Playwright tests.
 // Tests are written in YAML; nothing here needs editing to add one.
 
 const environment = getEnvironment();
 
-// The run's AI, once per worker: the judge's models, sharing the run's budget.
-function aiRunContext(): IAiRunContext | null {
-  const settings = resolveAiSettings(environment.name, selectedProfileName());
-  if (settings === null) {
-    return null;
-  }
-  const spend = runSpend();
-  const escalateTo = settings.judge.escalateTo;
-  return {
-    settings,
-    primary: createModelClient(settings, settings.judge.model, spend),
-    escalation:
-      escalateTo === null
-        ? null
-        : createModelClient(settings, escalateTo, spend),
-  };
-}
-
-const ai = aiRunContext();
+const ai = aiRunContext(environment);
 
 function createTestBody(testCase: ITestCase): ITestBody {
   return async ({ page, api, resources, errorMonitor }, testInfo) => {

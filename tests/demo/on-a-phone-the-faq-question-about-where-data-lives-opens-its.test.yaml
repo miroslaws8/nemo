@@ -1,0 +1,15 @@
+# yaml-language-server: $schema=../../schema/test-file.schema.json
+# Written by `pnpm author` from a description, and verified by a run of its own.
+suite: On a phone, the FAQ question about where data lives opens its answer
+tier: smoke
+tags:
+  - authored
+tests:
+  - name: On the phone-sized homepage, open “Where does our data live?” and verify its answer is visible.
+    steps:
+      - goto: /
+      - click:
+          button: Where does our data live?
+      - expect_visible:
+          role: region
+          name: Where does our data live?

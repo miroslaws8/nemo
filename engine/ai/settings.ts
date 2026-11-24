@@ -27,6 +27,7 @@ export function resolveAiSettingsFrom(
       keyVariable: model.key,
       vision: model.vision,
       usdPerMillion: { ...model.usd_per_million },
+      params: { ...model.params },
     };
   }
   return {

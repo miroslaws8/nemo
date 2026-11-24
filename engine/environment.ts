@@ -105,6 +105,7 @@ export function buildEnvironment(name: string): IEnvironment {
     apiUrl: apiUrl === undefined ? null : withoutTrailingSlash(apiUrl),
     allowedTiers: settings.allowed_tiers ?? null,
     signsIn: settings.credentials !== undefined,
+    authorWrites: settings.author_writes,
     device: settings.device ?? null,
     testsFolder: settings.tests ?? null,
     guarded: settings.guarded,

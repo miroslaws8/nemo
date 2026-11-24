@@ -78,6 +78,22 @@ describe("ai settings", () => {
     });
   });
 
+  test("model params pass through", () => {
+    const result = parseConfig(
+      configText(
+        MINIMAL_AI.replace(
+          "vision: true,",
+          "vision: true, params: { reasoning_effort: none },"
+        )
+      )
+    );
+    assert.ok(result.success, String(result.error));
+    assert.deepEqual(
+      resolveAiSettingsFrom(result.data, "demo", "smoke")?.models.fast.params,
+      { reasoning_effort: "none" }
+    );
+  });
+
   test("no ai section", () => {
     const result = parseConfig(configText(""));
     assert.ok(result.success, String(result.error));

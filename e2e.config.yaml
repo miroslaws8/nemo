@@ -21,6 +21,7 @@ environments:
     # Where the sign-in starts, its submit button, and where the app lands once signed in.
     login: { path: /dashboard, submit: Sign in, done: /dashboard }
     api_token_cookie: idp_access_token # the API takes the session's token as a Bearer header
+    author_writes: true # pnpm author may send forms here (no real data); never on prod
     login_origin: https://auth.staging.example.com
   prod:
     # Full parity with staging: no allowed_tiers.
@@ -107,6 +108,15 @@ ai:
       key: QA_AI_OPENAI_KEY
       vision: true
       usd_per_million: { input: 0.1, output: 0.5 }
+    # The same model for tool calling (pnpm author): OpenAI's reasoning models take tools in Chat
+    # Completions only without reasoning. `params` go into the request as they are.
+    tools:
+      protocol: openai
+      model: gpt-6-luna
+      key: QA_AI_OPENAI_KEY
+      vision: true
+      params: { reasoning_effort: none }
+      usd_per_million: { input: 0.1, output: 0.5 }
     strong:
       protocol: anthropic
       model: claude-sonnet-5-5
@@ -117,3 +127,5 @@ ai:
   # be, how many more looks before escalating, and whether a confident "fail" fails the step.
   judge: { model: fast, escalate_to: strong, min_confidence: 0.7, retries: 2, blocking: true }
   budget_usd_per_run: 1 # past it, AI answers nothing more in this run
+  # pnpm author: the model that walks a described case and writes its test (tool calling + vision).
+  author: { model: tools, max_actions: 30 }

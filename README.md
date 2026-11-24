@@ -105,7 +105,10 @@ Point it at your app:
    pnpm console:setup && pnpm console                 # → http://127.0.0.1:7357
    ```
 
-A new test from a scaffold: `pnpm new smoke home "Home page"`.
+A new test from a description, written by AI that walks it in the browser and verified by a run
+of its own: `pnpm author --env demo "On a phone, the menu leads to the pricing page" --save`
+([Writing a test with AI](docs/guide.md#writing-a-test-with-ai)). From a scaffold:
+`pnpm new smoke home "Home page"`.
 
 ## Adapting it to your app
 

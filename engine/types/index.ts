@@ -56,6 +56,8 @@ export interface IEnvironment {
   allowedTiers: string[] | null;
   // It has a QA account (`credentials`): its runs sign in first. Otherwise they run signed out.
   signsIn: boolean;
+  // pnpm author may submit forms here (author_writes).
+  authorWrites: boolean;
   // The Playwright device its tests run as (`device`, e.g. "Pixel 7"); null: a desktop browser.
   device: string | null;
   // Its folder under tests/ (`tests`); null: every test no other environment claims.
@@ -341,6 +343,8 @@ export interface IAiModelSettings {
   keyVariable: string | null;
   vision: boolean;
   usdPerMillion: { input: number; output: number };
+  // Extra request-body fields for this model (ai.models.<role>.params).
+  params: Record<string, unknown>;
 }
 
 /** What a model is sent: text and screenshots. */

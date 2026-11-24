@@ -56,6 +56,20 @@ const tierProjects: PlaywrightTestProject[] = run.tiers.map((tier) => ({
   },
 }));
 
+// pnpm author (E2E_AUTHOR_GOAL): one project that walks the described case and writes its test
+// (engine/author.spec.ts), signed in and on the environment's device like the tests; no tiers.
+const authoring = (process.env.E2E_AUTHOR_GOAL?.trim() ?? "") !== "";
+const authorProject: PlaywrightTestProject = {
+  name: `${environmentName}:author`,
+  testMatch: /author\.spec\.ts$/,
+  retries: 0,
+  dependencies: signsIn ? [loginProject] : [],
+  use: {
+    ...deviceSettings,
+    ...(signsIn ? { storageState: run.environment.storageStatePath } : {}),
+  },
+};
+
 // A run with E2E_RUN_DIR (the console) writes into its own folder and streams live events; the
 // JSON and JUnit reports stay with the shared paths that CI reads.
 const paths = runPaths();
@@ -109,6 +123,6 @@ export default defineConfig({
           },
         ]
       : []),
-    ...tierProjects,
+    ...(authoring ? [authorProject] : tierProjects),
   ],
 });

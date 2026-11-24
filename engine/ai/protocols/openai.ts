@@ -101,6 +101,7 @@ export const openAiProtocol: IModelProtocol = {
       maxRetries: 1,
     });
     const completion = await client.chat.completions.create({
+      ...settings.params,
       model: settings.model,
       messages: [
         { role: "system", content: request.system },

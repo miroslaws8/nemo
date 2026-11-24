@@ -111,6 +111,18 @@ export async function captureEvidence(
   };
 }
 
+/** What is on the screen now (the window, CSS pixels) and the ARIA snapshot: the author's look. */
+export async function captureViewport(page: Page): Promise<IEvidence> {
+  const png = await page.screenshot({ scale: "css" });
+  const snapshot = await page.locator("body").ariaSnapshot();
+  const aria =
+    snapshot.length > MAX_ARIA_CHARACTERS
+      ? `${snapshot.slice(0, MAX_ARIA_CHARACTERS)}\n…(trimmed)`
+      : snapshot;
+  const top = await page.evaluate(() => Math.round(window.scrollY));
+  return { png, aria, url: originAndPath(page.url()), top, focus: null };
+}
+
 /** Lets the page come to rest before another look: network quiet, animations done (capped). */
 export async function settlePage(page: Page): Promise<void> {
   await page
