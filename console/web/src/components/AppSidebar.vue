@@ -1,12 +1,6 @@
 <script setup lang="ts">
-import {
-  ListIcon,
-  PlusIcon,
-  ScrollTextIcon,
-  WifiOffIcon,
-  WorkflowIcon,
-} from "@lucide/vue";
-import { onKeyStroke, refDebounced } from "@vueuse/core";
+import { ListIcon, PlusIcon, ScrollTextIcon, WorkflowIcon } from "@lucide/vue";
+import { onKeyStroke } from "@vueuse/core";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { Button } from "@/components/ui/button";
@@ -22,7 +16,7 @@ import { consoleConfig } from "@/state/config";
 import { navOpen, newRunOpen, openNewRun } from "@/state/dialogs";
 import { runs } from "@/state/runs";
 import { modeWords } from "@/state/session";
-import { connection } from "@/state/stream";
+import ConnectionNotice from "./ConnectionNotice.vue";
 import SidebarEnvironment from "./SidebarEnvironment.vue";
 import UserMenu from "./UserMenu.vue";
 
@@ -69,12 +63,6 @@ const navItems = computed<ISidebarNavItem[]>(() => {
   ];
   return items.filter((item) => item.shown);
 });
-
-// A short reconnect (the console restarting) is not worth a notice.
-const settled = refDebounced(connection, 1500);
-const notice = computed(() =>
-  connection.value !== "open" && settled.value !== "open" ? settled.value : null
-);
 
 function startNewRun(): void {
   navOpen.value = false;
@@ -183,19 +171,8 @@ onKeyStroke("c", (event) => {
     </template>
 
     <div class="mt-auto grid gap-1 pt-2">
-      <p
-        v-if="notice !== null"
-        role="status"
-        class="flex items-center gap-1.5 px-2 text-xs"
-        :class="notice === 'lost' ? 'text-fail' : 'text-muted-foreground'"
-      >
-        <WifiOffIcon class="size-3.5 shrink-0" aria-hidden="true" />
-        {{
-          notice === "lost"
-            ? "The console does not answer"
-            : "Reconnecting to the console…"
-        }}
-      </p>
+      <!-- Below `md` the page bar says it instead: one notice in the accessibility tree. -->
+      <ConnectionNotice class="hidden px-2 md:flex" />
       <UserMenu />
     </div>
   </div>

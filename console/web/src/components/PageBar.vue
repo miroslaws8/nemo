@@ -2,10 +2,11 @@
 import { MenuIcon } from "@lucide/vue";
 import { Button } from "@/components/ui/button";
 import { navOpen } from "@/state/dialogs";
+import ConnectionNotice from "./ConnectionNotice.vue";
 
 // A page's title bar at the top of the panel: its crumbs on the left (one element each; a faint
 // `›` goes between them), its actions on the right. Below `md` it also holds the button that
-// opens the sidebar.
+// opens the sidebar, and the connection notice the sidebar shows from `md` up.
 </script>
 
 <template>
@@ -27,6 +28,8 @@ import { navOpen } from "@/state/dialogs";
     >
       <slot />
     </nav>
+    <!-- From `md` up the sidebar's foot says it. -->
+    <ConnectionNotice class="flex shrink-0 md:hidden" />
     <div
       v-if="$slots.actions"
       class="ml-auto flex shrink-0 items-center gap-1.5"

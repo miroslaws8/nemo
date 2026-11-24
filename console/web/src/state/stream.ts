@@ -6,7 +6,8 @@ import {
 } from "@shared/api";
 import { emptyRunState, reduceRun } from "@shared/reducer";
 import type { ILiveEvent, IRunState } from "@shared/types";
-import { reactive, ref } from "vue";
+import { refDebounced } from "@vueuse/core";
+import { computed, reactive, ref } from "vue";
 import type { IConnectionState } from "@/types";
 import { applyCi, loadCi } from "./ci";
 import { reloadRuns, removeRuns, upsertRun } from "./runs";
@@ -21,6 +22,14 @@ const BATCH_MS = 40;
 const RECONNECT_MS = 3000;
 
 export const connection = ref<IConnectionState>("connecting");
+// A short reconnect (the console restarting) is not worth a notice.
+const settledConnection = refDebounced(connection, 1500);
+/** What the connection notice says (ConnectionNotice.vue): null while all is well. */
+export const connectionNotice = computed<IConnectionState | null>(() =>
+  connection.value !== "open" && settledConnection.value !== "open"
+    ? settledConnection.value
+    : null
+);
 /** The run whose events this tab follows; null follows the run list only. */
 export const followedRunId = ref<string | null>(null);
 /** The followed run, as its events tell it. */
