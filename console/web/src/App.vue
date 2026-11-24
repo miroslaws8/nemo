@@ -74,7 +74,10 @@ watch(
   </div>
   <TooltipProvider v-else :delay-duration="300">
     <div class="flex h-dvh bg-paper text-foreground">
-      <aside class="hidden w-58 shrink-0 flex-col p-2 md:flex">
+      <aside
+        aria-label="Console"
+        class="hidden w-58 shrink-0 flex-col p-2 md:flex"
+      >
         <AppSidebar />
       </aside>
       <Sheet v-model:open="navOpen">

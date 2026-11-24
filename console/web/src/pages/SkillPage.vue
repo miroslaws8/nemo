@@ -14,6 +14,7 @@ import { useTitle } from "@vueuse/core";
 import { computed, ref, watch } from "vue";
 import CodeView from "@/components/CodeView.vue";
 import DeleteSkill from "@/components/DeleteSkill.vue";
+import DisabledReason from "@/components/DisabledReason.vue";
 import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import PromoteToProd from "@/components/PromoteToProd.vue";
@@ -39,6 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useClock } from "@/composables/useClock";
+import { useMenuFocusReturn } from "@/composables/useMenuFocusReturn";
 import { useSkillDetail } from "@/composables/useSkills";
 import { formatWhen } from "@/lib/format";
 import {
@@ -49,7 +51,12 @@ import {
   skillYamlUrl,
 } from "@/lib/paths";
 import { STORE_WORDS } from "@/lib/skills";
-import { mayEditSkills, mayPromoteSkills, mayStartRuns } from "@/state/access";
+import {
+  mayEditSkills,
+  mayPromoteSkills,
+  mayStartRuns,
+  refusalOf,
+} from "@/state/access";
 import { consoleConfig } from "@/state/config";
 import { openNewRun } from "@/state/dialogs";
 import { runs } from "@/state/runs";
@@ -73,6 +80,7 @@ const LINK =
 const now = useClock();
 const tab = ref("overview");
 const deleteOpen = ref(false);
+const { returnFocus } = useMenuFocusReturn("menuButton");
 const { detail, error, reload } = useSkillDetail(
   () => props.name,
   () => props.origin,
@@ -218,53 +226,50 @@ function run(): void {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink
-      :to="skillsPath(branch)"
-      class="shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-      >Skills</RouterLink
-    >
-    <span :title="title">{{ title }}</span>
+  <PageBar
+    :crumbs="[{ label: 'Skills', to: skillsPath(branch) }]"
+    :title="title"
+  >
+    {{ title }}
     <template v-if="detail !== null && skill !== null" #actions>
-      <Tooltip :disabled="running.allowed">
-        <TooltipTrigger as-child>
-          <!-- The span takes the pointer while the button is disabled, so the reason still shows. -->
-          <span class="inline-flex" :tabindex="running.allowed ? undefined : 0">
-            <Button size="sm" :disabled="!running.allowed" @click="run()">
-              <PlayIcon aria-hidden="true" />
-              Run…
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{{ running.reason }}</TooltipContent>
-      </Tooltip>
+      <DisabledReason v-slot="{ describedBy }" :reason="refusalOf(running)">
+        <Button
+          size="sm"
+          :disabled="!running.allowed"
+          :aria-describedby="describedBy"
+          @click="run()"
+        >
+          <PlayIcon aria-hidden="true" />
+          Run…
+        </Button>
+      </DisabledReason>
 
       <!-- From `md` to `lg` they keep only their icon: the tooltip says what they are. -->
-      <Tooltip v-for="action in linkActions" :key="action.label">
-        <TooltipTrigger as-child>
-          <span
-            class="inline-flex max-md:hidden"
-            :tabindex="replacing.allowed ? undefined : 0"
-          >
-            <Button
-              v-if="replacing.allowed"
-              size="sm"
-              variant="outline"
-              as-child
-            >
-              <RouterLink :to="action.to">
-                <component :is="action.icon" aria-hidden="true" />
-                <span class="max-lg:sr-only">{{ action.label }}</span>
-              </RouterLink>
-            </Button>
-            <Button v-else size="sm" variant="outline" disabled>
-              <component :is="action.icon" aria-hidden="true" />
-              <span class="max-lg:sr-only">{{ action.label }}</span>
-            </Button>
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{{ replacing.reason ?? action.label }}</TooltipContent>
-      </Tooltip>
+      <DisabledReason
+        v-for="action in linkActions"
+        :key="action.label"
+        v-slot="{ describedBy }"
+        class="max-md:hidden"
+        :reason="refusalOf(replacing)"
+        :hint="action.label"
+      >
+        <Button v-if="replacing.allowed" size="sm" variant="outline" as-child>
+          <RouterLink :to="action.to">
+            <component :is="action.icon" aria-hidden="true" />
+            <span class="max-lg:sr-only">{{ action.label }}</span>
+          </RouterLink>
+        </Button>
+        <Button
+          v-else
+          size="sm"
+          variant="outline"
+          disabled
+          :aria-describedby="describedBy"
+        >
+          <component :is="action.icon" aria-hidden="true" />
+          <span class="max-lg:sr-only">{{ action.label }}</span>
+        </Button>
+      </DisabledReason>
 
       <Tooltip v-if="yamlUrl !== null">
         <TooltipTrigger as-child>
@@ -294,11 +299,13 @@ function run(): void {
         :promoted="detail.prod !== null"
         :after-deploys="skill.afterDeploys"
         :permission="replacing"
+        @close-auto-focus="returnFocus"
       />
 
       <DropdownMenu v-if="hasMenu">
         <DropdownMenuTrigger as-child>
           <Button
+            ref="menuButton"
             size="icon-sm"
             variant="outline"
             class="md:hidden"

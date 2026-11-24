@@ -22,11 +22,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useAgentSkills } from "@/composables/useAgentSkills";
 import { useBranches } from "@/composables/useBranches";
 import { useCatalog } from "@/composables/useCatalog";
@@ -45,6 +40,7 @@ import type {
   ISelectionMode,
   ITagCount,
 } from "@/types";
+import DisabledReason from "./DisabledReason.vue";
 import NewRunAgent from "./NewRunAgent.vue";
 import NewRunAuthor from "./NewRunAuthor.vue";
 import NewRunProperties from "./NewRunProperties.vue";
@@ -157,6 +153,19 @@ const UNAVAILABLE_WORDS: Record<IRunKindChoice, () => string> = {
       ? `No tests written with AI here: ${authoring.value.reason}.`
       : "No tests written with AI on this console.",
 };
+// The same, in words the dialog may show: no setting names.
+const OFF_WORDS: Record<IRunKindChoice, string> = {
+  tests: "",
+  agent: "This console runs no agent checks.",
+  author: "This console does not write tests with AI.",
+};
+// The kind last clicked or tapped, available or not.
+const tried = ref<IRunKindChoice | null>(null);
+const triedWords = computed(() =>
+  tried.value === null || AVAILABLE[tried.value]()
+    ? null
+    : OFF_WORDS[tried.value]
+);
 const pills = computed(() => PILLS[kind.value]);
 const modelInfo = computed(() =>
   agents.value?.models.find((candidate) => candidate.id === model.value)
@@ -263,6 +272,7 @@ watch(newRunOpen, (isOpen) => {
     kind.value = "tests";
   }
   typed.value = "";
+  tried.value = null;
   // Opened from a skill's page: an agent check of it, on the branch the page shows.
   const preset = newRunPreset.value;
   newRunPreset.value = null;
@@ -505,34 +515,32 @@ async function submit(): Promise<void> {
             class="min-w-0"
             @update:model-value="chooseKind"
           >
-            <Tooltip
+            <DisabledReason
               v-for="option in KINDS"
               :key="option.value"
-              :disabled="AVAILABLE[option.value]()"
+              v-slot="{ describedBy }"
+              class="min-w-0"
+              :reason="
+                AVAILABLE[option.value]()
+                  ? null
+                  : UNAVAILABLE_WORDS[option.value]()
+              "
+              @click="tried = option.value"
             >
-              <TooltipTrigger as-child>
-                <span
-                  class="inline-flex min-w-0"
-                  :tabindex="AVAILABLE[option.value]() ? undefined : 0"
-                >
-                  <ToggleGroupItem
-                    :value="option.value"
-                    :disabled="!AVAILABLE[option.value]()"
-                    class="h-7 gap-1.5 px-2 text-xs data-[state=on]:bg-muted data-[state=on]:text-foreground data-[state=off]:text-muted-foreground"
-                  >
-                    <component
-                      :is="option.icon"
-                      class="size-3.5"
-                      aria-hidden="true"
-                    />
-                    {{ option.label }}
-                  </ToggleGroupItem>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{{
-                UNAVAILABLE_WORDS[option.value]()
-              }}</TooltipContent>
-            </Tooltip>
+              <ToggleGroupItem
+                :value="option.value"
+                :disabled="!AVAILABLE[option.value]()"
+                :aria-describedby="describedBy"
+                class="h-7 gap-1.5 px-2 text-xs data-[state=on]:bg-muted data-[state=on]:text-foreground data-[state=off]:text-muted-foreground"
+              >
+                <component
+                  :is="option.icon"
+                  class="size-3.5"
+                  aria-hidden="true"
+                />
+                {{ option.label }}
+              </ToggleGroupItem>
+            </DisabledReason>
           </ToggleGroup>
           <DialogClose as-child>
             <Button
@@ -546,6 +554,14 @@ async function submit(): Promise<void> {
             </Button>
           </DialogClose>
         </div>
+
+        <!-- A kind tapped while it is off: a touch screen shows no tooltip. -->
+        <p
+          v-if="triedWords !== null"
+          class="shrink-0 px-4 pt-1.5 text-xs text-muted-foreground"
+        >
+          {{ triedWords }}
+        </p>
 
         <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain">
           <div class="min-h-40 min-w-0 px-4 py-3">

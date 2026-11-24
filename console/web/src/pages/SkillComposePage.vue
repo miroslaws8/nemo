@@ -130,8 +130,6 @@ const crumb = computed(() =>
     ? `Copy of ${props.from}`
     : chosenTemplate.value?.label ?? "Form"
 );
-const CRUMB =
-  "rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
 
 const pageTitle = computed(() =>
   props.from !== null
@@ -201,12 +199,16 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink :to="skillsPath()" :class="CRUMB">Skills</RouterLink>
-    <RouterLink :to="newSkillPath()" :class="CRUMB">New skill</RouterLink>
-    <span :title="pageTitle">{{ crumb }}</span>
+  <PageBar
+    :crumbs="[
+      { label: 'Skills', to: skillsPath() },
+      { label: 'New skill', to: newSkillPath() },
+    ]"
+    :title="pageTitle"
+  >
+    <span aria-hidden="true">{{ crumb }}</span>
+    <span class="sr-only">{{ pageTitle }}</span>
   </PageBar>
-  <h1 class="sr-only">{{ pageTitle }}</h1>
 
   <!-- From `lg` the form and the check each scroll in their own column; below, one page. -->
   <div class="lg:flex lg:min-h-0 lg:flex-1">

@@ -4,6 +4,7 @@ import { useTitle } from "@vueuse/core";
 import type { ISkillList, ISkillOrigin } from "@shared/types";
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import DisabledReason from "@/components/DisabledReason.vue";
 import PageBar from "@/components/PageBar.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
 import SkillRow from "@/components/SkillRow.vue";
@@ -22,7 +23,7 @@ import { useSkillList } from "@/composables/useSkills";
 import { newSkillPath, skillsPath } from "@/lib/paths";
 import { sourceWords, STORE_WORDS } from "@/lib/skills";
 import { TONE_CLASSES } from "@/lib/status";
-import { mayEditSkills, mayStartRuns } from "@/state/access";
+import { mayEditSkills, mayStartRuns, refusalOf } from "@/state/access";
 import { consoleConfig, environmentNamed } from "@/state/config";
 
 // Every skill an agent check may follow: the repo's (hermes/skills of a branch: the default
@@ -102,7 +103,7 @@ function pickBranch(value: unknown): void {
 
 <template>
   <PageBar>
-    <span>Skills</span>
+    Skills
     <template #actions>
       <Select
         v-if="mayPickBranch"
@@ -127,18 +128,18 @@ function pickBranch(value: unknown): void {
           </SelectItem>
         </SelectContent>
       </Select>
-      <span :title="adding.reason ?? undefined">
+      <DisabledReason v-slot="{ describedBy }" :reason="refusalOf(adding)">
         <Button v-if="adding.allowed" size="sm" as-child>
           <RouterLink :to="newSkillPath()">
             <PlusIcon aria-hidden="true" />
             New skill
           </RouterLink>
         </Button>
-        <Button v-else size="sm" disabled>
+        <Button v-else size="sm" disabled :aria-describedby="describedBy">
           <PlusIcon aria-hidden="true" />
           New skill
         </Button>
-      </span>
+      </DisabledReason>
     </template>
   </PageBar>
 

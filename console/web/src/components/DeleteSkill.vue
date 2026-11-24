@@ -16,20 +16,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { messageOf, postJson } from "@/lib/api";
 import { deleteSkillUrl, skillsPath } from "@/lib/paths";
+import { refusalOf } from "@/state/access";
 import type { IPermission } from "@/types";
+import DisabledReason from "./DisabledReason.vue";
 
 // Deletes a skill from where this console keeps them, after a question that says what goes: from
 // the skill store for every console, from this console, or (a working copy) its folder git does
 // not keep. Runs that used it keep their reports; CI's checks of it fail until it is back. Its
-// trigger is the title bar's icon button (its reason, or what it does, as a tooltip).
+// trigger is the title bar's icon button (its reason, or what it does, as a tooltip). A page whose
+// "⋯" menu opens it below `md` (the trigger hidden there) holds `open` and takes `closeAutoFocus`
+// to put the focus back on the menu.
 
 const props = defineProps<{
   name: string;
@@ -45,6 +44,7 @@ defineOptions({ inheritAttrs: false });
 
 // Open from outside too: below `md` the page's "⋯" menu asks for it (its trigger is hidden there).
 const open = defineModel<boolean>("open", { default: false });
+const emit = defineEmits<{ closeAutoFocus: [event: Event] }>();
 const router = useRouter();
 const busy = ref(false);
 
@@ -80,30 +80,29 @@ async function remove(): Promise<void> {
 
 <template>
   <AlertDialog v-model:open="open">
-    <Tooltip>
-      <TooltipTrigger as-child>
-        <!-- The span takes the pointer while the button is disabled, so the reason still shows. -->
-        <span
-          class="inline-flex"
-          :tabindex="permission.allowed ? undefined : 0"
-          v-bind="$attrs"
+    <DisabledReason
+      v-slot="{ describedBy }"
+      :reason="refusalOf(permission)"
+      hint="Delete…"
+      v-bind="$attrs"
+    >
+      <AlertDialogTrigger as-child>
+        <Button
+          variant="outline"
+          size="icon-sm"
+          class="text-fail"
+          :disabled="!permission.allowed || busy"
+          :aria-describedby="describedBy"
         >
-          <AlertDialogTrigger as-child>
-            <Button
-              variant="outline"
-              size="icon-sm"
-              class="text-fail"
-              :disabled="!permission.allowed || busy"
-            >
-              <Trash2Icon aria-hidden="true" />
-              <span class="sr-only">Delete…</span>
-            </Button>
-          </AlertDialogTrigger>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{{ permission.reason ?? "Delete…" }}</TooltipContent>
-    </Tooltip>
-    <AlertDialogContent class="sm:max-w-md">
+          <Trash2Icon aria-hidden="true" />
+          <span class="sr-only">Delete…</span>
+        </Button>
+      </AlertDialogTrigger>
+    </DisabledReason>
+    <AlertDialogContent
+      class="sm:max-w-md"
+      @close-auto-focus="emit('closeAutoFocus', $event)"
+    >
       <AlertDialogHeader>
         <AlertDialogTitle>Delete {{ name }}?</AlertDialogTitle>
         <AlertDialogDescription class="space-y-1.5">
@@ -112,15 +111,20 @@ async function remove(): Promise<void> {
             them fails.
           </span>
           <span v-if="afterDeploys.length > 0" class="block text-fail">
-            CI runs it after deploys on {{ afterDeploys.join(" and ") }}
-            (agent_checks): those checks fail until it is back or off the list.
+            CI runs it after deploys on {{ afterDeploys.join(" and ") }}: those
+            checks fail until it is back or off
+            <span
+              class="underline decoration-dotted underline-offset-2"
+              title="agent_checks in e2e.config.yaml"
+              >CI's list</span
+            >.
           </span>
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogCancel>Keep it</AlertDialogCancel>
         <AlertDialogAction
-          class="bg-destructive text-white hover:bg-destructive/90"
+          :class="buttonVariants({ variant: 'destructive', size: 'sm' })"
           @click="remove()"
         >
           Delete {{ name }}

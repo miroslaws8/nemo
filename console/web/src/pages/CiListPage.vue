@@ -25,9 +25,7 @@ const groups = computed(() =>
 </script>
 
 <template>
-  <PageBar>
-    <span>CI</span>
-  </PageBar>
+  <PageBar>CI</PageBar>
 
   <CiStatusNote :overview="ciOverview" />
   <section v-for="group in groups" :key="group.title">

@@ -83,3 +83,8 @@ export function mayActOnPipeline(pipeline: ICiPipeline): IPermission {
     `Acting on ${pipeline.guardedEnv ?? pipeline.env ?? "this"} pipelines`
   );
 }
+
+/** Why a permission is refused, for a greyed-out control (null: it is not). */
+export function refusalOf(permission: IPermission): string | null {
+  return permission.allowed ? null : permission.reason;
+}

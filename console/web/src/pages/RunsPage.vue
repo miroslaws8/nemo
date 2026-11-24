@@ -80,12 +80,8 @@ function chooseFilter(value: unknown): void {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink v-if="environment !== null" to="/" class="hover:underline"
-      >Runs</RouterLink
-    >
-    <span v-else>Runs</span>
-    <span v-if="environment !== null">{{ environment.name }}</span>
+  <PageBar :crumbs="environment === null ? [] : [{ label: 'Runs', to: '/' }]">
+    {{ environment?.name ?? "Runs" }}
     <template #actions>
       <ToggleGroup
         type="single"

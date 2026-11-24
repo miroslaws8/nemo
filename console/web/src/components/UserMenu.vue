@@ -38,7 +38,7 @@ const guardedNames = computed(
     <DropdownMenuTrigger as-child>
       <Button
         variant="ghost"
-        class="w-full justify-start px-2 font-medium text-muted-foreground"
+        class="w-full min-w-0 shrink justify-start px-2 font-medium text-muted-foreground"
       >
         <span
           class="grid size-5 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold text-foreground uppercase ring-1 ring-border"

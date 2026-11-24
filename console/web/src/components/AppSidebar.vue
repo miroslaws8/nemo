@@ -4,20 +4,16 @@ import { onKeyStroke } from "@vueuse/core";
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { ciListPath } from "@/lib/paths";
 import type { ISidebarNavItem } from "@/types";
-import { mayStartRuns } from "@/state/access";
+import { mayStartRuns, refusalOf } from "@/state/access";
 import { ciOverview } from "@/state/ci";
 import { consoleConfig } from "@/state/config";
 import { navOpen, newRunOpen, openNewRun } from "@/state/dialogs";
 import { runs } from "@/state/runs";
 import { modeWords } from "@/state/session";
 import ConnectionNotice from "./ConnectionNotice.vue";
+import DisabledReason from "./DisabledReason.vue";
 import SidebarEnvironment from "./SidebarEnvironment.vue";
 import ThemeSwitcher from "./ThemeSwitcher.vue";
 import UserMenu from "./UserMenu.vue";
@@ -29,7 +25,9 @@ import UserMenu from "./UserMenu.vue";
 // Something already has the keyboard: a dialog, a menu or a list of options.
 const OVERLAYS =
   "[role=dialog], [role=alertdialog], [role=menu], [role=listbox]";
-const TEXT_FIELDS = "input, textarea, select, [contenteditable]";
+// A Select's trigger (a combobox) takes letters to pick its option.
+const TEXT_FIELDS =
+  "input, textarea, select, [contenteditable], [role=combobox]";
 
 const route = useRoute();
 const starting = computed(() => mayStartRuns());
@@ -100,82 +98,94 @@ onKeyStroke("c", (event) => {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col gap-0.5">
-    <RouterLink
-      to="/"
-      :aria-current="undefined"
-      class="mb-1.5 flex items-center gap-2 rounded-md px-2 py-1.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      @click="navOpen = false"
+  <div class="flex min-h-0 flex-1 flex-col">
+    <!-- What scrolls when the window is short or the environments many: never the foot. It
+         reaches into the column's padding, so the focus rings of its rows are not cut off. -->
+    <div
+      class="-mx-2 -mt-2 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-2 pt-2 pb-1"
     >
-      <span
-        class="grid size-5 shrink-0 place-items-center rounded-[5px] bg-foreground text-[11px] font-semibold text-paper"
-        aria-hidden="true"
-        >Q</span
-      >
-      <span class="flex-1 truncate text-sm font-semibold">QA Console</span>
-      <span class="shrink-0 text-xs text-faint">{{ modeWords.runsTab }}</span>
-    </RouterLink>
-
-    <Tooltip :disabled="starting.allowed">
-      <TooltipTrigger as-child>
-        <!-- The span takes the pointer while the button is disabled, so the reason still shows. -->
-        <span class="mb-2.5 block" :tabindex="starting.allowed ? undefined : 0">
-          <Button
-            variant="outline"
-            class="w-full justify-start"
-            :disabled="!starting.allowed"
-            aria-keyshortcuts="c"
-            @click="startNewRun"
-          >
-            <PlusIcon aria-hidden="true" />
-            New run
-            <kbd
-              class="ml-auto rounded border px-1 font-sans text-xs text-faint"
-              aria-hidden="true"
-              >C</kbd
-            >
-          </Button>
-        </span>
-      </TooltipTrigger>
-      <TooltipContent side="right">{{ starting.reason }}</TooltipContent>
-    </Tooltip>
-
-    <nav aria-label="The console" class="grid gap-0.5">
       <RouterLink
-        v-for="item in navItems"
-        :key="item.label"
-        :to="item.to"
-        class="flex h-7 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
-        :class="item.matches(route.path) ? 'bg-accent text-foreground' : ''"
-        :aria-current="item.matches(route.path) ? 'page' : undefined"
+        to="/"
+        :aria-current="undefined"
+        class="mb-1.5 flex items-center gap-2 rounded-md px-2 py-1.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         @click="navOpen = false"
       >
-        <component :is="item.icon" class="size-4 shrink-0" aria-hidden="true" />
-        {{ item.label }}
         <span
-          v-if="item.count !== null"
-          class="ml-auto text-xs text-faint tabular-nums"
-          >{{ item.count }}</span
+          class="grid size-5 shrink-0 place-items-center rounded-[5px] bg-foreground text-[11px] font-semibold text-paper"
+          aria-hidden="true"
+          >Q</span
         >
+        <span class="flex-1 truncate text-sm font-semibold">QA Console</span>
+        <span class="shrink-0 text-xs text-faint">{{ modeWords.runsTab }}</span>
       </RouterLink>
-    </nav>
 
-    <template v-if="consoleConfig !== null">
-      <p class="mt-4 mb-1 px-2 text-xs font-medium text-faint">Environments</p>
-      <nav aria-label="Environments" class="grid gap-0.5">
-        <SidebarEnvironment
-          v-for="environment in consoleConfig.environments"
-          :key="environment.name"
-          :environment="environment"
+      <DisabledReason
+        v-slot="{ describedBy }"
+        class="mb-2.5 w-full"
+        side="right"
+        :reason="refusalOf(starting)"
+      >
+        <Button
+          variant="outline"
+          class="w-full justify-start"
+          :disabled="!starting.allowed"
+          :aria-describedby="describedBy"
+          aria-keyshortcuts="c"
+          @click="startNewRun"
+        >
+          <PlusIcon aria-hidden="true" />
+          New run
+          <kbd
+            class="ml-auto rounded border px-1 font-sans text-xs text-faint"
+            aria-hidden="true"
+            >C</kbd
+          >
+        </Button>
+      </DisabledReason>
+
+      <nav aria-label="Main" class="grid gap-0.5">
+        <RouterLink
+          v-for="item in navItems"
+          :key="item.label"
+          :to="item.to"
+          class="flex h-7 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50"
+          :class="item.matches(route.path) ? 'bg-accent text-foreground' : ''"
+          :aria-current="item.matches(route.path) ? 'page' : undefined"
           @click="navOpen = false"
-        />
+        >
+          <component
+            :is="item.icon"
+            class="size-4 shrink-0"
+            aria-hidden="true"
+          />
+          {{ item.label }}
+          <span
+            v-if="item.count !== null"
+            class="ml-auto text-xs text-faint tabular-nums"
+            >{{ item.count }}</span
+          >
+        </RouterLink>
       </nav>
-    </template>
 
-    <div class="mt-auto grid gap-1 pt-2">
+      <template v-if="consoleConfig !== null">
+        <p class="mt-4 mb-1 px-2 text-xs font-medium text-faint">
+          Environments
+        </p>
+        <nav aria-label="Environments" class="grid gap-0.5">
+          <SidebarEnvironment
+            v-for="environment in consoleConfig.environments"
+            :key="environment.name"
+            :environment="environment"
+            @click="navOpen = false"
+          />
+        </nav>
+      </template>
+    </div>
+
+    <div class="grid shrink-0 gap-1 pt-2">
       <!-- Below `md` the page bar says it instead: one notice in the accessibility tree. -->
       <ConnectionNotice class="hidden px-2 md:flex" />
-      <div class="flex items-center gap-1">
+      <div class="flex min-w-0 items-center gap-1">
         <UserMenu />
         <ThemeSwitcher class="ml-auto shrink-0" />
       </div>

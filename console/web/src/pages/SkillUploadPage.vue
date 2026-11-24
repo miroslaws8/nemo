@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSkillEditor } from "@/composables/useSkillEditor";
 import { newSkillPath, skillPath, skillsPath } from "@/lib/paths";
 import { skillNameHint } from "@/lib/skills";
-import type { ITone } from "@/types";
+import type { ICrumb, ITone } from "@/types";
 
 // A skill.yaml becomes a skill (`name` null), or a skill's new version: dropped or pasted, checked
 // by the console at every pause (its problems, what Hermes will read, the changes), then added or
@@ -75,8 +75,18 @@ const marks = computed(() => {
 });
 
 const nameHint = computed(() => skillNameHint(skillName.value));
-const CRUMB =
-  "rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
+
+// Back to the list, then to New skill or to the skill a new version replaces.
+const crumbs = computed((): ICrumb[] => [
+  { label: "Skills", to: skillsPath() },
+  props.name === null
+    ? { label: "New skill", to: newSkillPath() }
+    : {
+        label: props.name,
+        to: skillPath(props.name, replacedOrigin.value),
+        mono: true,
+      },
+]);
 
 const cancelTo = computed(() =>
   props.name === null
@@ -133,24 +143,14 @@ async function showProblem(problem: ISkillProblem): Promise<void> {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink :to="skillsPath()" :class="CRUMB">Skills</RouterLink>
-    <template v-if="name === null">
-      <RouterLink :to="newSkillPath()" :class="CRUMB">New skill</RouterLink>
-      <span>Upload</span>
-    </template>
-    <template v-else>
-      <RouterLink
-        :to="skillPath(name, replacedOrigin)"
-        :class="[CRUMB, 'font-mono text-xs']"
-        >{{ name }}</RouterLink
-      >
-      <span>New version</span>
-    </template>
+  <PageBar :crumbs="crumbs">
+    <span aria-hidden="true">{{
+      name === null ? "Upload" : "New version"
+    }}</span>
+    <span class="sr-only">{{
+      name === null ? "Add a skill" : `A new version of ${name}`
+    }}</span>
   </PageBar>
-  <h1 class="sr-only">
-    {{ name === null ? "Add a skill" : `A new version of ${name}` }}
-  </h1>
 
   <!-- From `lg` the file and the check each scroll in their own column; below, one page. -->
   <div class="lg:flex lg:min-h-0 lg:flex-1">

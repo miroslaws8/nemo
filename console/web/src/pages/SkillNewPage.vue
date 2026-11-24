@@ -147,13 +147,8 @@ function copy(): void {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink
-      :to="skillsPath()"
-      class="rounded-sm outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
-      >Skills</RouterLink
-    >
-    <span>New skill</span>
+  <PageBar :crumbs="[{ label: 'Skills', to: skillsPath() }]">
+    New skill
   </PageBar>
 
   <div class="mx-auto w-full max-w-2xl px-6 py-10">

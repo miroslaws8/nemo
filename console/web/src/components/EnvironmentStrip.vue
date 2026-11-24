@@ -12,7 +12,7 @@ import {
   RUN_STATUS_LOOKS,
   TONE_CLASSES,
 } from "@/lib/status";
-import { mayActOn } from "@/state/access";
+import { mayActOn, refusalOf } from "@/state/access";
 import { activeCiOn, latestCiOn } from "@/state/ci";
 import { openNewRun } from "@/state/dialogs";
 import {
@@ -21,6 +21,7 @@ import {
   queuedOn,
   toneOfEnvironment,
 } from "@/state/runs";
+import DisabledReason from "./DisabledReason.vue";
 import ProgressBar from "./ProgressBar.vue";
 import StatusIcon from "./StatusIcon.vue";
 
@@ -71,18 +72,23 @@ const single = computed(() => props.environments.length === 1);
           class="text-xs font-normal text-faint"
           >guarded</span
         >
-        <Button
+        <DisabledReason
           v-if="single"
-          size="sm"
-          variant="outline"
+          v-slot="{ describedBy }"
           class="ml-auto"
-          :disabled="!cell.permission.allowed"
-          :title="cell.permission.reason ?? undefined"
-          @click="openNewRun(cell.environment.name)"
+          :reason="refusalOf(cell.permission)"
         >
-          <PlusIcon aria-hidden="true" />
-          New run
-        </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            :disabled="!cell.permission.allowed"
+            :aria-describedby="describedBy"
+            @click="openNewRun(cell.environment.name)"
+          >
+            <PlusIcon aria-hidden="true" />
+            New run
+          </Button>
+        </DisabledReason>
       </div>
       <p class="truncate font-mono text-xs text-faint">{{ cell.host }}</p>
 

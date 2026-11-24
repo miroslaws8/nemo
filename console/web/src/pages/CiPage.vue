@@ -9,8 +9,8 @@ import {
   Trash2Icon,
 } from "@lucide/vue";
 import type { ICiStep, ISweepResult } from "@shared/types";
-import { unrefElement, useTitle } from "@vueuse/core";
-import { computed, ref, useTemplateRef, watch } from "vue";
+import { useTitle } from "@vueuse/core";
+import { computed, ref, watch } from "vue";
 import CiProperties from "@/components/CiProperties.vue";
 import CiReport from "@/components/CiReport.vue";
 import CiStatusNote from "@/components/CiStatusNote.vue";
@@ -31,7 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -50,6 +50,7 @@ import {
 import { useCiActions } from "@/composables/useCiActions";
 import { useCiDetail } from "@/composables/useCiDetail";
 import { useClock } from "@/composables/useClock";
+import { useMenuFocusReturn } from "@/composables/useMenuFocusReturn";
 import { ciTitle } from "@/lib/ci";
 import { ciListPath, ciLogUrl, runPath } from "@/lib/paths";
 import { CI_STATUS_LOOKS } from "@/lib/status";
@@ -93,7 +94,7 @@ const tab = ref("tests");
 // One dialog per action: its trigger in the bar from `md` up, the "⋯" menu's item below that.
 const stopOpen = ref(false);
 const cleanupOpen = ref(false);
-const menuButton = useTemplateRef("menuButton");
+const { returnFocus } = useMenuFocusReturn("menuButton");
 
 // The log shows the step picked, else the one going, else the last one.
 const logStep = computed(
@@ -144,15 +145,6 @@ useTitle(
         )} — QA Console`
   )
 );
-
-/** A dialog the "⋯" menu opened gives the focus back to the menu: its own trigger is hidden. */
-function returnFocus(event: Event): void {
-  const button = unrefElement(menuButton);
-  if (button instanceof HTMLElement && button.getClientRects().length > 0) {
-    event.preventDefault();
-    button.focus();
-  }
-}
 
 function stopPipeline(): void {
   const current = pipeline.value;
@@ -216,18 +208,14 @@ async function confirmRerun(options: {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink
-      :to="ciListPath()"
-      class="shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-      >CI</RouterLink
+  <PageBar
+    :crumbs="[{ label: 'CI', to: ciListPath() }]"
+    :title="pipeline === undefined ? undefined : ciTitle(pipeline)"
+  >
+    <span class="font-mono text-xs font-normal text-faint tabular-nums"
+      >#{{ number }}</span
     >
-    <span :title="pipeline === undefined ? undefined : ciTitle(pipeline)"
-      ><span class="font-mono text-xs font-normal text-faint tabular-nums"
-        >#{{ number }}</span
-      >
-      {{ pipeline?.label }}</span
-    >
+    {{ pipeline?.label }}
     <template v-if="pipeline !== undefined" #actions>
       <AlertDialog v-if="going" v-model:open="stopOpen">
         <AlertDialogTrigger as-child>
@@ -252,7 +240,7 @@ async function confirmRerun(options: {
           <AlertDialogFooter>
             <AlertDialogCancel>Keep it going</AlertDialogCancel>
             <AlertDialogAction
-              class="bg-destructive text-white hover:bg-destructive/90"
+              :class="buttonVariants({ variant: 'destructive', size: 'sm' })"
               @click="stopPipeline"
             >
               Stop pipeline

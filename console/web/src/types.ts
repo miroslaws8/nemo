@@ -197,6 +197,14 @@ export interface ISkillLinkAction {
 }
 
 /** A place the sidebar leads to: Runs, CI, Skills. */
+/** A crumb of a page's title bar that leads back: its words and where it goes. */
+export interface ICrumb {
+  label: string;
+  to: string;
+  // A skill's name: in the code font.
+  mono?: boolean;
+}
+
 export interface ISidebarNavItem {
   label: string;
   to: string;

@@ -17,7 +17,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { messageOf, postJson } from "@/lib/api";
 import { promoteSkillUrl } from "@/lib/paths";
+import { refusalOf } from "@/state/access";
 import type { IPermission } from "@/types";
+import DisabledReason from "./DisabledReason.vue";
 
 // Makes one version of a stored skill the one prod runs (its skill_channel), after a question:
 // prod's checks, CI's after a deploy among them, run it from the next one on. Below `sm` its
@@ -54,13 +56,14 @@ async function promote(): Promise<void> {
 </script>
 
 <template>
-  <span :title="permission.reason ?? undefined">
+  <DisabledReason v-slot="{ describedBy }" :reason="refusalOf(permission)">
     <AlertDialog v-model:open="open">
       <AlertDialogTrigger as-child>
         <Button
           variant="outline"
           size="sm"
           :disabled="!permission.allowed || busy"
+          :aria-describedby="describedBy"
         >
           <RocketIcon aria-hidden="true" />
           <span class="max-sm:sr-only">Promote to prod</span>
@@ -86,5 +89,5 @@ async function promote(): Promise<void> {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  </span>
+  </DisabledReason>
 </template>

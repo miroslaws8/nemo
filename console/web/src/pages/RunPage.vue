@@ -289,16 +289,11 @@ async function confirmRetry(options: {
 </script>
 
 <template>
-  <PageBar>
-    <RouterLink
-      to="/"
-      class="shrink-0 rounded-sm outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring/50"
-      >Runs</RouterLink
-    >
-    <span
-      :title="run === undefined ? undefined : formatLabel(run.selection.label)"
-      >{{ run === undefined ? "Run" : formatLabel(run.selection.label) }}</span
-    >
+  <PageBar
+    :crumbs="[{ label: 'Runs', to: '/' }]"
+    :title="run === undefined ? undefined : formatLabel(run.selection.label)"
+  >
+    {{ run === undefined ? "Run" : formatLabel(run.selection.label) }}
     <template v-if="run !== undefined" #actions>
       <RunActions
         :run="run"

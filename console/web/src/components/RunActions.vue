@@ -11,8 +11,7 @@ import {
   XIcon,
 } from "@lucide/vue";
 import type { IRunRecord, IRunStatus } from "@shared/types";
-import { unrefElement } from "@vueuse/core";
-import { computed, ref, useTemplateRef, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,7 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useMenuFocusReturn } from "@/composables/useMenuFocusReturn";
 import { useRunActions } from "@/composables/useRunActions";
 import { ciPath, reportUrl } from "@/lib/paths";
 import { originOf, runKindOf } from "@/lib/run-facts";
@@ -76,7 +76,7 @@ const { stop, cleanup } = useRunActions();
 const sending = ref(false);
 const forceOpen = ref(false);
 const cleanupOpen = ref(false);
-const menuButton = useTemplateRef("menuButton");
+const { returnFocus } = useMenuFocusReturn("menuButton");
 
 // Another run (the page stays, its run changes): no dialog of the last one stays open.
 watch(
@@ -114,15 +114,6 @@ const folds = computed(
     (actions.value === "ci" && props.run.ci !== null) ||
     (actions.value === "finished" && (props.cleanable || props.hasReport))
 );
-
-/** A dialog the "⋯" menu opened gives the focus back to the menu: its own trigger is hidden. */
-function returnFocus(event: Event): void {
-  const button = unrefElement(menuButton);
-  if (button instanceof HTMLElement && button.getClientRects().length > 0) {
-    event.preventDefault();
-    button.focus();
-  }
-}
 
 async function requestStop(force: boolean): Promise<void> {
   sending.value = true;
@@ -203,7 +194,7 @@ async function requestStop(force: boolean): Promise<void> {
       <AlertDialogFooter>
         <AlertDialogCancel>Keep waiting</AlertDialogCancel>
         <AlertDialogAction
-          class="bg-destructive text-white hover:bg-destructive/90"
+          :class="buttonVariants({ variant: 'destructive', size: 'sm' })"
           @click="requestStop(true)"
         >
           Force stop
