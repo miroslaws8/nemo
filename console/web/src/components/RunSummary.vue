@@ -17,7 +17,8 @@ import SummarySlowest from "./SummarySlowest.vue";
 import SummaryTimeline from "./SummaryTimeline.vue";
 
 // One test run taken apart: its figures, what failed and why, what was slowest and what each
-// worker ran when. Built from the run's live state, so it follows a run that is still going.
+// worker ran when; any test in it opens in the Tests tab. Built from the run's live state, so it
+// follows a run that is still going.
 
 const props = defineProps<{ state: IRunState; now: number; going: boolean }>();
 
@@ -135,11 +136,17 @@ const cells = computed(() => {
         :going="going"
         @open="emit('open', $event)"
       />
-      <SummarySlowest :tests="slowTests" :steps="slowSteps" :going="going" />
+      <SummarySlowest
+        :tests="slowTests"
+        :steps="slowSteps"
+        :going="going"
+        @open="emit('open', $event)"
+      />
       <SummaryTimeline
         v-if="lanes.length > 0"
         :lanes="lanes"
         :span-ms="spanMs"
+        @open="emit('open', $event)"
       />
     </template>
   </div>

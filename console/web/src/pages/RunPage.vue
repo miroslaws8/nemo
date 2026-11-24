@@ -152,18 +152,33 @@ const stoppingWords = computed(() =>
     ? "Stopping: the tests delete their data first. This can take up to 3 minutes."
     : "Stopping: waiting for the browsers to close."
 );
-// A run of tests takes itself apart in a Summary tab, first, and opens on it once it is over.
+// A run of tests takes itself apart in a Summary tab, first, and a page that opens on it once it
+// is over opens on that tab. One that ends while the page is open stays on the tab shown.
 const HAS_SUMMARY: Record<IRunKindChoice, boolean> = {
   tests: true,
   agent: false,
   author: false,
 };
 const showsSummary = computed(() => HAS_SUMMARY[kind.value]);
+// Whether the run was over when the page first knew it (its record), per run the page shows.
+const openedOver = ref<{ id: string; over: boolean } | null>(null);
+watch(
+  [() => props.id, () => run.value?.status],
+  ([id, status]) => {
+    if (status !== undefined && openedOver.value?.id !== id) {
+      openedOver.value = { id, over: isFinishedStatus(status) };
+    }
+  },
+  { immediate: true }
+);
 // The tab the person picked on this run (null: the default one).
 const chosenTab = ref<string | null>(null);
 const tab = computed<string>({
   get: () => {
-    const fallback = showsSummary.value && finished.value ? "summary" : "tests";
+    const openedOnSummary =
+      openedOver.value?.id === props.id && openedOver.value.over;
+    const fallback =
+      showsSummary.value && openedOnSummary ? "summary" : "tests";
     const chosen = chosenTab.value;
     return chosen === null || (chosen === "summary" && !showsSummary.value)
       ? fallback

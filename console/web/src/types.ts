@@ -98,6 +98,8 @@ export interface INoticeBanner {
   title: string;
   icon: Component;
   tone: ITone;
+  // How a screen reader tells it when it shows: at once (alert) or when idle (status).
+  role: "alert" | "status";
   // Its one line beside the title: what it means for the run, for a run still going or over.
   line: (notice: INoticeSummary, going: boolean) => string;
   // What its details add: how it happened, and what to do about it.
@@ -254,10 +256,13 @@ export interface IFailedTest {
 
 /** Failed tests of a run that failed the same way (lib/run-summary.ts). */
 export interface IFailureGroup {
-  // The first line of the error with its numbers, quoted text, ids and queries taken out.
+  // The first line of the error with its numbers, quoted text, ids and queries taken out, and the
+  // element it names (its quoted text kept).
   key: string;
   // The first line as the first test of the group had it.
   cause: string;
+  // The element the error names (a later line of it), as the first test had it; null: none.
+  locator: string | null;
   // A setup (the login) failed this way: what made other tests not run.
   setup: boolean;
   tests: IFailedTest[];
@@ -319,6 +324,9 @@ export interface ISetupMiss {
 /** A row of the Summary's slowest lists: a neutral bar, its length the share of the slowest. */
 export interface ISlowRow {
   key: string;
+  // The test the row opens: its own, or the one its step belongs to.
+  testId: string;
+  testTitle: string;
   title: string;
   // Faint after the title: a test's slowest step, a step's test.
   context: string | null;

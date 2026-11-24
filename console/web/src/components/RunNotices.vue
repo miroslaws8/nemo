@@ -9,7 +9,8 @@ import type { INoticeBanner } from "@/types";
 // Banners for what slows a run down or breaks it from outside the tests: the API's rate limit
 // (429) and the QA account's session ending. The tests report them as they happen
 // (engine/notices.ts). Each is one line (its title and what it means for the run); its details
-// open below it: how it happened, what to do, and the last message the API gave.
+// open below it: how it happened, what to do, and the last message the API gave. Each is a live
+// region of its own as it shows: the session ending an alert, the rate limit a status.
 
 const props = defineProps<{ state: IRunState; going: boolean }>();
 
@@ -18,6 +19,7 @@ const BANNERS: Record<INoticeKind, INoticeBanner> = {
     title: "The QA account's session has ended",
     icon: KeyRoundIcon,
     tone: "fail",
+    role: "alert",
     line: (_notice, going) =>
       going
         ? "the tests from here on fail: stop the run and start a new one, which logs in again."
@@ -33,6 +35,7 @@ const BANNERS: Record<INoticeKind, INoticeBanner> = {
     title: "The API is rate-limiting the QA account",
     icon: GaugeIcon,
     tone: "flaky",
+    role: "status",
     line: (notice, going) =>
       `${plural(
         notice.count,
@@ -61,56 +64,56 @@ const banners = computed(() =>
 </script>
 
 <template>
-  <div v-if="banners.length > 0" role="status" class="space-y-2">
-    <details
-      v-for="entry in banners"
-      :key="entry.kind"
-      :class="[
-        'group rounded-md text-sm',
-        TONE_CLASSES[entry.banner.tone].soft,
-      ]"
-    >
-      <summary
-        class="flex cursor-pointer list-none items-start gap-2 rounded-md px-3 py-2 outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden"
+  <div v-if="banners.length > 0" class="space-y-2">
+    <div v-for="entry in banners" :key="entry.kind" :role="entry.banner.role">
+      <details
+        :class="[
+          'group rounded-md text-sm',
+          TONE_CLASSES[entry.banner.tone].soft,
+        ]"
       >
-        <component
-          :is="entry.banner.icon"
-          :class="[
-            'mt-0.5 size-4 shrink-0',
-            TONE_CLASSES[entry.banner.tone].text,
-          ]"
-          aria-hidden="true"
-        />
-        <span class="min-w-0 flex-1">
-          <span
-            :class="['font-medium', TONE_CLASSES[entry.banner.tone].text]"
-            >{{ entry.banner.title }}</span
-          >
-          <span class="text-foreground/80">
-            — {{ entry.banner.line(entry.notice, going) }}</span
-          >
-        </span>
-        <span
-          class="mt-px flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground"
+        <summary
+          class="flex cursor-pointer list-none items-start gap-2 rounded-md px-3 py-2 outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden"
         >
-          <span class="max-sm:sr-only">Details</span>
-          <ChevronRightIcon
-            class="size-3.5 transition-transform group-open:rotate-90"
+          <component
+            :is="entry.banner.icon"
+            :class="[
+              'mt-0.5 size-4 shrink-0',
+              TONE_CLASSES[entry.banner.tone].text,
+            ]"
             aria-hidden="true"
           />
-        </span>
-      </summary>
-      <div class="space-y-1.5 px-3 pb-2.5 pl-9 text-foreground/80">
-        <p
-          v-for="detail in entry.banner.details(entry.notice, going)"
-          :key="detail"
-        >
-          {{ detail }}
-        </p>
-        <p class="font-mono text-xs break-words text-muted-foreground">
-          {{ entry.notice.lastMessage }}
-        </p>
-      </div>
-    </details>
+          <span class="min-w-0 flex-1">
+            <span
+              :class="['font-medium', TONE_CLASSES[entry.banner.tone].text]"
+              >{{ entry.banner.title }}</span
+            >
+            <span class="text-foreground/80">
+              — {{ entry.banner.line(entry.notice, going) }}</span
+            >
+          </span>
+          <span
+            class="mt-px flex shrink-0 items-center gap-0.5 text-xs text-muted-foreground"
+          >
+            <span class="max-sm:sr-only">Details</span>
+            <ChevronRightIcon
+              class="size-3.5 transition-transform group-open:rotate-90"
+              aria-hidden="true"
+            />
+          </span>
+        </summary>
+        <div class="space-y-1.5 px-3 pb-2.5 pl-9 text-foreground/80">
+          <p
+            v-for="detail in entry.banner.details(entry.notice, going)"
+            :key="detail"
+          >
+            {{ detail }}
+          </p>
+          <p class="font-mono text-xs break-words text-muted-foreground">
+            {{ entry.notice.lastMessage }}
+          </p>
+        </div>
+      </details>
+    </div>
   </div>
 </template>

@@ -11,9 +11,12 @@ import { TEST_STATUS_LOOKS, TONE_CLASSES } from "@/lib/status";
 import type { ITimelineLane } from "@/types";
 
 // What each worker ran when: one line per worker, each test a bar in its status's tone, placed
-// by its start and length on a shared time axis. Hover or focus a bar for its test.
+// by its start and length on a shared time axis. Hover or focus a bar for its test; a click (or
+// Enter) opens it in the Tests tab.
 
 const props = defineProps<{ lanes: ITimelineLane[]; spanMs: number }>();
+
+const emit = defineEmits<{ open: [testId: string] }>();
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -92,6 +95,7 @@ const rows = computed(() =>
                 :aria-label="`${bar.title}: ${bar.label.toLowerCase()}, ${
                   bar.duration
                 }`"
+                @click="emit('open', bar.testId)"
               />
             </TooltipTrigger>
             <TooltipContent>

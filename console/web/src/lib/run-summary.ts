@@ -35,21 +35,44 @@ const DONE_STATUSES: ReadonlySet<ITestStatus> = new Set([
 ]);
 const GOING_PHASES: ReadonlySet<IRunPhase> = new Set(["starting", "running"]);
 
-// What an error's first line loses to become its group's key, in this order: a URL's query
-// first (it holds digits and quotes), then quoted text, then ids, then any other number.
-const NORMALISERS: { pattern: RegExp; replacement: string }[] = [
-  { pattern: /(https?:\/\/[^\s?#"'`]+)[?#][^\s"'`]*/g, replacement: "$1" },
-  // A ' after a letter is an apostrophe (couldn't), not a quote.
-  { pattern: /"[^"]*"|(?<!\w)'[^']*'|`[^`]*`|“[^”]*”/g, replacement: '"…"' },
+interface INormaliser {
+  pattern: RegExp;
+  replacement: string;
+}
+
+// A URL loses its query first (it holds digits and quotes).
+const URL_QUERY: INormaliser = {
+  pattern: /(https?:\/\/[^\s?#"'`]+)[?#][^\s"'`]*/g,
+  replacement: "$1",
+};
+// A ' after a letter is an apostrophe (couldn't), not a quote.
+const QUOTED: INormaliser = {
+  pattern: /"[^"]*"|(?<!\w)'[^']*'|`[^`]*`|“[^”]*”/g,
+  replacement: '"…"',
+};
+// Ids (a uuid, or hex that mixes letters and digits), then any other number, whatever its length.
+const IDS_AND_NUMBERS: INormaliser[] = [
   {
     pattern:
       /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi,
     replacement: "<id>",
   },
-  { pattern: /\b(?=[0-9a-f]*\d)[0-9a-f]{8,}\b/gi, replacement: "<id>" },
+  {
+    pattern: /\b(?=[0-9a-f]*\d)(?=[0-9a-f]*[a-f])[0-9a-f]{8,}\b/gi,
+    replacement: "<id>",
+  },
   { pattern: /\d+/g, replacement: "#" },
   { pattern: /\s+/g, replacement: " " },
 ];
+// What an error's first line loses to become its group's key, in this order.
+const LINE_NORMALISERS = [URL_QUERY, QUOTED, ...IDS_AND_NUMBERS];
+// What the element it names loses: not its quoted text, which says which element it is.
+const LOCATOR_NORMALISERS = [URL_QUERY, ...IDS_AND_NUMBERS];
+
+// The element a Playwright error names, on a line after its first: `Locator: getByText('Save')`
+// (an expect), or a call log's `- waiting for getByRole('button', { name: 'Save' })`.
+const LOCATOR_LINE =
+  /^\s*(?:-\s*)?(?:Locator:\s*(\S.*?)|waiting for\s+((?:locator|frameLocator|getBy[A-Za-z]+)\(.*?))\s*$/m;
 
 const NO_MESSAGE = "Failed without an error message";
 
@@ -60,9 +83,8 @@ function testsInOrder(state: IRunState): ITestState[] {
   });
 }
 
-/** The first line of a test's first error, as it reads. */
-function causeOf(test: ITestState): string {
-  const message = test.errors[0]?.message ?? "";
+/** The first line of an error, as it reads. */
+function causeOf(message: string): string {
   const line = message
     .split("\n")
     .map((text) => text.trim())
@@ -70,12 +92,31 @@ function causeOf(test: ITestState): string {
   return line ?? NO_MESSAGE;
 }
 
-/** A cause without what changes from one failure to the next (numbers, names, ids). */
-export function causeKey(cause: string): string {
-  return NORMALISERS.reduce(
-    (text, { pattern, replacement }) => text.replace(pattern, replacement),
-    cause
-  ).trim();
+/** The first element an error names (a locator), as it reads; null: it names none. */
+export function locatorOf(message: string): string | null {
+  const found = LOCATOR_LINE.exec(message);
+  return found?.[1] ?? found?.[2] ?? null;
+}
+
+function normalised(text: string, normalisers: INormaliser[]): string {
+  return normalisers
+    .reduce(
+      (result, { pattern, replacement }) =>
+        result.replace(pattern, replacement),
+      text
+    )
+    .trim();
+}
+
+/**
+ * A cause without what changes from one failure to the next (numbers, names, ids), with the
+ * element it names when it names one: a timeout on another button is another cause.
+ */
+export function causeKey(cause: string, locator: string | null = null): string {
+  const key = normalised(cause, LINE_NORMALISERS);
+  return locator === null
+    ? key
+    : `${key} @ ${normalised(locator, LOCATOR_NORMALISERS)}`;
 }
 
 /** The deepest step that failed (the first of them at that depth). */
@@ -113,9 +154,17 @@ export function failureGroups(state: IRunState): IFailureGroup[] {
     if (!FAILED_STATUSES.has(test.status)) {
       continue;
     }
-    const cause = causeOf(test);
-    const key = causeKey(cause);
-    const group = groups.get(key) ?? { key, cause, setup: false, tests: [] };
+    const message = test.errors[0]?.message ?? "";
+    const cause = causeOf(message);
+    const locator = locatorOf(message);
+    const key = causeKey(cause, locator);
+    const group = groups.get(key) ?? {
+      key,
+      cause,
+      locator,
+      setup: false,
+      tests: [],
+    };
     group.tests.push(failedTest(test));
     group.setup = group.setup || isLoginProject(test.project);
     groups.set(key, group);
