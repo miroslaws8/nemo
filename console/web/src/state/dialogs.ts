@@ -9,6 +9,8 @@ export interface INewRunPreset {
 }
 
 export const newRunOpen = ref(false);
+// A skill written by AI from a description, for the skill's form to open on (taken once).
+export const skillStart = ref<{ name: string; yaml: string } | null>(null);
 /** The environment the next "New run" dialog starts on (null: its own default). */
 export const newRunEnvironment = ref<string | null>(null);
 export const newRunPreset = ref<INewRunPreset | null>(null);

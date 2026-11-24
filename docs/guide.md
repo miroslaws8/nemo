@@ -264,6 +264,14 @@ skill's page shows its `skill.yaml` in words, the `SKILL.md` Hermes reads, the f
 checks and (a stored skill) its versions and the one prod runs; **Run…** opens New run as an
 agent check of it, on that branch.
 
+**Add skill → Describe it:** say in plain words what the agent should check; the model of
+`ai.author` writes the `skill.yaml` (`POST /api/skills/write`; the shared contract's rules and an
+example skill go with the request), the console checks it like any skill and asks the model once
+more when it has errors, and the skill's form opens on it, to read, adjust and add as usual.
+Nothing is added before that. Its cost counts against the day's limit of the agent checks. It
+needs `ai.author` and its model's key in this console's environment (`QA_AI_*`); otherwise the
+page says why.
+
 An operator adds one with **Add skill**, which starts it one of three ways:
 
 - **From a template** (`hermes/skill-templates`): a page checked read-only, a flow that leaves the

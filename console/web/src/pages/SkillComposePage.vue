@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSkillEditor } from "@/composables/useSkillEditor";
+import { skillStart } from "@/state/dialogs";
 import { useSkillDetail, useSkillTemplates } from "@/composables/useSkills";
 import { newSkillPath, skillsPath } from "@/lib/paths";
 import {
@@ -80,6 +81,21 @@ watch(
 );
 if (ready.value) {
   startYaml.value = draftToYaml(draft.value);
+}
+
+// A skill AI wrote from a description: the form opens on it, as unsaved work.
+const written = skillStart.value;
+skillStart.value = null;
+if (written !== null && ready.value) {
+  skillName.value = written.name;
+  const read = draftFromYaml(written.yaml);
+  if (read === null) {
+    mode.value = "yaml";
+    yamlText.value = written.yaml;
+  } else {
+    draft.value = read;
+  }
+  startYaml.value = "";
 }
 
 const loadProblem = computed(() => {

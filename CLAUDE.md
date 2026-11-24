@@ -200,7 +200,8 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
   only skills that run Playwright scripts stay in `hermes/skills`. A skill.yaml is read with
   `parseSkillSource` (engine) plus `skill-lint.ts`, and a `SKILL.md` is only ever written by
   `renderSkill`, as `pnpm skills` does. `POST /api/skills/check` changes nothing and stays out
-  of the audit log. Every way of making a skill in the web app ends in a skill.yaml text that the
+  of the audit log. Every way of making a skill in the web app (a description AI writes from, `SkillWriter`,
+  `engine/ai/skill-writer.ts`, included) ends in a skill.yaml text that the
   server checks: the form's draft becomes one in `console/web/src/lib/skill-draft.ts` (and back),
   and the pages share `useSkillEditor` and `SkillCheckPanel`. A problem names its place by `path`
   (the form's field) and line (the file); one found by its place in the text gets its path from

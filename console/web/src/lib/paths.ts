@@ -67,6 +67,11 @@ export function composeSkillPath(
   return `/skills/new/form?${query}`;
 }
 
+/** The skill form opening on a skill AI wrote (state/dialogs.ts skillStart carries it). */
+export function writtenSkillPath(): string {
+  return "/skills/new/form";
+}
+
 /** Where a skill gets a new version. */
 export function replaceSkillPath(name: string): string {
   return `/skills/${encodeURIComponent(name)}/replace`;

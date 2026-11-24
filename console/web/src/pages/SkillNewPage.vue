@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ISkillSummary } from "@shared/types";
-import { CopyIcon, FileUpIcon } from "@lucide/vue";
+import { CopyIcon, FileUpIcon, SparklesIcon } from "@lucide/vue";
+import { skillWrittenSchema } from "@shared/api";
 import { useTitle } from "@vueuse/core";
 import { computed, ref, useId } from "vue";
 import { useRouter } from "vue-router";
@@ -16,18 +17,57 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "vue-sonner";
+import { messageOf, postJson } from "@/lib/api";
+import { skillStart } from "@/state/dialogs";
 import { useSkillList, useSkillTemplates } from "@/composables/useSkills";
-import { composeSkillPath, skillsPath, uploadSkillPath } from "@/lib/paths";
+import {
+  composeSkillPath,
+  skillsPath,
+  uploadSkillPath,
+  writtenSkillPath,
+} from "@/lib/paths";
 import { SAFETY_WORDS } from "@/lib/skills";
 import { mayEditSkills } from "@/state/access";
-import { storeWords } from "@/state/config";
+import { consoleConfig, storeWords } from "@/state/config";
 
-// Where a new skill starts: a template (hermes/skill-templates), a copy of a skill, or a
-// skill.yaml brought in. The first two open the skill's form.
+// Where a new skill starts: a description AI turns into a skill.yaml, a template
+// (hermes/skill-templates), a copy of a skill, or a skill.yaml brought in. All but the last open
+// the skill's form.
 
 useTitle("Add a skill · Skills · QA Console");
 const router = useRouter();
 const copyId = useId();
+const describeId = useId();
+// What the skill should check, in plain words (POST /api/skills/write).
+const description = ref("");
+const writing = ref(false);
+const writer = computed(() => consoleConfig.value?.skillWriting ?? null);
+const canWrite = computed(
+  () =>
+    editing.value.allowed &&
+    writer.value?.available === true &&
+    description.value.trim().length >= 10 &&
+    !writing.value
+);
+
+async function write(): Promise<void> {
+  writing.value = true;
+  try {
+    const written = await postJson(
+      "/api/skills/write",
+      { description: description.value.trim() },
+      skillWrittenSchema
+    );
+    skillStart.value = { name: written.name, yaml: written.yaml };
+    await router.push(writtenSkillPath());
+  } catch (failure) {
+    toast.error(messageOf(failure));
+  } finally {
+    writing.value = false;
+  }
+}
 const editing = computed(() => mayEditSkills());
 const whereItGoes = computed(() =>
   storeWords.value.addSkill.replace("{name}", "<name>")
@@ -81,6 +121,39 @@ function copy(): void {
       </p>
     </div>
     <PermissionNote :permission="editing" />
+
+    <section aria-labelledby="new-from-description" class="space-y-3">
+      <h2 id="new-from-description" class="text-base font-semibold">
+        Describe it
+      </h2>
+      <p class="max-w-prose text-sm text-muted-foreground">
+        Say in plain words what the agent should check. AI writes the skill and
+        opens it in the form, already checked, for you to read, adjust and add.
+      </p>
+      <div class="grid max-w-2xl gap-2">
+        <Label :for="describeId" class="sr-only">What the skill checks</Label>
+        <Textarea
+          :id="describeId"
+          v-model="description"
+          rows="3"
+          maxlength="1000"
+          :disabled="!editing.allowed || writer?.available !== true"
+          placeholder="On a phone, open the pricing page, check every plan shows a price and a button, and look for text that is cut off"
+        />
+        <div class="flex flex-wrap items-center gap-3">
+          <Button :disabled="!canWrite" @click="write">
+            <SparklesIcon class="size-4" aria-hidden="true" />
+            {{ writing ? "Writing…" : "Write the skill" }}
+          </Button>
+          <p
+            v-if="writer !== null && !writer.available"
+            class="text-xs text-muted-foreground"
+          >
+            Not here: {{ writer.reason }}.
+          </p>
+        </div>
+      </div>
+    </section>
 
     <section aria-labelledby="new-from-template" class="space-y-3">
       <h2 id="new-from-template" class="text-base font-semibold">
