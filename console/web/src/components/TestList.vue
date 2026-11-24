@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { IRunState, ITestState, ITestStatus } from "@shared/types";
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { ITestFilter } from "@/types";
 import TestRow from "./TestRow.vue";
 
 // Every test of the run in Playwright's order, filtered by outcome. A finished run with
-// failures opens on them, the first one unfolded.
+// failures opens on them, the first one unfolded; a test opened from the Summary tab
+// (`openTestId`) instead.
 
 const props = defineProps<{
   runId: string;
@@ -17,6 +18,8 @@ const props = defineProps<{
   hasReport: boolean;
   // Its attachments may be opened (prod's take an operator).
   filesAllowed: boolean;
+  // A test to show unfolded and scroll to (the Summary tab opened it).
+  openTestId?: string | null;
 }>();
 
 const emit = defineEmits<{ retryTest: [testId: string] }>();
@@ -89,6 +92,35 @@ watch(
   { immediate: true }
 );
 
+// A test asked for from the Summary: in a filter that shows it, unfolded, scrolled to. It wins
+// over the first failure above (this watch runs after that one).
+const list = ref<HTMLElement | null>(null);
+let openedTestId: string | null = null;
+watch(
+  [() => props.openTestId, () => tests.value.length],
+  ([testId]) => {
+    const test = tests.value.find((candidate) => candidate.testId === testId);
+    if (test === undefined || testId === openedTestId) {
+      return;
+    }
+    openedTestId = test.testId;
+    openedOnFailures = true;
+    if (!matches(filter.value, test)) {
+      filter.value =
+        FILTER_ORDER.find(
+          (candidate) => candidate !== "all" && matches(candidate, test)
+        ) ?? "all";
+    }
+    expanded.value = new Set([test.testId]);
+    void nextTick(() => {
+      list.value
+        ?.querySelector(`[data-test-id="${CSS.escape(test.testId)}"]`)
+        ?.scrollIntoView({ block: "start" });
+    });
+  },
+  { immediate: true }
+);
+
 // A filter that no test fits any more falls back to "All".
 watch(filters, (available) => {
   if (!available.some((entry) => entry.filter === filter.value)) {
@@ -117,7 +149,7 @@ function toggle(testId: string): void {
 </script>
 
 <template>
-  <section class="min-w-0">
+  <section ref="list" class="min-w-0">
     <header class="flex flex-wrap items-center gap-2 border-b pb-2">
       <ToggleGroup
         type="single"
@@ -143,6 +175,7 @@ function toggle(testId: string): void {
       <TestRow
         v-for="test in visible"
         :key="test.testId"
+        :data-test-id="test.testId"
         :run-id="runId"
         :test="test"
         :now="now"

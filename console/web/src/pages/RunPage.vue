@@ -13,6 +13,7 @@ import AuthorDraftPanel from "@/components/AuthorDraftPanel.vue";
 import AgentCheckView from "@/components/AgentCheckView.vue";
 import RunProgress from "@/components/RunProgress.vue";
 import RunProperties from "@/components/RunProperties.vue";
+import RunSummary from "@/components/RunSummary.vue";
 import TestList from "@/components/TestList.vue";
 import WorkerLanes from "@/components/WorkerLanes.vue";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -151,7 +152,46 @@ const stoppingWords = computed(() =>
     ? "Stopping: the tests delete their data first. This can take up to 3 minutes."
     : "Stopping: waiting for the browsers to close."
 );
-const tab = ref("tests");
+// A run of tests takes itself apart in a Summary tab, first, and opens on it once it is over.
+const HAS_SUMMARY: Record<IRunKindChoice, boolean> = {
+  tests: true,
+  agent: false,
+  author: false,
+};
+const showsSummary = computed(() => HAS_SUMMARY[kind.value]);
+// The tab the person picked on this run (null: the default one).
+const chosenTab = ref<string | null>(null);
+const tab = computed<string>({
+  get: () => {
+    const fallback = showsSummary.value && finished.value ? "summary" : "tests";
+    const chosen = chosenTab.value;
+    return chosen === null || (chosen === "summary" && !showsSummary.value)
+      ? fallback
+      : chosen;
+  },
+  set: (value) => {
+    chosenTab.value = value;
+  },
+});
+// The test the Summary opened in the Tests tab (only while that tab is shown).
+const openTestId = ref<string | null>(null);
+watch(
+  () => props.id,
+  () => {
+    chosenTab.value = null;
+    openTestId.value = null;
+  }
+);
+watch(tab, (shown) => {
+  if (shown !== "tests") {
+    openTestId.value = null;
+  }
+});
+
+function openTest(testId: string): void {
+  openTestId.value = testId;
+  chosenTab.value = "tests";
+}
 
 useTitle(
   computed(() =>
@@ -360,6 +400,7 @@ async function confirmRetry(options: {
 
       <Tabs v-if="run.status !== 'queued'" v-model="tab">
         <TabsList>
+          <TabsTrigger v-if="showsSummary" value="summary">Summary</TabsTrigger>
           <TabsTrigger value="tests">
             {{ TAB_LABELS[kind] }}
             <span
@@ -370,6 +411,16 @@ async function confirmRetry(options: {
           </TabsTrigger>
           <TabsTrigger value="log">Log</TabsTrigger>
         </TabsList>
+        <TabsContent v-if="showsSummary" value="summary" class="mt-4">
+          <RunSummary
+            v-if="liveReady"
+            :key="run.id"
+            :state="liveRun"
+            :now="nowMs"
+            :going="going"
+            @open="openTest"
+          />
+        </TabsContent>
         <TabsContent value="tests" class="mt-3 grid gap-4">
           <AuthorDraftPanel
             v-if="kind === 'author'"
@@ -396,6 +447,7 @@ async function confirmRetry(options: {
             :can-retry="finished && acting"
             :has-report="report"
             :files-allowed="filesAllowed"
+            :open-test-id="openTestId"
             @retry-test="requestRetry('test', [$event])"
           />
         </TabsContent>

@@ -5,6 +5,8 @@ import type {
   IRetryScope,
   IRunCounts,
   ISignInProblem,
+  ITestStatus,
+  IYamlLocation,
 } from "@shared/types";
 import type { Component } from "vue";
 
@@ -214,3 +216,95 @@ export type IRunFilter = "all" | "failed";
 // The theme the person picks; "system" follows the operating system (state/theme.ts).
 export const THEME_CHOICES = ["system", "light", "dark"] as const;
 export type IThemeChoice = (typeof THEME_CHOICES)[number];
+
+/** The test a failure group lists: its latest attempt and the step it failed at. */
+export interface IFailedTest {
+  testId: string;
+  title: string;
+  suite: string;
+  // The YAML file, or the spec for a test without one (the login setup).
+  file: string;
+  project: string;
+  status: ITestStatus;
+  ms: number | null;
+  retry: number;
+  // The deepest failed step (null: none failed, e.g. a setup without steps).
+  step: { title: string; yaml: IYamlLocation | null } | null;
+  // Where it failed: the step's place in the YAML, else the error's.
+  yaml: IYamlLocation | null;
+}
+
+/** Failed tests of a run that failed the same way (lib/run-summary.ts). */
+export interface IFailureGroup {
+  // The first line of the error with its numbers, quoted text, ids and queries taken out.
+  key: string;
+  // The first line as the first test of the group had it.
+  cause: string;
+  // A setup (the login) failed this way: what made other tests not run.
+  setup: boolean;
+  tests: IFailedTest[];
+}
+
+/** One of a run's slowest tests, with its slowest YAML step. */
+export interface ISlowTest {
+  testId: string;
+  title: string;
+  status: ITestStatus;
+  ms: number;
+  step: { title: string; ms: number } | null;
+}
+
+/** One of a run's slowest YAML steps, with the test it belongs to. */
+export interface ISlowStep {
+  testId: string;
+  stepId: string;
+  title: string;
+  ms: number;
+  testTitle: string;
+}
+
+/** A test on a worker's line of the run's timeline: ms from the run's start. */
+export interface ITimelineBar {
+  testId: string;
+  title: string;
+  status: ITestStatus;
+  tone: ITone;
+  startMs: number;
+  endMs: number;
+}
+
+/** One worker of the run and the tests it ran, in the order it ran them. */
+export interface ITimelineLane {
+  lane: number;
+  bars: ITimelineBar[];
+}
+
+/** A run's headline numbers (counts as the progress bar has them). */
+export interface ISummaryFigures {
+  total: number;
+  passed: number;
+  failed: number;
+  flaky: number;
+  // Attempts beyond the first, over every test.
+  retried: number;
+  skipped: number;
+  // null while it goes (the page counts it from its start).
+  ms: number | null;
+}
+
+/** Tests that never ran because a setup they need failed. */
+export interface ISetupMiss {
+  count: number;
+  setupTitles: string[];
+}
+
+/** A row of the Summary's slowest lists: a neutral bar, its length the share of the slowest. */
+export interface ISlowRow {
+  key: string;
+  title: string;
+  // Faint after the title: a test's slowest step, a step's test.
+  context: string | null;
+  ms: number;
+  // Percent of the slowest row's ms.
+  share: number;
+}
