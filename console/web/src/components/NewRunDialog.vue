@@ -2,6 +2,7 @@
 import {
   BotIcon,
   GitBranchIcon,
+  PencilLineIcon,
   ListChecksIcon,
   LockIcon,
   PlayIcon,
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAgentSkills } from "@/composables/useAgentSkills";
 import { useBranches } from "@/composables/useBranches";
@@ -60,26 +62,26 @@ import TestPicker from "./TestPicker.vue";
 // alongside them.
 
 // What a run can be, the agent check first (the dialog opens on it where the console has agents);
-// each with its icon, and whether it needs the console's agent checks.
+// each with its icon.
 const KINDS: {
   value: IRunKindChoice;
   label: string;
   icon: Component;
-  needsAgents: boolean;
 }[] = [
-  { value: "agent", label: "Agent check", icon: BotIcon, needsAgents: true },
-  {
-    value: "tests",
-    label: "Scripted tests",
-    icon: ListChecksIcon,
-    needsAgents: false,
-  },
+  { value: "agent", label: "Agent check", icon: BotIcon },
+  { value: "tests", label: "Scripted tests", icon: ListChecksIcon },
+  { value: "author", label: "Write a test", icon: PencilLineIcon },
 ];
 
 const START_WORDS: Record<IRunKindChoice, string> = {
   tests: "Start run",
   agent: "Start check",
+  author: "Write the test",
 };
+
+// What a description of a test may be (startAuthorRunRequestSchema).
+const GOAL_MIN = 5;
+const GOAL_MAX = 500;
 
 const MODES: { value: ISelectionMode; label: string }[] = [
   { value: "all", label: "All tests of the profile" },
@@ -87,13 +89,15 @@ const MODES: { value: ISelectionMode; label: string }[] = [
   { value: "tags", label: "By tag" },
 ];
 
-const { start, startAgent } = useRunActions();
+const { start, startAgent, startAuthor } = useRunActions();
 
 const kind = ref<IRunKindChoice>("agent");
 const skill = ref("");
 const model = ref("");
 // One line for the skill after the environment (e.g. an asset type).
 const skillArguments = ref("");
+// What to check, in a person's words (a test written with AI).
+const goal = ref("");
 const environment = ref("");
 const profile = ref("");
 const mode = ref<ISelectionMode>("all");
@@ -114,6 +118,7 @@ const ids = {
   confirm: useId(),
   branch: useId(),
   kind: useId(),
+  goal: useId(),
   model: useId(),
   arguments: useId(),
 };
@@ -138,6 +143,15 @@ const refusal = computed(
 const profiles = computed(() => consoleConfig.value?.profiles ?? []);
 const agents = computed(() => consoleConfig.value?.agents ?? null);
 const agentsAvailable = computed(() => agents.value?.available === true);
+const authoring = computed(() => consoleConfig.value?.authoring ?? null);
+const authoringAvailable = computed(() => authoring.value?.available === true);
+
+// Whether each kind of run can start on this console at all.
+const AVAILABLE: Record<IRunKindChoice, () => boolean> = {
+  tests: () => true,
+  agent: () => agentsAvailable.value,
+  author: () => authoringAvailable.value,
+};
 const modelInfo = computed(() =>
   agents.value?.models.find((candidate) => candidate.id === model.value)
 );
@@ -344,6 +358,8 @@ const spentOut = computed(
 // What the footer says each kind of run will do.
 const SUMMARIES: Record<IRunKindChoice, () => string> = {
   tests: () => summary.value,
+  author: () =>
+    `AI walks it on ${environment.value}, writes the YAML test and runs it once on its own`,
   agent: () =>
     skill.value === ""
       ? "Pick the skill the agent runs"
@@ -370,6 +386,12 @@ const COMPLETE: Record<IRunKindChoice, () => boolean> = {
     !spentOut.value &&
     skill.value !== "" &&
     model.value !== "",
+  author: () =>
+    authoringAvailable.value &&
+    !guarded.value &&
+    goal.value.trim().length >= GOAL_MIN &&
+    goal.value.length <= GOAL_MAX &&
+    !/\p{Cc}/u.test(goal.value),
 };
 
 const ready = computed(
@@ -451,6 +473,8 @@ const STARTS: Record<IRunKindChoice, () => Promise<boolean>> = {
     };
     return startAgent(request);
   },
+  author: () =>
+    startAuthor({ env: environment.value, goal: goal.value.trim() }),
 };
 
 async function submit(): Promise<void> {
@@ -489,7 +513,7 @@ async function submit(): Promise<void> {
               v-for="option in KINDS"
               :key="option.value"
               :value="option.value"
-              :disabled="option.needsAgents && !agentsAvailable"
+              :disabled="!AVAILABLE[option.value]()"
               class="flex-1 gap-1.5 px-4"
             >
               <component :is="option.icon" class="size-4" aria-hidden="true" />
@@ -501,7 +525,18 @@ async function submit(): Promise<void> {
             skills in hermes/skills, the way a tester would. Its report and
             screenshots land in the run.
           </p>
+          <p
+            v-else-if="kind === 'author'"
+            class="text-xs text-muted-foreground"
+          >
+            Describe what to check. AI walks it in the browser with nemo's own
+            steps, keeps what worked, adds the checks that prove it, and runs
+            the test once on its own; then you add it to the tests.
+          </p>
           <p v-else class="text-xs text-muted-foreground">
+            <template v-if="!authoringAvailable && authoring?.reason">
+              Writing tests with AI: {{ authoring.reason }}
+            </template>
             Playwright runs the YAML tests of a profile, the same steps every
             time: all of them, some picked by hand, or the ones with a tag.
             <template v-if="!agentsAvailable && agents?.reason">
@@ -525,7 +560,10 @@ async function submit(): Promise<void> {
                 v-for="entry in environments"
                 :key="entry.name"
                 :value="entry.name"
-                :disabled="!permitted.has(entry.name)"
+                :disabled="
+                  !permitted.has(entry.name) ||
+                  (kind === 'author' && entry.guarded)
+                "
                 class="flex-1 gap-1.5"
               >
                 {{ entry.name }}
@@ -593,7 +631,10 @@ async function submit(): Promise<void> {
             </p>
           </div>
 
-          <div v-else class="grid min-w-0 content-start gap-2">
+          <div
+            v-else-if="kind === 'tests'"
+            class="grid min-w-0 content-start gap-2"
+          >
             <Label :for="ids.profile">Profile</Label>
             <Select :model-value="profile" @update:model-value="chooseProfile">
               <SelectTrigger :id="ids.profile" class="w-full">
@@ -691,6 +732,21 @@ async function submit(): Promise<void> {
             </p>
           </div>
         </template>
+
+        <div v-else-if="kind === 'author'" class="grid min-w-0 gap-2">
+          <Label :for="ids.goal">What to check</Label>
+          <Textarea
+            :id="ids.goal"
+            v-model="goal"
+            :maxlength="GOAL_MAX"
+            rows="3"
+            placeholder="On a phone, the menu leads to the pricing page and its plans are shown"
+          />
+          <p class="text-xs text-muted-foreground">
+            In plain words, like you would tell a tester. Not on guarded
+            environments: write it on staging, it runs on prod too.
+          </p>
+        </div>
 
         <div v-else class="grid min-w-0 gap-3">
           <Label :id="ids.mode">Tests</Label>

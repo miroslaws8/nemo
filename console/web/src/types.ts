@@ -98,8 +98,8 @@ export interface IAttachmentLink {
 /** How a new run picks its tests. */
 export type ISelectionMode = "all" | "pick" | "tags";
 
-/** What a new run runs: the YAML tests, or an agent check (Hermes with a skill). */
-export type IRunKindChoice = "tests" | "agent";
+/** What a new run runs: the YAML tests, an agent check (Hermes with a skill), or writing a test. */
+export type IRunKindChoice = "tests" | "agent" | "author";
 
 /** A tag of the catalog and how many tests carry it. */
 export interface ITagCount {

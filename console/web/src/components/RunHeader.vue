@@ -130,6 +130,7 @@ const agent = computed(() => {
 const REPORT_LABELS: Record<IRunKindChoice, string> = {
   tests: "Open report",
   agent: "Open transcript",
+  author: "Open report",
 };
 const reportLabel = computed(() => REPORT_LABELS[runKindOf(props.run)]);
 const look = computed(() => RUN_STATUS_LOOKS[props.run.status]);

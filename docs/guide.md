@@ -609,6 +609,13 @@ pnpm author --env staging "the contact form sends a message" --verify 2 --save
   with tool calling and vision; `max_actions` counts every tool call. `params` on a model go into the request as they are: OpenAI's reasoning models take
   tools in Chat Completions only with `params: { reasoning_effort: none }` (the role `tools` here).
 - A test file may name the environments that run it: `environments: [staging]`.
+- **In the QA console:** New run → **Write a test**: the description, the environment (not a
+  guarded one), and the run page shows the author's steps live, then the result, the
+  verification and the draft's YAML; **Add to tests** writes a verified draft into the working
+  tree (`tests/<folder>/`; an existing file is not overwritten), **Write it again** starts over.
+  A local console only for now: a server console's runs get no model keys and its tests come from
+  git (it says so in the dialog). API: `POST /api/author-runs` `{ env, goal }`,
+  `GET /api/runs/<id>/author`, `POST /api/runs/<id>/author/save`.
 
 ## A test file
 

@@ -8,6 +8,7 @@ import RunHeader from "@/components/RunHeader.vue";
 import RunLog from "@/components/RunLog.vue";
 import RunNotices from "@/components/RunNotices.vue";
 import PermissionNote from "@/components/PermissionNote.vue";
+import AuthorDraftPanel from "@/components/AuthorDraftPanel.vue";
 import AgentCheckView from "@/components/AgentCheckView.vue";
 import RunProgress from "@/components/RunProgress.vue";
 import TestList from "@/components/TestList.vue";
@@ -107,11 +108,13 @@ const mayClean = computed(
 const TAB_LABELS: Record<IRunKindChoice, string> = {
   tests: "Tests",
   agent: "Check",
+  author: "Test",
 };
 // What lists a run's tests: Playwright, or Hermes for an agent check.
 const STARTERS: Record<IRunKindChoice, string> = {
   tests: "Playwright",
   agent: "Hermes",
+  author: "the author",
 };
 // What a run without tests yet is doing.
 const waitingWords = computed(() => {
@@ -332,7 +335,13 @@ async function confirmRetry(options: {
         </TabsTrigger>
         <TabsTrigger value="log">Log</TabsTrigger>
       </TabsList>
-      <TabsContent value="tests" class="mt-3">
+      <TabsContent value="tests" class="mt-3 grid gap-4">
+        <AuthorDraftPanel
+          v-if="kind === 'author'"
+          :key="`author-${run.id}`"
+          :run="run"
+          :finished="finished"
+        />
         <AgentCheckView
           v-if="liveReady && kind === 'agent'"
           :key="run.id"

@@ -38,14 +38,22 @@ export function isAgentCheck(run: IRunRecord): boolean {
   return run.agent !== null;
 }
 
-/** What the run runs: the YAML tests, or an agent check. */
+/** A test being written with AI from a description: it runs again as a whole. */
+export function isAuthorRun(run: IRunRecord): boolean {
+  return run.author !== null;
+}
+
+/** What the run runs: the YAML tests, an agent check, or writing a test. */
 export function runKindOf(run: IRunRecord): IRunKindChoice {
+  if (isAuthorRun(run)) {
+    return "author";
+  }
   return isAgentCheck(run) ? "agent" : "tests";
 }
 
 /** What "Retry failed" takes (an agent check: nothing, it only runs again). */
 export function failedTests(run: IRunRecord, state: IRunState): ITestState[] {
-  if (isAgentCheck(run)) {
+  if (isAgentCheck(run) || isAuthorRun(run)) {
     return [];
   }
   return selectableTests(state).filter(

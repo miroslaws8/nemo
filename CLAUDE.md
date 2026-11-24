@@ -106,7 +106,10 @@ packages from its `pnpm-lock.yaml` (`console/server/workspaces/deps-cache.ts`, s
 - `pnpm author` (`engine/author.spec.ts`, `engine/ai/author/`) writes a test from a description:
   the model calls the step registry's steps as tools; guards (site, `ai.author.avoid`, forms only
   where `author_writes`) run in the engine before a step, never only in the prompt; a draft is
-  saved only after it passed a run of its own.
+  saved only after it passed a run of its own (verified inside the author run, which writes into
+  the run folder when it has one). In the console it is a run kind of its own, `author`
+  (`console/server/authoring/`, `IRunKind`; `record.author`); adding a draft to the tests goes
+  through `IWorkspace.saveTest` (the working tree writes, a git snapshot refuses).
 - Unit tests are `engine/**/*.unit.ts` (`node:test`, `pnpm unit`); they call no real model.
 
 ## Engine code (TypeScript)

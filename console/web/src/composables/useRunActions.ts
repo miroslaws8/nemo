@@ -3,6 +3,7 @@ import type {
   IRetryRequest,
   IRunRecord,
   IStartAgentRunRequest,
+  IStartAuthorRunRequest,
   IStartRunRequest,
   ISweepResult,
 } from "@shared/types";
@@ -22,6 +23,7 @@ function runUrl(run: IRunRecord, action: string): string {
 export function useRunActions(): {
   start: (request: IStartRunRequest) => Promise<boolean>;
   startAgent: (request: IStartAgentRunRequest) => Promise<boolean>;
+  startAuthor: (request: IStartAuthorRunRequest) => Promise<boolean>;
   stop: (run: IRunRecord, force: boolean) => Promise<void>;
   retry: (run: IRunRecord, request: IRetryRequest) => Promise<boolean>;
   cleanup: (
@@ -46,6 +48,23 @@ export function useRunActions(): {
     try {
       const record = await postJson("/api/runs", request, runRecordSchema);
       await open(record, "Run queued");
+      return true;
+    } catch (failure) {
+      toast.error(messageOf(failure));
+      return false;
+    }
+  }
+
+  async function startAuthor(
+    request: IStartAuthorRunRequest
+  ): Promise<boolean> {
+    try {
+      const record = await postJson(
+        "/api/author-runs",
+        request,
+        runRecordSchema
+      );
+      await open(record, "Writing the test");
       return true;
     } catch (failure) {
       toast.error(messageOf(failure));
@@ -113,5 +132,5 @@ export function useRunActions(): {
     }
   }
 
-  return { start, startAgent, stop, retry, cleanup };
+  return { start, startAgent, startAuthor, stop, retry, cleanup };
 }
