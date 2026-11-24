@@ -100,7 +100,7 @@ export function tierOf(project: string): string {
 
 /** A run's label as a title: capitalized, with typographic quotes around a test's name. */
 export function formatLabel(label: string): string {
-  const quoted = label.replace(/"([^"]*)"/g, "“$1”");
+  const quoted = label.replace(/^✎ /, "").replace(/"([^"]*)"/g, "“$1”");
   return quoted.charAt(0).toUpperCase() + quoted.slice(1);
 }
 

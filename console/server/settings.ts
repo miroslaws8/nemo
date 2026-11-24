@@ -112,6 +112,9 @@ export const REGISTRY_MIRROR_DIR = "skills-registry";
 export const REGISTRY_SYNC_MS = 60_000;
 export const REGISTRY_TIMEOUT_MS = 15_000;
 
+// A live run's counts go out on its record at most this often.
+export const PROGRESS_PUBLISH_MS = 1000;
+
 // Tests from git (a server console, console/server/workspaces): the clone fetches at most this
 // often, lists this many branches, keeps the packages of this many lockfiles, and gives
 // pnpm install this long.

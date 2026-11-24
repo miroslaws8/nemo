@@ -145,6 +145,8 @@ export const runRecordSchema = z.object({
   exitCode: z.number().int().nullable(),
   stopRequestedAt: z.string().nullable(),
   summary: runCountsSchema.nullable(),
+  // The counts while it goes (the home list shows done / total); null once it ended.
+  progress: runCountsSchema.nullable().default(null),
   // Who started it and who stopped it: an email, null where nobody signs in (or nobody stopped it).
   startedBy: z.string().nullable().default(null),
   stoppedBy: z.string().nullable().default(null),

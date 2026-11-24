@@ -15,6 +15,7 @@ import type {
   IIngestStreamRequest,
   IRetryRequest,
   IRetryScope,
+  IRunCounts,
   IRunDetail,
   IRunPhase,
   IRunRecord,
@@ -56,6 +57,7 @@ import {
   CI_CLAIM_GRANTED_MS,
   CI_CLAIM_POLL_MS,
   CI_CLAIM_WAITING_MS,
+  PROGRESS_PUBLISH_MS,
   STOP_GRACE_MS,
 } from "./settings";
 import type { SseHub } from "./sse-hub";
@@ -126,6 +128,21 @@ function messageOf(error: unknown): string {
 function isActive(status: IRunStatus): boolean {
   return ACTIVE_RUN_STATUSES.some((active) => active === status);
 }
+
+function countsDiffer(counts: IRunCounts, shown: IRunCounts | null): boolean {
+  return shown === null || COUNT_KEYS.some((key) => counts[key] !== shown[key]);
+}
+
+const COUNT_KEYS: readonly (keyof IRunCounts)[] = [
+  "total",
+  "passed",
+  "failed",
+  "flaky",
+  "skipped",
+  "interrupted",
+  "running",
+  "queued",
+];
 
 function finalStatus(live: ILiveRun, exitCode: number | null): IRunStatus {
   if (live.forced) {
@@ -485,7 +502,7 @@ export class RunManager implements ISweeper {
         kind: "run",
         parentId: null,
         selection: {
-          label: `✎ ${request.goal.slice(0, 80)}`,
+          label: request.goal.slice(0, 80),
           testIds: null,
           grep: null,
         },
@@ -792,6 +809,7 @@ export class RunManager implements ISweeper {
       exitCode: null,
       stopRequestedAt: null,
       summary: null,
+      progress: null,
       startedBy: pipeline.creator,
       stoppedBy: null,
       ref: pipeline.branch,
@@ -1009,6 +1027,7 @@ export class RunManager implements ISweeper {
       exitCode: null,
       stopRequestedAt: null,
       summary: null,
+      progress: null,
       startedBy: by,
       stoppedBy: null,
       ref: plan.source.ref,
@@ -1174,7 +1193,11 @@ export class RunManager implements ISweeper {
       },
     };
     const ending = endings[status];
-    const record = this.save({ ...live.record, ...ending.patch });
+    const record = this.save({
+      ...live.record,
+      progress: null,
+      ...ending.patch,
+    });
     ending.then(record.id);
     return record;
   }
@@ -1196,6 +1219,8 @@ export class RunManager implements ISweeper {
       forced: false,
       preparing: null,
       ingestNext: null,
+      progressAt: 0,
+      progressTimer: null,
     };
     this.live.set(record.id, live);
     this.save(record);
@@ -1241,6 +1266,37 @@ export class RunManager implements ISweeper {
     if (event.type === "run.end" && isCi(live)) {
       this.finish(live, null);
     }
+    this.publishProgress(live);
+  }
+
+  // The counts go out on the record (and to the watchers, no disk write) at most once per
+  // PROGRESS_PUBLISH_MS; a change inside the interval is owed by a timer.
+  private publishProgress(live: ILiveRun): void {
+    if (
+      !isActive(live.record.status) ||
+      !this.live.has(live.record.id) ||
+      live.progressTimer !== null ||
+      !countsDiffer(live.state.counts, live.record.progress)
+    ) {
+      return;
+    }
+    const wait = live.progressAt + PROGRESS_PUBLISH_MS - Date.now();
+    if (wait <= 0) {
+      this.sendProgress(live);
+      return;
+    }
+    live.progressTimer = setTimeout(() => {
+      live.progressTimer = null;
+      if (this.live.get(live.record.id) === live) {
+        this.sendProgress(live);
+      }
+    }, wait);
+  }
+
+  private sendProgress(live: ILiveRun): void {
+    live.progressAt = Date.now();
+    live.record = { ...live.record, progress: { ...live.state.counts } };
+    this.hub.publishRun(live.record);
   }
 
   // `status` null: as its events and exit code say, once the last events are read (a process
@@ -1265,6 +1321,7 @@ export class RunManager implements ISweeper {
       exitCode,
       endedAt: now(),
       summary: live.state.counts,
+      progress: null,
     });
     this.workspace.release(live.record.id);
     this.freeSlot();
@@ -1303,6 +1360,10 @@ export class RunManager implements ISweeper {
     if (live.exitWatch !== null) {
       clearInterval(live.exitWatch);
       live.exitWatch = null;
+    }
+    if (live.progressTimer !== null) {
+      clearTimeout(live.progressTimer);
+      live.progressTimer = null;
     }
   }
 

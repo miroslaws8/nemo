@@ -52,6 +52,9 @@ export interface ILiveRun {
   preparing: AbortController | null;
   // A CI run (record.ci): the seq its stream expects next; null for the console's own runs.
   ingestNext: number | null;
+  // The last time its counts went out on the record (ms), and the timer owing the next one.
+  progressAt: number;
+  progressTimer: NodeJS.Timeout | null;
 }
 
 /** What a new run will be: its selection and, when it picks tests, their --test-list lines. */
