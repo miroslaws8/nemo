@@ -31,3 +31,6 @@ Thumbs.db
 
 # Execution scratch of superpowers plans (ledgers, briefs)
 .superpowers/
+
+# Superpowers specs, plans and mockups: kept local, never published
+docs/superpowers/
